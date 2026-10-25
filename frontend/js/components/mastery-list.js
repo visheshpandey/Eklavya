@@ -19,14 +19,28 @@ export function mountMasteryList({ store, root, onOpenTopic, onRemoveDocument })
     return { node, fill, value, name, fresh: true };
   }
 
+  /** Group header: notes name, topic count and a Remove button that asks for confirmation in the page
+   *  (a browser pop-up can be blocked, which made the old link look dead). */
   function createGroup(documentId) {
     const title = el('span', { class: 'mgroup-name' });
     const count = el('span', { class: 'mgroup-count' });
-    const remove = el('button', { class: 'mgroup-remove', type: 'button', title: 'Remove these notes and your progress on them' }, 'Remove');
-    remove.addEventListener('click', () => {
-      if (window.confirm(`Remove "${title.textContent}" and your progress on its topics?`)) onRemoveDocument(documentId);
-    });
-    return { node: el('div', { class: 'mgroup' }, title, count, remove), title, count };
+    const remove = el('button', { class: 'btn-remove mgroup-remove', type: 'button', title: 'Remove these notes and your progress on them' }, 'Remove');
+    const yes = el('button', { class: 'btn-remove danger mgroup-confirm-yes', type: 'button' }, 'Yes, remove');
+    const no = el('button', { class: 'btn-remove', type: 'button' }, 'Cancel');
+    const confirmBox = el('span', { class: 'mgroup-confirm', hidden: true }, el('span', { class: 'mgroup-ask', text: 'Remove these notes and your progress?' }), yes, no);
+    let timer = null;
+
+    const ask = (on) => {
+      remove.hidden = on;
+      confirmBox.hidden = !on;
+      clearTimeout(timer);
+      if (on) { yes.focus(); timer = setTimeout(() => ask(false), 8000); }   // forget an unanswered question
+    };
+    remove.addEventListener('click', () => ask(true));
+    no.addEventListener('click', () => ask(false));
+    yes.addEventListener('click', () => { yes.disabled = no.disabled = true; onRemoveDocument(documentId); });
+
+    return { node: el('div', { class: 'mgroup' }, title, count, remove, confirmBox), title, count };
   }
 
   function render() {

@@ -80,3 +80,4 @@
 - Verified with the user's real syllabus text through the real UI + real Gemini: upload, topic notes differ per topic, Remove, and teach-then-test on "TOC: Turing Machines" (question from the notes, graded, mastery 50 -> 57.5). Tests: backend 53, frontend 37.
 - To use it on the existing data: press Remove next to `5th sem_syllabus.pdf` and upload the PDF again (the old copy was stored as one chunk and is not reprocessed automatically).
 - Observed: Gemini sometimes times out (504, 30 s limit); a retry usually succeeds. Browser test harness flaked twice (page made no API calls); the app itself was fine on reruns.
+- Remove on a notes group is now a visible button with an in-page confirmation (Yes, remove / Cancel) instead of a small link plus a browser pop-up that can be blocked.

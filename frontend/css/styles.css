@@ -152,5 +152,11 @@ button, input, select { font: inherit; color: inherit; }
 .mgroup:first-child { margin-top: 0; }
 .mgroup-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 700; text-transform: uppercase; color: var(--ink); }
 .mgroup-count { white-space: nowrap; }
-.mgroup-remove { border: 0; background: transparent; color: var(--low); cursor: pointer; font-size: 12px; text-decoration: underline; padding: 4px; }
-.mgroup-remove:hover { filter: brightness(.85); }
+.btn-remove { border: 1px solid var(--low); background: transparent; color: var(--low); border-radius: 8px; padding: 4px 10px; min-height: 28px; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; cursor: pointer; }
+.btn-remove:hover:not(:disabled) { background: var(--bad-bg); }
+.btn-remove.danger { background: var(--low); color: #fff; }
+.btn-remove:disabled { opacity: .5; cursor: default; }
+.mgroup { flex-wrap: wrap; }
+.mgroup-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex-basis: 100%; justify-content: flex-end; text-transform: none; letter-spacing: 0; }
+.mgroup-confirm[hidden], .btn-remove[hidden] { display: none; }
+.mgroup-ask { flex: 1 1 100%; text-align: right; color: var(--ink); font-size: 12px; }
