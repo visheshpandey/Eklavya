@@ -1,0 +1,19 @@
+Classification in Machine Learning
+
+Classification is a supervised learning task where a model predicts which category an input belongs to, such as spam or not spam, or disease or no disease. The model learns from labelled examples and is then evaluated on data it has not seen.
+
+Confusion Matrix
+
+A confusion matrix compares what the model predicted with what is actually true. It has four cells. True Positive (TP): the model predicted positive and the real condition is positive. False Positive (FP): the model predicted positive but the real condition is negative. False Negative (FN): the model predicted negative but the real condition is positive. True Negative (TN): the model predicted negative and the real condition is negative.
+
+Precision
+
+Precision measures how many of the items the model predicted as positive were actually positive. Precision = TP / (TP + FP). High precision means few false alarms. For example, if a spam filter marks 10 emails as spam and 8 really are spam, precision is 80 percent.
+
+Recall
+
+Recall measures how many of the actually positive items the model managed to find. Recall = TP / (TP + FN). High recall means few missed cases. For example, if 20 emails are really spam and the filter catches 8 of them, recall is 40 percent. Recall matters most when missing a positive is costly, such as in disease screening.
+
+F1 Score
+
+The F1 score is the harmonic mean of precision and recall: F1 = 2 x (Precision x Recall) / (Precision + Recall). It is useful when you need a balance between precision and recall, especially when classes are imbalanced. A model with high precision but very low recall will still have a low F1 score.

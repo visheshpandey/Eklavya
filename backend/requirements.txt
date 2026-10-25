@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-groq
+google-genai
 pdfplumber
 python-dotenv
 python-multipart
