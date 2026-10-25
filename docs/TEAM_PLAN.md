@@ -22,14 +22,14 @@ Nobody waits: P1 builds against **mock JSON**, P3 uses **stubs** for P2's functi
 - [ ] `emotion.js`: emotion chips per student turn
 - [ ] Voice quiz UI, mastery before/after animation, mission card
 - [ ] Dashboard: mastery bars, weak topics, alerts, decision log, quiz history, Chart.js progress graph
-- [ ] Fallback modes: browser SpeechRecognition -> send `user_text` over the WS; play `tts_audio` or use browser speechSynthesis; typed input; mode indicator; escape all model output
+- [ ] Show Gemini errors clearly (`error` message / HTTP 502) with a retry button; typed-text input goes to the same Gemini session; escape all model output
 - [ ] `presenter.js` interface (audio-only now, avatar later)
 - [ ] Done when: the full demo journey runs in the UI against real endpoints
 
 ## P2 — Backend half 1: Data, RAG, learning logic
 - [ ] `db.py`: all tables incl. `learner_state`, `voice_sessions`, `transcripts`
 - [ ] `retrieval.py`: chunking + BM25 + 10-question test set (8/10 must hit)
-- [ ] `POST /api/upload-document` (chunks + topics) and `POST /api/tutor/ask` (text fallback)
+- [ ] `POST /api/upload-document` (chunks + topics) and `POST /api/tutor/ask` (text channel, same Gemini)
 - [ ] `POST /api/quiz/generate` and `/api/quiz/submit` (server-side grading)
 - [ ] Misconception taxonomy + `agents/misconception.py`
 - [ ] `mastery.py` (+15·(1−m/100) correct, −10·confidence wrong) with tests
@@ -38,13 +38,13 @@ Nobody waits: P1 builds against **mock JSON**, P3 uses **stubs** for P2's functi
 - [ ] Done when: wrong answer returns named misconception + before/after mastery + mission; dashboard JSON complete
 
 ## P3 — Backend half 2: Voice, LLM, agents
-- [ ] `gemini.py` verified with the real key; fallback response
+- [ ] `gemini.py` verified with the real key (errors raise `LLMError`, no canned content)
 - [ ] `prompts/persona_eklavya.md` written and tested in AI Studio
 - [ ] `live.py` Gemini Live session + `routers/voice_ws.py` (audio in/out, transcripts, `interrupted`)
 - [ ] `tools.py`: `search_notes`, `report_learner_state`, `ask_quiz_question`, `grade_answer`, `get_mission` (call P2's functions)
 - [ ] WS events: `emotion`, `mastery`, `mission`, `error`
-- [ ] `fallback/cascade.py` + `tts.py` (Sarvam, cached); auto-switch on error/quota/silence; session cap
-- [ ] Done when: a quiz works by voice, tone changes after wrong vs right, and killing the Live connection falls back cleanly
+- [ ] Session cap and clean error handling on quota/connection loss/silence (send `error`, no other model)
+- [ ] Done when: a quiz works by voice, tone changes after wrong vs right, and killing the Live connection ends with a clear `error`, not a crash
 
 ## Joint finish (last, all three)
 - [ ] Remove mocks; run the full journey (mastery 38% -> 67%) in under 4 min
@@ -57,14 +57,15 @@ P3's `search_notes` needs P2's `retrieve()`; P3's quiz tools need P2's grading a
 ## Frozen contracts
 REST (PRD s8): `/api/upload-document`, `/api/tutor/ask`, `/api/quiz/generate`, `/api/quiz/submit`, `/api/missions/generate`, `/api/dashboard`, `/api/demo/seed`.
 
-WebSocket `/ws/voice?user_id=1&lang=hinglish` — binary = PCM audio; JSON:
-- `{"type":"transcript","role":"user|tutor","text":"..."}`
-- `{"type":"emotion","topic":"...","confusion":0-1,"confidence":0-1,"frustration":0-1}`
+WebSocket `/ws/voice?user_id=1&lang=hinglish` — binary = PCM audio; browser can also send JSON `{"type":"user_text","text":"..."}` (typed message to the same Gemini tutor), `{"type":"audio_stream_end"}` (mic paused >1 s) or `{"type":"end"}`. Server JSON:
+- `{"type":"transcript","role":"user|tutor","text":"...","final":false|true}` — `final:false` are live chunks to append; `final:true` carries the full turn text (replace the chunks with it)
+- `{"type":"quiz_question","question_id":1,"topic":"...","question":"...","options":["A. ..","B. ..","C. ..","D. .."]}` — sent when the tutor asks a quiz question (never contains the answer)
+- `{"type":"turn_complete"}` — tutor finished speaking this turn
+- `{"type":"emotion","topic":"...","confusion":0-1,"confidence":0-1,"frustration":0-1,"note":"..."}`
 - `{"type":"interrupted"}`
-- `{"type":"mastery","topic":"...","before":38,"after":67}`
-- `{"type":"mission","title":"...","duration_minutes":15,"priority":"High","reason":"..."}`
-- `{"type":"error","fallback":"cascade|browser|typed"}`
-- Client -> server, fallback modes only: `{"type":"user_text","text":"..."}`; server -> client: `{"type":"tts_audio"}` followed by an audio binary frame, or plain `transcript` for the browser to speak
+- `{"type":"mastery","topic":"...","before":38,"after":67,"is_correct":true,"misconception":{"label","text","severity"}|null,"misconceptions_resolved":0}`
+- `{"type":"mission","title":"...","duration_minutes":15,"priority":"High","reason":"...","tasks":["..."]}`
+- `{"type":"error","message":"..."}` (Gemini unavailable or quota hit; client shows it and offers retry)
 - Audio format (live mode): browser -> server PCM16 mono 16 kHz; server -> browser PCM16 mono 24 kHz; chunks about 20–40 ms
 - Single demo student: `user_id = 1`, no login
 
@@ -77,6 +78,6 @@ WebSocket `/ws/voice?user_id=1&lang=hinglish` — binary = PCM audio; JSON:
 - `db.save_learner_state(user_id, topic_id, confusion, confidence, frustration, note)`
 
 ## Shared rules
-- Keys only in `backend/.env`; external calls from the backend only; 10-min cache + fallback per external API.
+- Keys only in `backend/.env`; Gemini is the only model/vendor and is called from the backend only. No fallback models or canned content.
 - Every agent/tool step writes to `agent_logs`.
 - Small PRs to `main`; update `docs/CHECKLIST.md` and `docs/LOG.md` when you finish an item.

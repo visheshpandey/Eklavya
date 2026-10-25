@@ -58,8 +58,8 @@ P0 = required for the demo · P1 = strengthens judging · P2 = post-hackathon.
 | F1 | Upload PDF / TXT and extract text | P0 | Done (pdfplumber) |
 | F2 | Extract topics and subtopics at upload | P0 | Not started |
 | F3 | Chunk notes and retrieve top-k chunks per question | P0 | Not started |
-| F4 | Voice input (primary: Gemini Live, see s14; fallback: browser SpeechRecognition en-IN / hi-IN) | P0 | Not started |
-| F5 | Spoken output (primary: Gemini Live; fallback: Sarvam TTS / browser SpeechSynthesis) | P0 | Not started |
+| F4 | Voice input via Gemini Live (s14) | P0 | Not started |
+| F5 | Spoken output via Gemini Live (s14) | P0 | Not started |
 | F6 | Language selection (English / Hindi / Hinglish) passed to every prompt | P0 | Not started |
 | F7 | Tutor answers a doubt from notes with a follow-up question | P0 | Not started |
 | F8 | Adaptive quiz on the current weak topic | P0 | Partial (static MCQs) |
@@ -71,7 +71,7 @@ P0 = required for the demo · P1 = strengthens judging · P2 = post-hackathon.
 | F14 | Agent decision log (observation → diagnosis → decision → action → result) | P0 | Not started |
 | F15 | Progress graph over time | P1 | Not started |
 | F16 | Image / screenshot upload with OCR or multimodal model | P1 | Not started |
-| F17 | Whisper fallback for speech-to-text | P1 | Dropped (see s15) |
+| F17 | Whisper / other speech models | P1 | Dropped: Gemini is the only model (s15) |
 | F18 | Embedding-based retrieval (vs keyword) | P1 | Not started |
 | F19 | PDF export of study pack | P2 | Done (jsPDF) |
 | F20 | User accounts and login | P2 | Not started |
@@ -83,7 +83,7 @@ P0 = required for the demo · P1 = strengthens judging · P2 = post-hackathon.
 | Latency | Tutor answer starts speaking within 5 s of the student finishing (s14 tightens to ~1.5 s for live voice) |
 | Reliability | Every LLM call returns validated JSON; on parse failure, retry once, then show a friendly error |
 | Demo safety | A seeded demo dataset (ML notes + student profile) can be loaded in one click |
-| Browser support | Chrome desktop; typed-input fallback elsewhere |
+| Browser support | Chrome desktop (mic access) |
 | Privacy | API keys only on the server; uploaded notes not shared beyond the LLM call |
 | Cost | Free tiers for the demo; no paid services required |
 | Security | Escape all model output before rendering |
@@ -96,7 +96,7 @@ P0 = required for the demo · P1 = strengthens judging · P2 = post-hackathon.
 | Frontend | HTML, CSS, vanilla JS | Next.js, TypeScript, Tailwind |
 | Backend | Python FastAPI | FastAPI + workers |
 | LLM | Gemini Flash | Gemini (multimodal) |
-| Voice | Gemini Live native audio (fallback: browser STT + Sarvam TTS) | Gemini Live / Whisper + managed TTS |
+| Voice | Gemini Live native audio | Gemini Live / Whisper + managed TTS |
 | Retrieval | Keyword / BM25 over in-memory chunks | Sentence Transformers + ChromaDB |
 | Database | SQLite | PostgreSQL / Supabase |
 | Hosting | Render | Vercel + Render/Railway |
@@ -167,8 +167,8 @@ See `TEAM_PLAN.md` (3 people, 1 chunk each) and `CHECKLIST.md`. Original phases:
 ## 12. Risks and Mitigations
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
-| Speech recognition mishears Hinglish or fails on venue Wi-Fi/mic | Demo breaks | Typed fallback; quiet room; pre-tested mic; Chrome only |
-| LLM returns invalid JSON or slow responses | Stalls the demo | JSON mode, schema check, one retry, cached demo responses |
+| Speech recognition mishears Hinglish or fails on venue Wi-Fi/mic | Demo breaks | Quiet room; pre-tested mic; Chrome only; backup video of a good run |
+| LLM returns invalid JSON or slow responses | Stalls the demo | JSON mode, schema check, one retry; on failure show the error and retry (no canned content) |
 | Misconception output is vague | Weakens core differentiator | Few-shot prompt with a fixed taxonomy |
 | API rate limits during judging | Errors on stage | Separate demo API key; cache last good responses |
 | Scope creep across 7 agents | Unfinished demo | Agents can share one call; P0 list is the cutline |
@@ -187,7 +187,7 @@ See `TEAM_PLAN.md` (3 people, 1 chunk each) and `CHECKLIST.md`. Original phases:
 ## 14. Conversational Voice Tutor (replaces F4/F5 as the voice core)
 
 ### 14.1 Problem with the v1 voice plan
-v1 used browser SpeechRecognition + speechSynthesis: the student speaks, text comes back, a robotic voice reads it. That is a chatbot with a microphone. It cannot hear *how* the student sounds, cannot be interrupted, and cannot sound warm or concerned.
+The earlier idea used browser SpeechRecognition + speechSynthesis: the student speaks, text comes back, a robotic voice reads it. That is a chatbot with a microphone. It cannot hear *how* the student sounds, cannot be interrupted, and cannot sound warm or concerned.
 
 ### 14.2 Goal
 A **person-to-person discussion**: the tutor ("Eklavya") talks with the student in natural spoken Hindi / English / Hinglish, reacts to tone as well as words, and responds with matching emotion. Not question-in / answer-out.
@@ -205,7 +205,7 @@ A **person-to-person discussion**: the tutor ("Eklavya") talks with the student 
 | V8 | Every factual claim grounded in the student's notes via a `search_notes` tool call; cites the source | P0 |
 | V9 | Learner state signal (confusion, confidence, frustration) saved per turn and used in the mastery rule | P0 |
 | V10 | Voice quiz inside the conversation: tutor asks, student answers aloud, answer graded server-side | P0 |
-| V11 | Fallback chain if the live model fails: cascade (browser STT -> Gemini text -> Indic TTS) -> browser speech -> typed | P0 |
+| V11 | No fallback models: if Gemini fails or hits quota the UI shows a clear error with retry; no canned or alternate-vendor content | P0 |
 | V12 | Live transcript shown on screen, with an emotion chip per student turn | P1 |
 | V13 | Persona and voice selectable (calm mentor / friendly senior) | P2 |
 
@@ -213,9 +213,6 @@ A **person-to-person discussion**: the tutor ("Eklavya") talks with the student 
 | Role | Choice | Why | Risk / to verify |
 |---|---|---|---|
 | Primary: live voice | **Gemini Live API (native audio)**, Gemini Flash family | One model hears audio directly (tone, not just transcript), speaks back, supports barge-in, tool calling and Hindi; already our LLM vendor; free tier exists | Sources conflict on whether "affective dialog" is a flag or default in the newest model; exact model ID, Hindi quality and free-tier limits must be checked against current docs before building |
-| Fallback TTS | **Sarvam Bulbul (v3/v4)** | Indian-language voices with emotion, streaming, free credits (Rs 1,000 reported) | Vendor claims; run a listening test |
-| Fallback STT | Browser SpeechRecognition (en-IN/hi-IN) | Free, no key | Chrome only |
-| Last resort | Browser speechSynthesis | Always available | Robotic |
 
 Emotion is handled in two layers: (1) the native-audio model hears tone and adjusts its own delivery; (2) the tutor calls `report_learner_state` each turn so the emotion becomes **data** (stored, logged, shown on the dashboard) rather than only a vibe.
 
@@ -241,7 +238,7 @@ Confidence is no longer a UI input. It is derived: `confidence = 1 - hesitation/
 | Interruption | Tutor audio stops within ~300 ms of barge-in |
 | Privacy | Mic audio streams browser -> our backend -> Gemini only; not stored; transcripts stored per user. API keys only on server |
 | Safety | Wrap-up if no speech for 30 s; hard cap on session length to protect free-tier quota |
-| Cost | Free tiers only for demo; session cap and cached fallback |
+| Cost | Free tier only for demo; session cap |
 
 ## 14.9 Video tutor (planned, not in hackathon scope)
 Phase V2 adds a talking avatar so the tutor has a face. Same brain, new "body".
@@ -253,13 +250,13 @@ Phase V2 adds a talking avatar so the tutor has a face. Same brain, new "body".
 - Acceptance for V2: avatar responds to the same demo journey with visible lip-sync and no added delay beyond ~1 s.
 
 ## 15. Changes to base PRD
-- **F4, F5 (voice in/out)**: now P0 via section 14; browser APIs become the fallback, not the primary.
+- **F4, F5 (voice in/out)**: now P0 via section 14 and handled entirely by Gemini Live; no browser or third-party speech models.
 - **F6 language toggle**: becomes the starting language only; tutor follows the student's language mid-conversation.
-- **F7 tutor**: replaced by the live conversation + `search_notes` tool; `/api/tutor/ask` kept as the text fallback.
+- **F7 tutor**: replaced by the live conversation + `search_notes` tool; `/api/tutor/ask` kept as a text channel to the same Gemini model.
 - **F9/F10/F11**: confidence comes from `report_learner_state` (14.7).
 - **F14 agent log**: also records emotion signals and tool calls.
-- **F17 Whisper fallback**: dropped in favour of the Gemini Live path + browser STT fallback.
+- **F17 Whisper fallback**: dropped: Gemini Live is the only speech path.
 - **New API**: `WS /ws/voice` (live session proxy). Existing REST endpoints stay.
 - **New table**: `learner_state(id, user_id, topic_id, confusion, confidence, frustration, note, created_at)`.
-- **New risks**: live-model preview instability or quota; Hindi voice quality; mic/Wi-Fi at venue (mitigated by V11 fallback chain and a recorded backup demo).
+- **New risks**: live-model preview instability or quota; Hindi voice quality; mic/Wi-Fi at venue (mitigated by testing on the demo laptop and a recorded backup demo; no fallback models).
 - **Demo acceptance**: add "student interrupts the tutor mid-sentence and it stops", and "tutor's tone visibly changes after a wrong answer (reassuring) vs a right one (upbeat)".

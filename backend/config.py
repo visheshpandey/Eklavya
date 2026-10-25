@@ -13,3 +13,13 @@ DEMO_USER_ID = 1  # single seeded student, no login
 CORRECT_GAIN = 15
 WRONG_PENALTY = 10
 RETRIEVAL_TOP_K = 4
+
+# --- Gemini Live (voice tutor). Model IDs are env-configurable because they change; verify with
+# scripts/check_gemini.py before relying on them.
+GEMINI_LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.8-live")
+LIVE_VOICE = os.getenv("LIVE_VOICE", "Kore")
+# Not supported on every Live model (docs: not on 3.1 Flash Live). Emotion is also captured via report_learner_state.
+LIVE_AFFECTIVE_DIALOG = os.getenv("LIVE_AFFECTIVE_DIALOG", "false").lower() == "true"
+SESSION_CAP_SECONDS = int(os.getenv("SESSION_CAP_SECONDS", "840"))  # Live audio sessions are limited to 15 min
+INPUT_AUDIO_MIME = "audio/pcm;rate=16000"   # browser -> Gemini
+OUTPUT_SAMPLE_RATE = 24000                  # Gemini -> browser

@@ -14,12 +14,12 @@ Status: early build. The original StudyAI summary/quiz generator works as a base
 | [docs/LOG.md](docs/LOG.md) | Progress log |
 
 ## Stack
-FastAPI (Python) · SQLite · Gemini (text + Live native audio) · vanilla JS frontend · Sarvam TTS as fallback voice.
+FastAPI (Python) · SQLite · Gemini (text + Live native audio) · vanilla JS frontend. Gemini is the only model and vendor: no fallback models or services.
 
 ## Project structure
 ```
-backend/    main.py, gemini.py, live.py, tools.py, tts.py, db.py, retrieval.py, mastery.py,
-            seed.py, schemas.py, config.py, pdf_extract.py, agents/, routers/, fallback/
+backend/    main.py, gemini.py, live.py, tools.py, db.py, retrieval.py, mastery.py,
+            seed.py, schemas.py, config.py, pdf_extract.py, agents/, routers/
 frontend/   index.html, css/, js/ (voice, audio-worklet, emotion, presenter, quiz, mission, dashboard)
 prompts/    master_prompt.md, persona_eklavya.md, misconception_taxonomy.md
 samples/    ml_notes.txt
@@ -43,6 +43,7 @@ Check `http://localhost:5000/` returns `{"status":"StudyAI API is running"}`.
 
 ## Rules
 - API keys only in `backend/.env` (never committed).
-- External APIs are called from the backend only, with a 10-minute cache and a fallback response.
+- Gemini is the only model. There are no fallback models, canned answers or second vendors: if Gemini fails the API returns a 502 and the UI shows the error.
+- All Gemini calls are made from the backend only (10-minute cache, one retry on bad JSON).
 - Demo uses one seeded student (`user_id = 1`), no login.
 - Use Chrome (mic access) for the demo.

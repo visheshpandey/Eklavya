@@ -7,6 +7,7 @@ class TutorAskRequest(BaseModel):
     question: str
     language: str = "hinglish"  # english | hindi | hinglish
     subject: str | None = None
+    document_id: int | None = None
 
 
 class QuizGenerateRequest(BaseModel):
@@ -20,7 +21,7 @@ class QuizSubmitRequest(BaseModel):
     user_id: int = 1
     question_id: int
     student_answer: str
-    confidence: float = 0.5  # 0-1
+    confidence: float | None = None  # 0-1; None = use latest voice tone signal
 
 
 class MissionRequest(BaseModel):

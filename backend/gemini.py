@@ -70,6 +70,18 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
     return {"success": False, "error": last_error}
 
 
+class LLMError(Exception):
+    """Gemini call failed after its retry. Routers turn this into a 502."""
+
+
+def llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7):
+    """Like call_llm_json but returns the data dict or raises LLMError (no fallback content)."""
+    res = call_llm_json(system, prompt, required_keys, temperature)
+    if not res["success"]:
+        raise LLMError(res["error"])
+    return res["data"]
+
+
 def build_prompt(text: str, difficulty: str, num_questions: int) -> str:
     return f"""Analyze the text below and return ONLY a valid JSON object.
 

@@ -2,11 +2,14 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
-from gemini import generate_study_content
+from gemini import generate_study_content, LLMError
 from pdf_extract import extract_text_from_pdf
 import io
+import db
+from routers import documents, tutor, quiz, missions, dashboard, demo, voice_ws
 
 app = FastAPI(title="StudyAI API")
+db.init_db()
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,6 +17,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(LLMError)
+async def llm_error_handler(request, exc):
+    """Gemini is the only model: when it fails the client gets a clear 502, never canned content."""
+    return JSONResponse(status_code=502, content={"error": f"Gemini request failed: {exc}"})
+
+
+for _r in (documents, tutor, quiz, missions, dashboard, demo, voice_ws):
+    app.include_router(_r.router)
+
 
 @app.get("/")
 def root():

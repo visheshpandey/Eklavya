@@ -10,7 +10,7 @@ Browser (Chrome)
  ├─ Mic ─ AudioWorklet ─ PCM16 16 kHz ─┐
  ├─ Speaker ◄─ PCM 24 kHz ◄────────────┤  WebSocket /ws/voice   frontend/js/voice.js
  ├─ Transcript + emotion chips · Quiz · Mission · Dashboard
- └─ REST (upload, dashboard, text fallback)
+ └─ REST (upload, dashboard, text channel)
                   │
                   ▼
 FastAPI (backend/main.py)
@@ -23,7 +23,6 @@ FastAPI (backend/main.py)
  │             ├─ grade_answer        → agents/evaluation.py + misconception.py + mastery.py
  │             └─ get_mission         → agents/study_mission.py
  ├─ routers/{documents,tutor,quiz,missions,dashboard,demo}.py   (REST)
- ├─ fallback/cascade.py   browser STT text → Gemini text → Sarvam TTS
  └─ db.py (SQLite)   gemini.py (call_llm_json, cache)
 ```
 
@@ -40,14 +39,13 @@ The browser never sees the API key; the backend holds the Live session (keys, to
 8. End: transcript saved, mission generated, dashboard refreshed.
 
 WebSocket messages (JSON control + binary audio):
-`{type:"transcript", role, text}` · `{type:"emotion", confusion, confidence, frustration}` · `{type:"interrupted"}` · `{type:"mastery", topic, before, after}` · `{type:"mission", ...}` · `{type:"error", fallback:"cascade"}`
+`{type:"transcript", role, text}` · `{type:"emotion", confusion, confidence, frustration}` · `{type:"interrupted"}` · `{type:"mastery", topic, before, after}` · `{type:"mission", ...}` · `{type:"error", message}`
 
-## 3. Fallback chain (PRD V11)
-1. Gemini Live native audio (primary)
-2. Cascade: browser SpeechRecognition → `call_llm_json`/text → Sarvam Bulbul TTS (via backend, cached)
-3. Browser SpeechRecognition → text → browser speechSynthesis
-4. Typed input + text answer
-The backend switches automatically on connection error, quota error or 5 s with no audio, and sends `{type:"error", fallback}` so the UI shows which mode is active.
+## 3. Failure handling (PRD V11): no fallbacks
+Gemini is the only model and vendor. If it fails (connection, quota, bad JSON after one retry):
+- REST: `LLMError` -> HTTP 502 `{"error": "Gemini request failed: ..."}`; no canned or partial content is returned, and nothing is written to the database (grading classifies before it writes).
+- Voice WS: send `{type:"error", message}`, close the session cleanly; the UI shows the message with a retry button.
+- Protect the free tier with a session length cap and a separate demo API key.
 
 ## 4. File layout
 
@@ -59,14 +57,12 @@ studyai/
 │   ├── gemini.py               call_llm_json + cache (text agents)
 │   ├── live.py                 NEW Gemini Live session wrapper (open, send audio, receive, tools)
 │   ├── tools.py                NEW tool declarations + dispatcher → agents/db
-│   ├── tts.py                  NEW Sarvam TTS client (cached, fallback)
 │   ├── db.py · schemas.py · retrieval.py · mastery.py · seed.py · pdf_extract.py
 │   ├── agents/                 document_intelligence, learner_profile, voice_tutor, quiz,
 │   │                           evaluation, misconception, study_mission, logger
 │   ├── routers/
 │   │   ├── voice_ws.py         NEW WS /ws/voice
-│   │   └── documents, tutor (text fallback), quiz, missions, dashboard, demo
-│   ├── fallback/cascade.py     NEW non-live path
+│   │   └── documents, tutor (text channel), quiz, missions, dashboard, demo
 │   └── data/                   SQLite file (gitignored)
 ├── frontend/
 │   ├── index.html
@@ -101,13 +97,11 @@ Backend impact: add `routers/avatar.py` to create the avatar session token; pers
 | Decision | Why |
 |---|---|
 | Gemini Live native audio over STT→LLM→TTS | Hears tone, natural turn-taking and barge-in, lower latency, one vendor |
-| Backend proxy for the Live session | Keeps key off the browser, lets tools hit DB/RAG, enables logging and fallback switching |
+| Backend proxy for the Live session | Keeps key off the browser, lets tools hit DB/RAG, enables logging |
 | Emotion as tool-reported data | Makes tone auditable, drives mastery and the dashboard, not just flavour |
-| Cascade fallback kept | Preview live models can fail on stage |
 | SQLite + FastAPI kept | Already in place, enough for demo |
 
 ## 8. Risks / verify before building
 - Gemini Live model ID, preview status, free-tier limits, Hindi quality, and whether affective dialog is a flag or default in the chosen model (sources conflict).
-- Sarvam Bulbul quality and credits for Hindi/Hinglish.
 - Browser audio on venue hardware; test the AudioWorklet path in Chrome.
 - Avatar vendors: all pricing and latency numbers so far are vendor-sourced.
