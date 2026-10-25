@@ -1,3 +1,113 @@
-# Architecture
+# Architecture — StudyPilot Voice (v2)
 
-See readme.md. Backend: FastAPI + SQLite + Gemini. Frontend: vanilla JS modules in frontend/js.
+Stack: FastAPI + SQLite + Gemini (text and Live audio), vanilla JS frontend. See `PRD.md` section 14 for requirements.
+
+## 1. System diagram
+
+```
+Browser (Chrome)
+ ├─ Presenter  (audio-only now │ avatar later)        frontend/js/presenter.js
+ ├─ Mic ─ AudioWorklet ─ PCM16 16 kHz ─┐
+ ├─ Speaker ◄─ PCM 24 kHz ◄────────────┤  WebSocket /ws/voice   frontend/js/voice.js
+ ├─ Transcript + emotion chips · Quiz · Mission · Dashboard
+ └─ REST (upload, dashboard, text fallback)
+                  │
+                  ▼
+FastAPI (backend/main.py)
+ ├─ routers/voice_ws.py   ── session proxy ──► Gemini Live API (native audio)
+ │      ▲  tool calls                                 │ audio + transcripts + tool calls
+ │      └────────── tools.py (dispatcher) ◄───────────┘
+ │             ├─ search_notes        → retrieval.py → SQLite chunks
+ │             ├─ report_learner_state→ learner_state + agent_logs
+ │             ├─ ask_quiz_question   → agents/quiz.py
+ │             ├─ grade_answer        → agents/evaluation.py + misconception.py + mastery.py
+ │             └─ get_mission         → agents/study_mission.py
+ ├─ routers/{documents,tutor,quiz,missions,dashboard,demo}.py   (REST)
+ ├─ fallback/cascade.py   browser STT text → Gemini text → Sarvam TTS
+ └─ db.py (SQLite)   gemini.py (call_llm_json, cache)
+```
+
+The browser never sees the API key; the backend holds the Live session (keys, tool execution and logging stay server-side, matching the API rules).
+
+## 2. Voice session flow
+1. Student clicks "Talk" → browser opens `WS /ws/voice?user_id=1&lang=hinglish`.
+2. Backend opens a Gemini Live session with: persona system prompt (`prompts/persona_eklavya.md`), tool declarations, language hint, session cap.
+3. Mic audio streams browser → backend → Gemini; model audio streams back and plays immediately.
+4. Barge-in: Gemini signals interruption → backend forwards `interrupted` → browser flushes its audio queue.
+5. Model calls tools mid-conversation; backend runs them (DB/LLM) and returns results; model continues speaking.
+6. Each student turn: model calls `report_learner_state`; backend stores it, logs to `agent_logs`, pushes an emotion chip to the UI.
+7. Quiz: `ask_quiz_question` → tutor asks aloud → student answers → `grade_answer` → mastery update, misconception named, tutor reacts emotionally accordingly.
+8. End: transcript saved, mission generated, dashboard refreshed.
+
+WebSocket messages (JSON control + binary audio):
+`{type:"transcript", role, text}` · `{type:"emotion", confusion, confidence, frustration}` · `{type:"interrupted"}` · `{type:"mastery", topic, before, after}` · `{type:"mission", ...}` · `{type:"error", fallback:"cascade"}`
+
+## 3. Fallback chain (PRD V11)
+1. Gemini Live native audio (primary)
+2. Cascade: browser SpeechRecognition → `call_llm_json`/text → Sarvam Bulbul TTS (via backend, cached)
+3. Browser SpeechRecognition → text → browser speechSynthesis
+4. Typed input + text answer
+The backend switches automatically on connection error, quota error or 5 s with no audio, and sends `{type:"error", fallback}` so the UI shows which mode is active.
+
+## 4. File layout
+
+```
+studyai/
+├── backend/
+│   ├── main.py                 app, CORS, router registration
+│   ├── config.py               env, constants (model IDs, session cap, top-k)
+│   ├── gemini.py               call_llm_json + cache (text agents)
+│   ├── live.py                 NEW Gemini Live session wrapper (open, send audio, receive, tools)
+│   ├── tools.py                NEW tool declarations + dispatcher → agents/db
+│   ├── tts.py                  NEW Sarvam TTS client (cached, fallback)
+│   ├── db.py · schemas.py · retrieval.py · mastery.py · seed.py · pdf_extract.py
+│   ├── agents/                 document_intelligence, learner_profile, voice_tutor, quiz,
+│   │                           evaluation, misconception, study_mission, logger
+│   ├── routers/
+│   │   ├── voice_ws.py         NEW WS /ws/voice
+│   │   └── documents, tutor (text fallback), quiz, missions, dashboard, demo
+│   ├── fallback/cascade.py     NEW non-live path
+│   └── data/                   SQLite file (gitignored)
+├── frontend/
+│   ├── index.html
+│   ├── css/styles.css
+│   └── js/
+│       ├── api.js · language.js · tutor.js · quiz.js · mission.js · dashboard.js
+│       ├── voice.js            WS client, mic capture, playback queue, barge-in
+│       ├── audio-worklet.js    NEW PCM16 capture processor
+│       ├── presenter.js        NEW Presenter interface (audio-only │ avatar)
+│       └── emotion.js          NEW emotion chips + tone indicator
+├── prompts/
+│   ├── master_prompt.md
+│   ├── persona_eklavya.md      NEW persona + style rules + examples
+│   └── misconception_taxonomy.md  NEW fixed taxonomy for few-shot
+├── samples/ml_notes.txt
+└── docs/  PRD.md · ARCHITECTURE.md · CHECKLIST.md · LOG.md
+```
+
+## 5. Data model changes
+Base 9 tables unchanged, plus:
+- `learner_state(id, user_id, topic_id, confusion, confidence, frustration, note, created_at)`
+- `voice_sessions(id, user_id, started_at, ended_at, mode, language, turns)` and `transcripts(session_id, role, text, ts)`
+`agent_logs` also records tool calls and emotion signals.
+
+## 6. Video upgrade path (Phase V2, not built now)
+`Presenter` interface keeps the UI independent of how the tutor is shown:
+- `AudioPresenter` (now): plays PCM, shows waveform.
+- `AvatarPresenter` (later): WebRTC avatar (Tavus or HeyGen LiveAvatar) rendered in a `<video>`.
+Backend impact: add `routers/avatar.py` to create the avatar session token; persona, tools, retrieval, emotion logging stay identical. Decision pending (verify vendor pricing, Hindi lip-sync): vendor-driven voice with our LLM as brain, vs piping Gemini Live audio into the avatar.
+
+## 7. Key decisions and why
+| Decision | Why |
+|---|---|
+| Gemini Live native audio over STT→LLM→TTS | Hears tone, natural turn-taking and barge-in, lower latency, one vendor |
+| Backend proxy for the Live session | Keeps key off the browser, lets tools hit DB/RAG, enables logging and fallback switching |
+| Emotion as tool-reported data | Makes tone auditable, drives mastery and the dashboard, not just flavour |
+| Cascade fallback kept | Preview live models can fail on stage |
+| SQLite + FastAPI kept | Already in place, enough for demo |
+
+## 8. Risks / verify before building
+- Gemini Live model ID, preview status, free-tier limits, Hindi quality, and whether affective dialog is a flag or default in the chosen model (sources conflict).
+- Sarvam Bulbul quality and credits for Hindi/Hinglish.
+- Browser audio on venue hardware; test the AudioWorklet path in Chrome.
+- Avatar vendors: all pricing and latency numbers so far are vendor-sourced.
