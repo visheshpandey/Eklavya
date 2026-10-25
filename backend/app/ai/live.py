@@ -49,9 +49,21 @@ def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
     return ""
 
 
-def build_system_prompt(language: str, topics: list, mode: str = "free", focus_topic: Optional[dict] = None) -> str:
+def debate_plan(topic_name: str, side: str, motion: str) -> str:
+    """The debate rules for the live tutor: the topic, which side it argues, and the motion (or ask it to pick one)."""
+    stated = motion or f'none given, so pick one clear, debatable one-sentence motion about "{topic_name}" and say it in your first turn'
+    return (prompts.load("debate_plan.md").replace("{{TOPIC}}", topic_name)
+            .replace("{{SIDE}}", side).replace("{{MOTION}}", stated))
+
+
+def build_system_prompt(language: str, topics: list, mode: str = "free", focus_topic: Optional[dict] = None,
+                        debate: Optional[dict] = None) -> str:
     text = prompts.load("persona_eklavya.md")
-    plan = session_plan(mode, focus_topic["topic_name"]) if focus_topic and mode in ("learn", "test") else ""
+    plan = ""
+    if focus_topic and mode in ("learn", "test"):
+        plan = session_plan(mode, focus_topic["topic_name"])
+    elif focus_topic and mode == "debate" and debate:
+        plan = debate_plan(focus_topic["topic_name"], debate["side"], debate["motion"])
     return (text.replace("{{LANGUAGE}}", LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["hinglish"]))
                 .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "not specified")
                 .replace("{{SESSION_PLAN}}", plan))
@@ -59,6 +71,9 @@ def build_system_prompt(language: str, topics: list, mode: str = "free", focus_t
 
 def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> str:
     lang = LANGUAGE_NAMES.get(language, "Hinglish")
+    if focus_topic and mode == "debate":
+        return (f'[The student wants to debate "{focus_topic["topic_name"]}" with you. Say one short, friendly, competitive line in {lang}, '
+                'then give your opening statement right away.]')
     if focus_topic and mode == "learn":
         return (f'[The student chose to learn "{focus_topic["topic_name"]}". Say one short friendly line in {lang} that you will '
                 'teach it step by step and then take a short voice test, then start step 1 right away.]')
@@ -96,10 +111,11 @@ def default_connect(system_prompt: str):
 
 class LiveTutorSession:
     def __init__(self, ws: WebSocket, user_id: int, language: str, document_id: Optional[int],
-                 topics: list, connect=None, mode: str = "free", focus_topic: Optional[dict] = None):
+                 topics: list, connect=None, mode: str = "free", focus_topic: Optional[dict] = None,
+                 debate: Optional[dict] = None):
         self.ws, self.user_id, self.language = ws, user_id, language
         self.topics = topics
-        self.mode, self.focus_topic = mode, focus_topic
+        self.mode, self.focus_topic, self.debate = mode, focus_topic, debate   # debate: {"side": "for"|"against", "motion": str}
         self.connect = connect or default_connect
         self.ctx = ToolContext(user_id=user_id, document_id=document_id, emit=self.emit, topics=topics,
                                focus_topic_id=focus_topic["id"] if focus_topic else None, mode=mode)
@@ -214,11 +230,14 @@ class LiveTutorSession:
             db.execute, "INSERT INTO voice_sessions (user_id, mode, language) VALUES (?, ?, ?)",
             (self.user_id, "gemini-live", self.language))
         try:
-            prompt = build_system_prompt(self.language, self.topics, self.mode, self.focus_topic)
+            prompt = build_system_prompt(self.language, self.topics, self.mode, self.focus_topic, self.debate)
             async with self.connect(prompt) as session:
                 if self.focus_topic and self.mode in ("learn", "test"):
                     await self.emit({"type": "phase", "phase": "teaching" if self.mode == "learn" else "test",
                                      "topic": self.focus_topic["topic_name"]})
+                elif self.focus_topic and self.mode == "debate" and self.debate:
+                    await self.emit({"type": "phase", "phase": "debate", "topic": self.focus_topic["topic_name"],
+                                     "side": self.debate["side"], "motion": self.debate["motion"]})
                 await session.send_realtime_input(text=opening_message(self.language, self.mode, self.focus_topic))
                 tasks = [asyncio.create_task(self._gemini_to_browser(session)),
                          asyncio.create_task(self._browser_to_gemini(session)),

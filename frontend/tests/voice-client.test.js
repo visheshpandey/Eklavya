@@ -82,6 +82,16 @@ test('a normal start reaches "listening" and delivers server events', async () =
   assert.deepEqual(JSON.parse(sockets[0].sent.at(-1)), { type: 'user_text', text: 'hello' });
 });
 
+test('a debate adds the side and the encoded motion to the socket URL; other modes do not', async () => {
+  const { client, allowMic, settle } = setup();
+  const started = client.start({ mode: 'debate', topicId: 7, side: 'against', motion: 'Recall > precision?' });
+  allowMic();
+  await settle();
+  sockets[0].open();
+  await started;
+  assert.match(sockets[0].url, /&mode=debate&topic_id=7&side=against&motion=Recall%20%3E%20precision%3F$/);
+});
+
 test('stopping while the microphone prompt is open cancels quietly and releases everything', async () => {
   const { client, statuses, allowMic, settle } = setup();
   const started = client.start();

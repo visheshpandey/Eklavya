@@ -21,6 +21,7 @@ import { mountLibrary } from './components/library.js';
 import { mountStudyHeader } from './components/study-header.js';
 import { mountSessionOrb } from './components/session-orb.js';
 import { mountStepper } from './components/stepper.js';
+import { mountDebateTag } from './components/debate-tag.js';
 import { mountTextInput } from './components/text-input.js';
 import { mountChat } from './components/chat.js';
 import { mountEmotionCard } from './components/emotion-card.js';
@@ -70,10 +71,12 @@ mountStudyHeader({
   store, root: byId('studyHeader'),
   onLearn: (topicId) => session.start(SESSION_MODE.LEARN, topicId),
   onTest: (topicId) => session.start(SESSION_MODE.TEST, topicId),
+  onDebate: (topicId, options) => session.start(SESSION_MODE.DEBATE, topicId, options),
   onBrowse: () => store.dispatch(actions.viewChanged(VIEWS.LIBRARY)),
 });
 mountSessionOrb({ store, orb: byId('orb'), status: byId('status'), onToggle: session.toggle });
 mountStepper({ store, root: byId('stepper') });
+mountDebateTag({ store, root: byId('debateTag') });
 mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.sendText });
 mountSummaryCard({ store, root: byId('summary') });
 mountChat({ store, root: byId('chat') });

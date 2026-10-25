@@ -251,7 +251,7 @@ The student picks a topic and the tutor runs a guided lesson, not an open chat.
 | V17 | After the last answer: a spoken summary (what went well, the misconception found, mastery change), then the study mission is spoken; the screen shows a summary card (score, mastery before -> after, mistakes, resolved) | P0 |
 | V18 | The UI shows the current phase (Learning / Voice test / Summary) and "Question n of 3" | P1 |
 
-API: `GET /api/topics/{id}`; `WS /ws/voice?mode=learn|test&topic_id=N`; events `phase`, `test_summary`, and `number`/`total` on `quiz_question`.
+API: `GET /api/topics/{id}`; `WS /ws/voice?mode=learn|test&topic_id=N`; debate mode: `mode=debate&topic_id=N&side=for|against&motion=...` (voice debate against the tutor, grounded in the student's notes, ends with a spoken verdict); events `phase`, `test_summary`, and `number`/`total` on `quiz_question`.
 
 ## 14.9 Video tutor (planned, not in hackathon scope)
 Phase V2 adds a talking avatar so the tutor has a face. Same brain, new "body".

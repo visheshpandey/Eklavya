@@ -12,5 +12,5 @@ export const SERVER_EVENT = Object.freeze({
   INTERRUPTED: 'interrupted', TURN_COMPLETE: 'turn_complete', ERROR: 'error',
 });
 
-/** What the tutor does when a session starts. */
-export const SESSION_MODE = Object.freeze({ FREE: 'free', LEARN: 'learn', TEST: 'test' });
+/** What the tutor does when a session starts. DEBATE: the student argues against the tutor on a topic. */
+export const SESSION_MODE = Object.freeze({ FREE: 'free', LEARN: 'learn', TEST: 'test', DEBATE: 'debate' });

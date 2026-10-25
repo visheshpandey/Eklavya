@@ -173,7 +173,9 @@ user click / server event
 
 ## 4. WebSocket protocol (`/ws/voice`)
 
-`ws://<api>/ws/voice?user_id=1&lang=hinglish[&mode=learn|test&topic_id=N]`
+`ws://<api>/ws/voice?user_id=1&lang=hinglish[&mode=learn|test|debate&topic_id=N&side=for|against&motion=...]`
+
+`debate`: the student debates Eklavya on the topic. `side` is the side **Eklavya** argues (default `for`); `motion` is optional free text up to 200 characters (empty = Eklavya picks one). The rules live in `app/prompts/debate_plan.md`. The server sends `{"type":"phase","phase":"debate","topic","side","motion"}` first.
 
 Binary frames: mic audio up (PCM16 mono 16 kHz), tutor audio down (PCM16 mono 24 kHz).
 

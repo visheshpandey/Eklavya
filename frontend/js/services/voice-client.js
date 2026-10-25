@@ -42,7 +42,7 @@ export class VoiceClient {
    * Open the mic and the WebSocket. Rejects with a readable Error if either fails.
    * Resolves quietly (and releases everything) if stop() is called while it is still starting.
    */
-  async start({ userId = 1, lang = 'hinglish', mode = 'free', topicId = null } = {}) {
+  async start({ userId = 1, lang = 'hinglish', mode = 'free', topicId = null, side = null, motion = '' } = {}) {
     if (this.ws) return;
     const id = ++this.session;       // starting a new session cancels any start that is still waiting
     const current = () => this.session === id;
@@ -78,7 +78,8 @@ export class VoiceClient {
       throw new Error(err.name === 'NotAllowedError' ? 'Microphone permission was denied.' : `Could not start the microphone: ${err.message}`);
     }
 
-    const extra = topicId ? `&mode=${encodeURIComponent(mode)}&topic_id=${topicId}` : '';
+    let extra = topicId ? `&mode=${encodeURIComponent(mode)}&topic_id=${topicId}` : '';
+    if (topicId && mode === 'debate') extra += `&side=${side === 'against' ? 'against' : 'for'}&motion=${encodeURIComponent(motion)}`;
     ws = new WebSocket(`${WS_BASE}/ws/voice?user_id=${userId}&lang=${encodeURIComponent(lang)}${extra}`);
     ws.binaryType = 'arraybuffer';
     this.ws = ws;

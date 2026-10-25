@@ -93,3 +93,10 @@ test('values at an answer number hold each topic at its latest value so far', ()
   assert.equal(valuesAt(series, 4).find((v) => v.name === 'Precision').answeredNow, true);
   assert.equal(valuesAt(series, 4).find((v) => v.name === 'Recall').answeredNow, false);
 });
+
+test('a debate phase event keeps the side and motion for the debate tag', () => {
+  let state = reducer(initialState, actions.sessionStarted({ mode: 'debate', topicId: 3 }));
+  state = reducer(state, actions.phaseChanged({ phase: 'debate', topic: 'Precision', side: 'against', motion: 'Precision beats recall' }));
+  assert.deepEqual(state.session.phase, { phase: 'debate', topic: 'Precision', side: 'against', motion: 'Precision beats recall' });
+  assert.equal(state.session.mode, 'debate');
+});

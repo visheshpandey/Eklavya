@@ -48,12 +48,12 @@ export function createSessionController({ store, notes, notifier, getLanguage, u
     }
   }
 
-  /** Start a session. `topicId` is required for learn/test modes. */
-  async function start(mode = SESSION_MODE.FREE, topicId = null) {
+  /** Start a session. `topicId` is required for learn/test/debate modes; `debate` is {side, motion} for debates. */
+  async function start(mode = SESSION_MODE.FREE, topicId = null, debate = {}) {
     if (active()) voice.stop();
     store.dispatch(actions.sessionStarted({ mode, topicId }));
     try {
-      await voice.start({ userId, lang: getLanguage(), mode, topicId });
+      await voice.start({ userId, lang: getLanguage(), mode, topicId, side: debate.side, motion: debate.motion });
     } catch (err) {
       notifier.error(err);
     }

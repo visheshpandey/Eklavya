@@ -276,3 +276,12 @@
 
 .mobile-only { display: inline-flex; justify-self: start; }
 @media (min-width: 64rem) { .mobile-only { display: none; } }
+
+/* ---------- debate */
+.debate-body { display: grid; gap: var(--s-3); }
+.choices { display: grid; gap: var(--s-1); border: 0; padding: 0; margin: 0; }
+.choices legend { font-weight: 600; font-size: var(--text-sm); padding: 0; margin-bottom: var(--s-1); }
+.choice { display: flex; align-items: center; gap: var(--s-2); min-height: var(--tap); cursor: pointer; }
+.choice input { width: 18px; height: 18px; accent-color: var(--accent-fill); flex: none; }
+.field-label { font-weight: 600; font-size: var(--text-sm); }
+.debate-tag { margin: 0; padding: var(--s-2) var(--s-3); border: 1px solid var(--line-strong); border-radius: var(--r-control); background: var(--accent-soft); color: var(--ink); font-size: var(--text-sm); }

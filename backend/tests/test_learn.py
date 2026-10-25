@@ -101,3 +101,35 @@ def test_picking_a_missing_topic_is_an_error_not_a_free_chat():
     with client.websocket_connect("/ws/voice?mode=learn&topic_id=99999") as ws:
         ev = ws.receive_json()
     assert ev["type"] == "error" and "Pick a topic" in ev["message"]
+
+
+def test_debate_mode_sets_side_and_motion_and_skips_quiz_warmup(monkeypatch):
+    tid = topic_id("Precision")
+    warmed = []
+    monkeypatch.setattr(quiz, "warm_up", lambda t: warmed.append(t))
+    fake = FakeSession([[sc(turn_complete=True)]])
+    monkeypatch.setattr(live, "default_connect", fake_connect(fake))
+    with client.websocket_connect(f"/ws/voice?mode=debate&topic_id={tid}&side=against&motion=Precision%20beats%20recall") as ws:
+        ev, _ = collect(ws)
+    phase = next(e for e in ev if e["type"] == "phase")
+    assert phase == {"type": "phase", "phase": "debate", "topic": "Precision", "side": "against", "motion": "Precision beats recall"}
+    assert "DEBATE" in fake.system_prompt and "you argue against the motion" in fake.system_prompt
+    assert "Precision beats recall" in fake.system_prompt and "{{" not in fake.system_prompt
+    assert any('debate "Precision"' in str(s.get("text", "")) for s in fake.sent)
+    assert warmed == []
+
+
+def test_debate_without_a_motion_lets_the_tutor_pick_and_bad_side_defaults_to_for(monkeypatch):
+    tid = topic_id("Recall")
+    fake = FakeSession([[sc(turn_complete=True)]])
+    monkeypatch.setattr(live, "default_connect", fake_connect(fake))
+    with client.websocket_connect(f"/ws/voice?mode=debate&topic_id={tid}&side=sideways") as ws:
+        ev, _ = collect(ws)
+    assert next(e for e in ev if e["type"] == "phase")["side"] == "for"
+    assert "pick one clear, debatable one-sentence motion" in fake.system_prompt
+
+
+def test_debate_needs_a_topic():
+    with client.websocket_connect("/ws/voice?mode=debate") as ws:
+        ev = ws.receive_json()
+    assert ev["type"] == "error" and "Pick a topic" in ev["message"]

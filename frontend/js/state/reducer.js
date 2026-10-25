@@ -5,7 +5,7 @@ import { VOICE_STATUS, SESSION_MODE } from '../lib/protocol.js';
 const emptySession = () => ({
   mode: SESSION_MODE.FREE,
   topicId: null,
-  phase: null,        // {phase: 'teaching'|'test'|'summary', topic}
+  phase: null,        // {phase: 'teaching'|'test'|'summary'|'debate', topic, side?, motion?} (side = the side the tutor argues)
   messages: [],       // [{role: 'user'|'tutor', text, final, cut?}]
   emotion: null,      // latest tone reading
   question: null,     // quiz question currently on screen
@@ -112,7 +112,7 @@ export function reducer(state, action) {
     case A.EMOTION_REPORTED:
       return withSession(state, { emotion: payload });
     case A.PHASE_CHANGED:
-      return withSession(state, { phase: { phase: payload.phase, topic: payload.topic } });
+      return withSession(state, { phase: { phase: payload.phase, topic: payload.topic, ...(payload.side ? { side: payload.side, motion: payload.motion } : {}) } });
     case A.QUESTION_ASKED:
       return withSession(state, { question: payload, result: null, summary: null });
     case A.ANSWER_GRADED:

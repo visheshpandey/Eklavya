@@ -98,3 +98,9 @@
 - `/api/dashboard` progress rows now carry attempt id, topic name and before/after mastery for the chart.
 - Fix: `.gitignore` ignored every `lib/` folder, so `frontend/js/lib/*` was never committed; the rule is now anchored to the repo root.
 - Checks: axe-core 0 violations (desktop light/dark, tablet, phone), no horizontal scroll, all controls at least 44 px. Tests: backend 59, frontend 56. See `docs/DESIGN.md`.
+
+## Debate mode
+- Student and Eklavya debate a topic by voice. `Debate Eklavya on this topic` panel in the Study section: choose which side Eklavya argues, optionally type a motion (otherwise Eklavya states one), start.
+- Backend: `mode=debate&side=&motion=` on `/ws/voice`; rules in `app/prompts/debate_plan.md` (notes as evidence, opening, three rebuttal exchanges, closing, spoken verdict with one strength and one improvement); `phase` event carries side and motion. No quiz warm-up in this mode.
+- Frontend: `SESSION_MODE.DEBATE`, `onDebate` flow, `debate-tag` component (motion and side while the debate runs).
+- Verified in real Chrome with the real Gemini Live: tag shown, Eklavya opens with a notes-based argument, a typed rebuttal gets a counter-argument. Tests: backend 62, frontend 59.
