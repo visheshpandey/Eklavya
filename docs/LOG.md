@@ -41,3 +41,9 @@
 - Tests: `tests/test_live.py` (5, scripted fake of the Gemini Live session) + P2 tests = 11 passing, stable over 5 runs. These prove our event mapping, tool dispatch, barge-in, persistence and error handling.
 - NOT verified (needs GEMINI_API_KEY): that the real Gemini Live API behaves as the fake does. Specifically unconfirmed: the live model ID (`gemini-3.8-live` is from one docs page; another says 3.1 Flash Live lacks affective dialog, so `LIVE_AFFECTIVE_DIALOG` defaults to false), Hindi/Hinglish voice quality, latency, function-calling behaviour, 15-minute audio session cap. Run `python backend/scripts/check_gemini.py` first.
 - Note: `get_mission` and wrong-answer classification make a second (text) Gemini call inside a tool call, which adds latency to the spoken turn.
+
+## 2026-10-25 (real Gemini check passed)
+- `scripts/check_gemini.py` with the real key: text JSON call OK; Gemini Live OK on `gemini-3.8-live` (658,560 bytes of 24 kHz PCM audio back, mime `audio/pcm;rate=24000`, tools `search_notes` and `report_learner_state` called by the model, Hinglish reply grounded in the notes).
+- Models on this key include `gemini-3.8-live`, `gemini-3.1-flash-live-preview`, `gemini-2.5-flash-native-audio-*`, `gemini-3.8-flash`, `gemini-flash-latest`. Defaults kept: `GEMINI_MODEL=gemini-flash-latest`, `GEMINI_LIVE_MODEL=gemini-3.8-live`.
+- Observed: output transcription chunks can join without a space ("kitneactually"); watch for this when finalizing tutor text in `live.py` / the UI.
+- Still unjudged: Hindi/Hinglish voice quality by ear, spoken latency, interrupt behaviour on a real mic, session limits.

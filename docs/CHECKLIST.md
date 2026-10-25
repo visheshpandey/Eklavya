@@ -18,7 +18,7 @@ Legend: [x] done · [ ] todo · (P0 demo-critical, P1 nice, P2 later)
 - [ ] Load `css/` and `js/` modules from `index.html`
 
 ## Voice v2 — conversational tutor (PRD s14) · P0
-- [ ] Verify with a real key: run `python backend/scripts/check_gemini.py` (model IDs, Live audio + tool call, Hindi quality, free-tier limits, affective-dialog flag)
+- [x] Verified 2026-10-25 with a real key (text + Live + tool calls work; Hindi quality by ear and latency still to judge): run `python backend/scripts/check_gemini.py` (model IDs, Live audio + tool call, Hindi quality, free-tier limits, affective-dialog flag)
 - [x] `persona_eklavya.md` written (still to tune by ear in AI Studio / a live session)
 - [x] `live.py` + `routers/voice_ws.py` (WS proxy, barge-in)
 - [x] `tools.py`: search_notes, report_learner_state, ask_quiz_question, grade_answer, get_mission
