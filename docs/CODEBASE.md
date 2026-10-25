@@ -144,6 +144,23 @@ user click / server event
 | a server event | add its name to `lib/protocol.js`, handle it in `session-controller.js`, dispatch an action |
 | an API call | add a method to `backend` in `services/api-client.js` |
 
+## 3b. Notes, chunking and topics
+
+* A student can have **several notes documents**. The dashboard groups topics by document (newest first) and
+  each group has a Remove button (`DELETE /api/documents/{id}`, which also deletes the progress on its topics).
+  "Load demo notes" replaces only the demo document; uploads are kept.
+* A topic picked for **learn/test** is taught from its own document. The **open conversation** searches all notes.
+* `domain/retrieval.chunk_text` splits notes into ~200-word chunks. A long block with no blank lines (typical of
+  PDF text) is cut at `Unit-I / Module 2 / Chapter 3 / Course Objective` markers, then at sentence ends, and the
+  marker title becomes the chunk heading.
+* `agents/document_intelligence` sends up to 60,000 characters to Gemini for topics (max 30; names get a subject
+  prefix such as "DBMS: Normalization" when the notes cover several subjects), then files each chunk under the
+  topic whose words match its heading/text best (rare words weigh more). A topic with no chunk of its own shows
+  its closest passages (`notes_are_related`).
+* Gemini may answer `{"questions": [...]}` or a bare list; `ai.gemini.extract_list` accepts both.
+* When a lesson starts, `quiz.warm_up` writes the topic's test questions in the background so the test does not
+  wait for Gemini.
+
 ## 4. WebSocket protocol (`/ws/voice`)
 
 `ws://<api>/ws/voice?user_id=1&lang=hinglish[&mode=learn|test&topic_id=N]`

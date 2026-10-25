@@ -50,7 +50,7 @@ mountTopicCard({
   onLearn: (topicId) => session.start(SESSION_MODE.LEARN, topicId),
   onTest: (topicId) => session.start(SESSION_MODE.TEST, topicId),
 });
-mountMasteryList({ store, root: byId('mastery'), onOpenTopic: notes.openTopic });
+mountMasteryList({ store, root: byId('mastery'), onOpenTopic: notes.openTopic, onRemoveDocument: notes.removeDocument });
 mountAlertsList({ store, root: byId('alerts') });
 mountMissionCard({ store, root: byId('mission') });
 mountHistoryList({ store, root: byId('history') });

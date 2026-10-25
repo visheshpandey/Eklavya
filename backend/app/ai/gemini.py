@@ -83,9 +83,26 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
     return {"success": False, "error": last_error}
 
 
-def llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7) -> dict:
+def llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7) -> dict | list:
     """Like ``call_llm_json`` but returns the data dict or raises ``LLMError``."""
     result = call_llm_json(system, prompt, required_keys, temperature)
     if not result["success"]:
         raise LLMError(f"Gemini request failed: {result['error']}")
     return result["data"]
+
+
+def extract_list(data, *keys) -> list:
+    """Gemini sometimes answers with a bare JSON array instead of {"key": [...]}. Accept both.
+
+    Looks for the first of ``keys`` holding a list, then for the only list in the object; returns [] if none.
+    """
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for key in keys:
+            if isinstance(data.get(key), list):
+                return data[key]
+        lists = [value for value in data.values() if isinstance(value, list)]
+        if len(lists) == 1:
+            return lists[0]
+    return []

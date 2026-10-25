@@ -17,10 +17,9 @@ SYSTEM = ("You are Eklavya, a warm study mentor. Answer ONLY from the notes prov
 
 
 def ask(user_id: int, question: str, language: str = "hinglish", document_id: int = None):
-    document_id = document_id or retrieval.latest_document_id(user_id)
-    if not document_id:
+    if not document_id and not retrieval.has_notes(user_id):
         raise BadRequestError("No notes uploaded yet. Upload a document first.")
-    chunks = retrieval.retrieve(document_id, question)
+    chunks = retrieval.retrieve(document_id, question) if document_id else retrieval.retrieve_for_user(user_id, question)
     if not chunks:
         log_agent(user_id, "voice_tutor", f"Question: {question}", "No matching notes found", "Told student it is not in the notes", 0.3)
         return {"answer": "I could not find this in your notes. Try rephrasing, or upload the chapter that covers it.",
@@ -39,7 +38,7 @@ Return JSON {{"answer": "...", "follow_up_question": "one short question that ch
     top = chunks[0]
     out = {"answer": d["answer"], "follow_up_question": d["follow_up_question"],
            "source_topic": d.get("source_topic") or top["topic"]}
-    out.update({"source_document": document_id, "grounded": True, "chunks_used": len(chunks)})
+    out.update({"source_document": top["document_id"], "grounded": True, "chunks_used": len(chunks)})
     log_agent(user_id, "voice_tutor", f"Question: {question} [{language}]",
               f"Retrieved {len(chunks)} chunks, best: {top['topic']} ({top['score']})",
               "Answered from notes", 0.8)

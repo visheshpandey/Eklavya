@@ -1,10 +1,12 @@
-// One clickable bar per topic. Row elements are reused between renders so width changes animate.
+// Topics grouped by the notes they came from, one clickable bar per topic.
+// Row elements are reused between renders so width changes animate.
 import { el } from '../lib/dom.js';
 import { masteryLevel } from '../lib/format.js';
 import { selectDashboard, selectSelectedTopicId } from '../state/selectors.js';
 
-export function mountMasteryList({ store, root, onOpenTopic }) {
-  const rows = new Map();   // topicId -> {node, fill, value, name}
+export function mountMasteryList({ store, root, onOpenTopic, onRemoveDocument }) {
+  const rows = new Map();     // topicId -> {node, fill, value, name, fresh}
+  const groups = new Map();   // documentId -> {node, title, count}
 
   function createRow(topicId) {
     const name = el('span', { class: 'mname' });
@@ -17,19 +19,42 @@ export function mountMasteryList({ store, root, onOpenTopic }) {
     return { node, fill, value, name, fresh: true };
   }
 
+  function createGroup(documentId) {
+    const title = el('span', { class: 'mgroup-name' });
+    const count = el('span', { class: 'mgroup-count' });
+    const remove = el('button', { class: 'mgroup-remove', type: 'button', title: 'Remove these notes and your progress on them' }, 'Remove');
+    remove.addEventListener('click', () => {
+      if (window.confirm(`Remove "${title.textContent}" and your progress on its topics?`)) onRemoveDocument(documentId);
+    });
+    return { node: el('div', { class: 'mgroup' }, title, count, remove), title, count };
+  }
+
   function render() {
     const { dashboard, selectedTopicId } = store.getState();
     if (!dashboard) { root.replaceChildren(el('p', { class: 'empty', text: 'Loading…' })); return; }
     if (!dashboard.mastery.length) {
-      rows.clear();
+      rows.clear(); groups.clear();
       root.replaceChildren(el('p', { class: 'empty', text: 'No notes yet. Load the demo notes or upload your own.' }));
       return;
     }
     const weakestId = dashboard.weak_topics[0]?.topic_id;
-    const ids = new Set(dashboard.mastery.map((m) => m.topic_id));
-    for (const id of [...rows.keys()]) if (!ids.has(id)) rows.delete(id);
+    const topicIds = new Set(dashboard.mastery.map((m) => m.topic_id));
+    const documentIds = new Set(dashboard.mastery.map((m) => m.document_id));
+    for (const id of [...rows.keys()]) if (!topicIds.has(id)) rows.delete(id);
+    for (const id of [...groups.keys()]) if (!documentIds.has(id)) groups.delete(id);
 
-    const ordered = dashboard.mastery.map((m) => {
+    const ordered = [];
+    let lastDocument = null;
+    for (const m of dashboard.mastery) {                       // the server sends topics grouped by document, newest first
+      if (m.document_id !== lastDocument) {
+        lastDocument = m.document_id;
+        const group = groups.get(m.document_id) ?? createGroup(m.document_id);
+        groups.set(m.document_id, group);
+        const inGroup = dashboard.mastery.filter((x) => x.document_id === m.document_id).length;
+        group.title.textContent = m.document;
+        group.count.textContent = `${inGroup} topic${inGroup === 1 ? '' : 's'}`;
+        ordered.push(group.node);
+      }
       const row = rows.get(m.topic_id) ?? createRow(m.topic_id);
       rows.set(m.topic_id, row);
       const percent = Math.round(m.mastery_score);
@@ -38,8 +63,8 @@ export function mountMasteryList({ store, root, onOpenTopic }) {
       row.value.textContent = `${percent}%`;
       if (row.fresh) { row.fresh = false; requestAnimationFrame(() => { row.fill.style.width = `${percent}%`; }); }
       else row.fill.style.width = `${percent}%`;
-      return row.node;
-    });
+      ordered.push(row.node);
+    }
     // Re-inserting an unchanged list would restart the CSS transition, so only touch the DOM when the set changed.
     const current = [...root.children];
     if (current.length !== ordered.length || current.some((node, i) => node !== ordered[i])) root.replaceChildren(...ordered);

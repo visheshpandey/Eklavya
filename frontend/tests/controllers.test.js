@@ -18,6 +18,7 @@ function setup({ backendOverrides = {} } = {}) {
     dashboard: async () => { calls.push('dashboard'); return { mastery: [{ topic_id: 1 }], weak_topics: [], alerts: [], quiz_history: [], agent_log: [], mission: null }; },
     seedDemo: async () => { calls.push('seed'); return {}; },
     uploadDocument: async (file) => { calls.push(`upload:${file.name}`); return { topics_found: [{}, {}] }; },
+    deleteDocument: async (id) => { calls.push(`delete:${id}`); return { deleted: id }; },
     topic: async (id) => { calls.push(`topic:${id}`); return { topic_id: id, topic_name: 'Precision', notes: [], open_misconceptions: [], mastery: 38, question_count: 3 }; },
     ...backendOverrides,
   };
@@ -187,4 +188,29 @@ test('notes: a failing topic refresh does not turn a successful dashboard refres
   fail = true;
   assert.equal(await notes.refresh(), true);
   assert.equal(store.getState().banner, null);
+});
+
+test('notes: removing a document ends the session, deletes it, resets state and reloads the dashboard', async () => {
+  const { store, notes, calls, endedCount } = setup();
+  await notes.openTopic(1);
+  calls.length = 0;
+  assert.equal(await notes.removeDocument(7), true);
+  assert.deepEqual(calls, ['delete:7', 'dashboard']);
+  assert.equal(endedCount(), 1);
+  assert.equal(store.getState().selectedTopicId, null);          // the open topic may have belonged to it
+  assert.match(store.getState().toasts.at(-1).text, /Notes removed/);
+});
+
+test('notes: a failed removal is reported and leaves the state alone', async () => {
+  const { store, notes } = setup({ backendOverrides: { deleteDocument: async () => { throw new ApiError('Unknown document', { status: 404, code: 'not_found' }); } } });
+  assert.equal(await notes.removeDocument(99), false);
+  assert.equal(store.getState().banner, 'Unknown document');
+});
+
+test('api client: deleteDocument sends DELETE to the document url', async () => {
+  let seen;
+  globalThis.fetch = async (url, options) => { seen = { url, method: options.method }; return { ok: true, status: 200, json: async () => ({ deleted: 7 }) }; };
+  assert.deepEqual(await backend.deleteDocument(7, 1), { deleted: 7 });
+  assert.match(seen.url, /\/api\/documents\/7\?user_id=1$/);
+  assert.equal(seen.method, 'DELETE');
 });

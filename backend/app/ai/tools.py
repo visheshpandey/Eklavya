@@ -61,7 +61,7 @@ TOOLS = [types.Tool(function_declarations=TOOL_DECLARATIONS)]
 @dataclass
 class ToolContext:
     user_id: int
-    document_id: Optional[int]
+    document_id: Optional[int]   # when set, note search is limited to this document (the focused topic's); None = all notes
     emit: Callable[[dict], Awaitable[None]]
     current_question_id: Optional[int] = None
     topics: list = field(default_factory=list)  # [{id, topic_name}]
@@ -93,16 +93,17 @@ def _num(v, default=0.5):
 
 
 async def search_notes(ctx: ToolContext, query: str = "", **_):
-    if not ctx.document_id:
-        return {"found": False, "message": "No notes uploaded."}
-    hits = await asyncio.to_thread(retrieval.retrieve, ctx.document_id, query)
+    if ctx.document_id:
+        hits = await asyncio.to_thread(retrieval.retrieve, ctx.document_id, query)
+    else:
+        hits = await asyncio.to_thread(retrieval.retrieve_for_user, ctx.user_id, query)
     log_agent(ctx.user_id, "voice_tutor", f"search_notes('{query}')",
               f"{len(hits)} chunks" + (f", best: {hits[0]['topic']} ({hits[0]['score']})" if hits else ""),
               "Grounded the answer in notes" if hits else "Nothing found in notes", 0.8 if hits else 0.3)
     if not hits:
         return {"found": False, "message": "Nothing about this in the student's notes."}
     return {"found": True, "results": [
-        {"topic": h["topic"], "section": h["heading"], "text": h["text"]} for h in hits]}
+        {"document": h["document"], "topic": h["topic"], "section": h["heading"], "text": h["text"]} for h in hits]}
 
 
 async def report_learner_state(ctx: ToolContext, topic: str = "", confusion=0.5, confidence=0.5,

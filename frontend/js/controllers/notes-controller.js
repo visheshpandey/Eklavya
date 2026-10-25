@@ -58,6 +58,15 @@ export function createNotesController({ store, backend, notifier, userId, endSes
       notifier.success(`Found ${result.topics_found.length} topics in ${file.name}. Tap one to start.`);
     }),
 
+    /** Remove one notes document and the progress on its topics. */
+    removeDocument: (documentId) => guarded(async () => {
+      endSession();
+      await backend.deleteDocument(documentId, userId);
+      store.dispatch(actions.notesReset());
+      await loadDashboard();
+      notifier.info('Notes removed.');
+    }),
+
     openTopic: (topicId) => guarded(async () => {
       store.dispatch(actions.topicSelected(topicId));
       store.dispatch(actions.topicLoaded(await backend.topic(topicId, userId)));

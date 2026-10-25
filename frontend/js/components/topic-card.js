@@ -9,9 +9,10 @@ export function mountTopicCard({ store, root, onLearn, onTest }) {
     render(root,
       el('div', { class: 'card-title' }, el('span', { text: 'Selected topic' }), el('span', { class: 'pill', text: `Mastery ${Math.round(topic.mastery)}%` })),
       el('h3', { text: topic.topic_name }),
-      el('p', { class: 'meta', text: `${topic.question_count} practice question(s) ready` }),
+      el('p', { class: 'meta', text: topic.question_count ? `${topic.question_count} practice question(s) ready` : 'Test questions are written from your notes when the test starts' }),
+      topic.notes_are_related ? el('p', { class: 'hint', text: 'Nothing is filed under this topic, so these are the closest passages in your notes.' }) : null,
       el('div', { class: 'notes' }, topic.notes.length
-        ? topic.notes.map((n) => el('div', {}, n.heading ? el('strong', { text: n.heading }) : null, el('span', { text: n.text })))
+        ? topic.notes.map((n) => el('div', {}, n.heading && !n.text.startsWith(n.heading) ? el('strong', { text: n.heading }) : null, el('span', { text: n.text })))
         : [el('span', { text: 'No notes were matched to this topic.' })]),
       topic.open_misconceptions.length ? el('p', { class: 'warn', text: `To fix: ${topic.open_misconceptions[0].misconception_text}` }) : null,
       el('div', { class: 'actions' },

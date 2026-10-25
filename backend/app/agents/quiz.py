@@ -3,14 +3,17 @@
 Questions are stored with a per-wrong-option misconception so grading can name the exact
 root error without another LLM call (and the demo keeps working if the LLM is down).
 """
+import logging
 import random
 
 from app import db
 from app.agents.logger import log_agent
-from app.ai.gemini import llm_json
+from app.ai.gemini import extract_list, llm_json
 from app.domain import retrieval
 from app.domain.misconceptions import LABELS
-from app.errors import LLMError, NotFoundError
+from app.errors import AppError, LLMError, NotFoundError
+
+log = logging.getLogger(__name__)
 
 SYSTEM = "You write multiple-choice questions that expose specific misconceptions. Respond with valid JSON only."
 
@@ -53,9 +56,9 @@ Every wrong option must have a misconceptions entry. Make wrong options plausibl
 
 Notes:
 {context}"""
-    data = llm_json(SYSTEM, prompt, required_keys=("questions",), temperature=0.6)
+    data = llm_json(SYSTEM, prompt, temperature=0.6)
     ids = []
-    for q in data["questions"]:
+    for q in extract_list(data, "questions", "quiz"):
         try:
             opts, correct = q["options"], str(q["correct"]).strip().upper()[:1]
             if len(opts) != 4 or correct not in "ABCD":
@@ -67,7 +70,22 @@ Notes:
                  db.dumps(q.get("misconceptions", {})), difficulty)))
         except (KeyError, TypeError):
             continue
+    if not ids:
+        raise LLMError("Gemini did not return usable questions for this topic.")
     return ids
+
+
+def warm_up(topic_id: int, count: int = 3) -> None:
+    """Write test questions ahead of time (best effort) so a voice test does not wait on Gemini.
+
+    Failures are only logged: the live tutor asks for questions again when the test starts.
+    """
+    try:
+        stored = db.one("SELECT COUNT(*) AS n FROM quiz_questions WHERE topic_id = ?", (topic_id,))["n"]
+        if stored < count:
+            _generate_with_llm(topic_id, count - stored, "Medium")
+    except AppError as exc:
+        log.warning("Could not pre-write questions for topic %s: %s", topic_id, exc)
 
 
 def generate(user_id: int, topic_id: int, count: int = 5, difficulty: str = "Medium"):

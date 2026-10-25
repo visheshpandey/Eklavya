@@ -39,6 +39,7 @@ async function request(path, { method = 'GET', json, form } = {}) {
 export const backend = {
   dashboard: (userId) => request(`/api/dashboard?user_id=${userId}`),
   topic: (topicId, userId) => request(`/api/topics/${topicId}?user_id=${userId}`),
+  deleteDocument: (documentId, userId) => request(`/api/documents/${documentId}?user_id=${userId}`, { method: 'DELETE' }),
   seedDemo: (userId) => request(`/api/demo/seed?user_id=${userId}`, { method: 'POST' }),
   uploadDocument: (file, userId) => {
     const form = new FormData();

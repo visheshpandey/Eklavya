@@ -9,8 +9,9 @@ LEARNER_STATE_LIMIT = 10
 
 def build_dashboard(user_id: int) -> dict:
     mastery = db.query(
-        "SELECT t.id AS topic_id, t.topic_name, m.mastery_score, m.confidence_score "
-        "FROM learner_mastery m JOIN topics t ON t.id = m.topic_id WHERE m.user_id = ? ORDER BY t.id", (user_id,))
+        "SELECT t.id AS topic_id, t.topic_name, t.document_id, d.file_name AS document, m.mastery_score, m.confidence_score "
+        "FROM learner_mastery m JOIN topics t ON t.id = m.topic_id JOIN documents d ON d.id = t.document_id "
+        "WHERE m.user_id = ? ORDER BY d.id DESC, t.id", (user_id,))
     weak = sorted((m for m in mastery if m["mastery_score"] < WEAK_BELOW), key=lambda m: m["mastery_score"])
     open_misconceptions = db.query(
         "SELECT x.id, x.topic_id, t.topic_name, x.misconception_text, x.label, x.severity, x.detected_at "

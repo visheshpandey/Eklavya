@@ -146,3 +146,11 @@ button, input, select { font: inherit; color: inherit; }
 .history li { display: grid; gap: 2px; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); border-left: 4px solid var(--line); }
 .history li.right { border-left-color: var(--high); } .history li.wrong { border-left-color: var(--low); }
 .history .delta { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* notes groups in the mastery list */
+.mgroup { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--line); font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+.mgroup:first-child { margin-top: 0; }
+.mgroup-name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 700; text-transform: uppercase; color: var(--ink); }
+.mgroup-count { white-space: nowrap; }
+.mgroup-remove { border: 0; background: transparent; color: var(--low); cursor: pointer; font-size: 12px; text-decoration: underline; padding: 4px; }
+.mgroup-remove:hover { filter: brightness(.85); }

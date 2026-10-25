@@ -1,6 +1,6 @@
 """One-click demo data: ML notes, curated questions with per-option misconceptions, student at 38% on Precision.
 
-POST /api/demo/seed resets user data for the demo user and rebuilds it. Curated questions mean the
+POST /api/demo/seed replaces the demo document and its progress (other uploaded notes are kept). Curated questions mean the
 demo quiz and misconception diagnosis work even if the LLM is down.
 """
 from app import db
@@ -8,6 +8,7 @@ from app.agents.document_intelligence import ingest_document
 from app.agents.logger import log_agent
 from app.config import settings
 from app.errors import NotFoundError
+from app.services.documents import delete_document
 
 NOTES_FILE = "ml_notes.txt"   # lives in settings.samples_dir
 
@@ -67,15 +68,9 @@ QUESTIONS = {
 
 
 def _wipe(user_id: int):
-    docs = [d["id"] for d in db.query("SELECT id FROM documents WHERE user_id = ?", (user_id,))]
-    with db.get_conn() as c:
-        for table in ("quiz_attempts", "misconceptions", "study_missions", "agent_logs", "learner_state", "learner_mastery"):
-            c.execute(f"DELETE FROM {table} WHERE user_id = ?", (user_id,))
-        for d in docs:
-            c.execute("DELETE FROM quiz_questions WHERE topic_id IN (SELECT id FROM topics WHERE document_id = ?)", (d,))
-            for table in ("chunks", "topics"):
-                c.execute(f"DELETE FROM {table} WHERE document_id = ?", (d,))
-        c.execute("DELETE FROM documents WHERE user_id = ?", (user_id,))
+    """Remove the previous demo document (and the progress on its topics); the student's own uploads stay."""
+    for doc in db.query("SELECT id FROM documents WHERE user_id = ? AND file_name = ?", (user_id, NOTES_FILE)):
+        delete_document(user_id, doc["id"])
 
 
 def seed_demo(user_id: int = 1):

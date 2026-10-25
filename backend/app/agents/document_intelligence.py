@@ -1,23 +1,29 @@
 """Document Intelligence agent: chunk uploaded text, extract topics, store everything."""
 from app import db
 from app.agents.logger import log_agent
-from app.ai.gemini import llm_json
+from app.ai.gemini import extract_list, llm_json
 from app.domain import retrieval
 from app.errors import BadRequestError, LLMError
 
 SYSTEM = "You extract the topic structure of study notes. Respond with valid JSON only."
 
 
+MAX_TOPICS = 30
+TOPIC_TEXT_CHARS = 60_000   # about 15k tokens: enough for a whole syllabus booklet in one call
+
+
 def _llm_topics(text: str):
     prompt = (
-        'Return JSON {"topics": ["Topic 1", "Topic 2"]}: 3-8 short topic names (1-4 words each) '
-        "covering the notes below, in the order they appear.\n\nNotes:\n" + text[:8000]
+        f'Return JSON {{"topics": ["Topic 1", "Topic 2"]}}: 3-{MAX_TOPICS} study topics (1-6 words each) covering the notes '
+        "below, in the order they appear. If the notes contain several subjects or courses, start each topic with a short "
+        'subject name so topics are distinguishable (for example "DBMS: Normalization"). Skip administrative parts such as '
+        "reference books or marks.\n\nNotes:\n" + text[:TOPIC_TEXT_CHARS]
     )
-    data = llm_json(SYSTEM, prompt, required_keys=("topics",), temperature=0.2)
-    names = [str(t).strip() for t in data["topics"] if str(t).strip()] if isinstance(data["topics"], list) else []
+    data = llm_json(SYSTEM, prompt, temperature=0.2)
+    names = [str(t).strip() for t in extract_list(data, "topics") if str(t).strip()]
     if not names:
         raise LLMError("Gemini returned no topics")
-    return names[:8]
+    return list(dict.fromkeys(names))[:MAX_TOPICS]
 
 
 def _heading_topics(chunks):
@@ -30,16 +36,40 @@ def _heading_topics(chunks):
     return names
 
 
-def _assign_topic(chunk, topics):
-    """topics: list[{id, topic_name}]. Heading match wins, otherwise token overlap."""
+HEADING_WEIGHT = 3   # a topic word found in the chunk's heading counts this many times more than one in its body
+
+
+def _topic_tokens(topics):
+    """Per topic: {word: weight}. A word used by many topics ("data", "unit") says little, so it weighs less."""
+    token_sets = {t["id"]: set(retrieval.tokenize(t["topic_name"])) for t in topics}
+    topics_using = {}
+    for tokens in token_sets.values():
+        for token in tokens:
+            topics_using[token] = topics_using.get(token, 0) + 1
+    return {tid: {token: 1 / topics_using[token] for token in tokens} for tid, tokens in token_sets.items()}
+
+
+def _assign_topic(chunk, topics, weights):
+    """Pick the topic a chunk belongs to: exact heading match, else the best weighted word overlap.
+
+    The score is the share of the topic's (weighted) words that appear in the chunk, with extra credit for words
+    in the heading, so a long or generic topic name cannot win just by matching common words.
+    """
     heading = chunk["heading"].lower()
     for t in topics:
         if t["topic_name"].lower() == heading:
             return t["id"]
-    ctoks = set(retrieval.tokenize(chunk["heading"] + " " + chunk["text"]))
-    best, best_score = None, 0
+    heading_tokens = set(retrieval.tokenize(chunk["heading"]))
+    body_tokens = set(retrieval.tokenize(chunk["text"]))
+    best, best_score = None, 0.0
     for t in topics:
-        score = len(set(retrieval.tokenize(t["topic_name"])) & ctoks)
+        topic_weights = weights[t["id"]]
+        total = sum(topic_weights.values())
+        if not total:
+            continue
+        matched = sum(w * (HEADING_WEIGHT if tok in heading_tokens else 1) for tok, w in topic_weights.items()
+                      if tok in heading_tokens or tok in body_tokens)
+        score = matched / total
         if score > best_score:
             best, best_score = t["id"], score
     return best if best is not None else (topics[0]["id"] if topics else None)
@@ -63,10 +93,11 @@ def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = Tru
         tid = db.execute("INSERT INTO topics (document_id, topic_name) VALUES (?, ?)", (doc_id, n))
         topics.append({"id": tid, "topic_name": n})
         db.execute("INSERT OR IGNORE INTO learner_mastery (user_id, topic_id) VALUES (?, ?)", (user_id, tid))
+    weights = _topic_tokens(topics)
     for c in chunks:
         db.execute(
             "INSERT INTO chunks (document_id, topic_id, heading, text) VALUES (?, ?, ?, ?)",
-            (doc_id, _assign_topic(c, topics), c["heading"], c["text"]),
+            (doc_id, _assign_topic(c, topics, weights), c["heading"], c["text"]),
         )
 
     log_agent(user_id, "document_intelligence",

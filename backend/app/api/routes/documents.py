@@ -6,6 +6,7 @@ from app.agents.document_intelligence import ingest_document
 from app.config import settings
 from app.domain.pdf import extract_text
 from app.errors import BadRequestError, PayloadTooLargeError
+from app.services.documents import delete_document
 
 router = APIRouter()
 MIN_TEXT_CHARS = 50
@@ -27,3 +28,9 @@ async def upload_document(user_id: int = Form(settings.demo_user_id), file: Uplo
         raise BadRequestError("Could not read enough text from this. Scanned PDFs are not supported yet.")
     # ingest calls Gemini (blocking): keep it off the event loop that also serves the voice WebSocket
     return await run_in_threadpool(ingest_document, user_id, name, content)
+
+
+@router.delete("/api/documents/{document_id}")
+def remove_document(document_id: int, user_id: int = settings.demo_user_id):
+    delete_document(user_id, document_id)
+    return {"deleted": document_id}
