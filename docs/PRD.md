@@ -240,6 +240,19 @@ Confidence is no longer a UI input. It is derived: `confidence = 1 - hesitation/
 | Safety | Wrap-up if no speech for 30 s; hard cap on session length to protect free-tier quota |
 | Cost | Free tier only for demo; session cap |
 
+### 14.8b Learn-then-test flow (topic picker)
+The student picks a topic and the tutor runs a guided lesson, not an open chat.
+
+| ID | Requirement | Priority |
+|---|---|---|
+| V14 | Tapping a topic shows what the student's own notes say about it, its mastery, any open misconception, and two actions: "Teach me this, then test me" and "Just test me" | P0 |
+| V15 | Learn mode: the tutor teaches the topic from the notes in 3-4 small spoken steps (one idea, one everyday example, one quick check question each), then announces a 3-question voice test | P0 |
+| V16 | Test mode: 3 distinct questions on that topic only, read aloud with options, answered by voice, graded server-side; never repeats a question in a session | P0 |
+| V17 | After the last answer: a spoken summary (what went well, the misconception found, mastery change), then the study mission is spoken; the screen shows a summary card (score, mastery before -> after, mistakes, resolved) | P0 |
+| V18 | The UI shows the current phase (Learning / Voice test / Summary) and "Question n of 3" | P1 |
+
+API: `GET /api/topics/{id}`; `WS /ws/voice?mode=learn|test&topic_id=N`; events `phase`, `test_summary`, and `number`/`total` on `quiz_question`.
+
 ## 14.9 Video tutor (planned, not in hackathon scope)
 Phase V2 adds a talking avatar so the tutor has a face. Same brain, new "body".
 

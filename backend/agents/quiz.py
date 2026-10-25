@@ -89,9 +89,11 @@ def generate(user_id: int, topic_id: int, count: int = 5, difficulty: str = "Med
     return [_public(q, topic["topic_name"]) for q in chosen]
 
 
-def next_question(user_id: int, topic_id: int = None):
-    """Contract for P3: the next unanswered-correctly question on the weakest (or given) topic.
-    Returns None when the topic has no questions."""
+def next_question(user_id: int, topic_id: int = None, exclude=None):
+    """Contract for P3: the next question on the weakest (or given) topic, skipping `exclude` ids
+    (questions already asked this session). Tops up with Gemini when the topic has none left.
+    Returns None when no question can be found."""
+    exclude = set(exclude or [])
     if topic_id is None:
         w = weakest_topic(user_id)
         if not w:
@@ -100,17 +102,19 @@ def next_question(user_id: int, topic_id: int = None):
     topic = db.one("SELECT topic_name FROM topics WHERE id = ?", (topic_id,))
     if not topic:
         return None
-    rows = db.query("SELECT * FROM quiz_questions WHERE topic_id = ? ORDER BY id", (topic_id,))
-    if not rows:
-        if not _generate_with_llm(topic_id, 3, "Medium"):
-            return None
+
+    def fresh():
         rows = db.query("SELECT * FROM quiz_questions WHERE topic_id = ? ORDER BY id", (topic_id,))
+        return [q for q in rows if q["id"] not in exclude]
+
+    rows = fresh()
+    if not rows:
+        _generate_with_llm(topic_id, 3, "Medium")
+        rows = fresh()
+    if not rows:
+        return None
     solved = {r["question_id"] for r in db.query(
         "SELECT DISTINCT question_id FROM quiz_attempts WHERE user_id = ? AND topic_id = ? AND is_correct = 1",
         (user_id, topic_id))}
     pool = [q for q in rows if q["id"] not in solved] or rows
-    # prefer one not asked most recently so the student does not see the same question twice in a row
-    last = db.one("SELECT question_id FROM quiz_attempts WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,))
-    if last and len(pool) > 1:
-        pool = [q for q in pool if q["id"] != last["question_id"]] or pool
-    return _public(pool[0] if len(pool) == 1 else random.choice(pool[:3]), topic["topic_name"])
+    return _public(pool[0], topic["topic_name"])

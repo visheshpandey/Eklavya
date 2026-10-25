@@ -12,7 +12,7 @@ export class VoiceClient {
 
   _set(state) { this.state = state; this.onState(state); }
 
-  async start({ userId = 1, lang = 'hinglish' } = {}) {
+  async start({ userId = 1, lang = 'hinglish', mode = 'free', topicId = null } = {}) {
     if (this.ws) return;
     this._set('connecting');
     // audio contexts must be created from the click that started the session
@@ -30,7 +30,8 @@ export class VoiceClient {
       throw new Error(e.name === 'NotAllowedError' ? 'Microphone permission was denied.' : 'Could not start the microphone: ' + e.message);
     }
 
-    this.ws = new WebSocket(`${WS_BASE}/ws/voice?user_id=${userId}&lang=${encodeURIComponent(lang)}`);
+    const extra = topicId ? `&mode=${encodeURIComponent(mode)}&topic_id=${topicId}` : '';
+    this.ws = new WebSocket(`${WS_BASE}/ws/voice?user_id=${userId}&lang=${encodeURIComponent(lang)}${extra}`);
     this.ws.binaryType = 'arraybuffer';
     this.ws.onmessage = (m) => this._onMessage(m);
     this.ws.onclose = () => { this._cleanup(); };

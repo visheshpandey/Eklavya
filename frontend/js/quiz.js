@@ -4,7 +4,7 @@ import { el, $ } from './dom.js';
 export function showQuestion(q, onPick) {
   const card = $('quizcard');
   card.replaceChildren(
-    el('div', { class: 'card-title' }, el('span', { text: 'Quiz' }), el('span', { class: 'pill', text: q.topic })),
+    el('div', { class: 'card-title' }, el('span', { text: 'Quiz' }), el('span', { class: 'pill', text: q.number ? 'Question ' + q.number + ' of ' + q.total + ' · ' + q.topic : q.topic })),
     el('p', { class: 'q-text', text: q.question }),
     el('div', { class: 'opts' }, (q.options || []).map((o) => {
       const letter = o.trim().charAt(0);

@@ -65,6 +65,11 @@ class ToolContext:
     emit: Callable[[dict], Awaitable[None]]
     current_question_id: Optional[int] = None
     topics: list = field(default_factory=list)  # [{id, topic_name}]
+    focus_topic_id: Optional[int] = None         # set when the student picked a topic to learn / be tested on
+    mode: str = "free"                           # free | learn | test
+    test_total: int = 3                          # questions in a focused test
+    asked_ids: list = field(default_factory=list)
+    results: list = field(default_factory=list)  # one dict per graded answer this session
 
     def topic_id_for(self, name: Optional[str]) -> Optional[int]:
         """Best fuzzy match of a spoken/LLM topic name to a topic id."""
@@ -112,13 +117,25 @@ async def report_learner_state(ctx: ToolContext, topic: str = "", confusion=0.5,
 
 
 async def ask_quiz_question(ctx: ToolContext, topic: str = None, **_):
-    tid = ctx.topic_id_for(topic) if topic else None
-    q = await asyncio.to_thread(quiz.next_question, ctx.user_id, tid)
+    focused = ctx.focus_topic_id is not None
+    if focused and len(ctx.results) >= ctx.test_total:
+        return {"available": False, "test_complete": True,
+                "message": "The test is finished. Give the spoken summary now, then call get_mission."}
+    tid = ctx.focus_topic_id if focused else (ctx.topic_id_for(topic) if topic else None)
+    q = await asyncio.to_thread(quiz.next_question, ctx.user_id, tid, ctx.asked_ids)
     if not q:
-        return {"available": False, "message": "No questions available for this topic yet."}
+        return {"available": False, "test_complete": focused,
+                "message": "No more questions on this topic." + (" Give the spoken summary now." if focused else "")}
+    ctx.asked_ids.append(q["question_id"])
     ctx.current_question_id = q["question_id"]
+    number = len(ctx.asked_ids)
+    if focused:
+        if number == 1:
+            await ctx.emit({"type": "phase", "phase": "test", "topic": q["topic"]})
+        q = {**q, "number": number, "total": ctx.test_total}
     await ctx.emit({"type": "quiz_question", **q})
-    return {"available": True, "question": q["question"], "options": q["options"], "topic": q["topic"]}
+    return {"available": True, "question": q["question"], "options": q["options"], "topic": q["topic"],
+            **({"question_number": number, "of": ctx.test_total} if focused else {})}
 
 
 async def grade_answer(ctx: ToolContext, student_answer: str = "", confidence=None, **_):
@@ -128,6 +145,9 @@ async def grade_answer(ctx: ToolContext, student_answer: str = "", confidence=No
     res = await asyncio.to_thread(evaluation.grade, ctx.user_id, ctx.current_question_id, student_answer, conf)
     if res.get("unclear"):
         return {"unclear": True, "message": res["message"]}
+    ctx.results.append({"is_correct": res["is_correct"], "before": res["mastery_before"], "after": res["mastery_after"],
+                        "misconception": (res["misconception"] or {}).get("text"),
+                        "resolved": res["misconceptions_resolved"], "topic": res["topic"]})
     await ctx.emit({"type": "mastery", "topic": res["topic"], "before": res["mastery_before"], "after": res["mastery_after"],
                     "is_correct": res["is_correct"], "misconception": res["misconception"],
                     "misconceptions_resolved": res["misconceptions_resolved"]})
@@ -136,6 +156,17 @@ async def grade_answer(ctx: ToolContext, student_answer: str = "", confidence=No
            "misconceptions_resolved": res["misconceptions_resolved"]}
     if res["misconception"]:
         out["misconception"] = res["misconception"]["text"]
+    if ctx.focus_topic_id is not None and len(ctx.results) >= ctx.test_total:
+        r = ctx.results
+        summary = {"type": "test_summary", "topic": res["topic"], "correct": sum(1 for x in r if x["is_correct"]),
+                   "total": len(r), "mastery_before": r[0]["before"], "mastery_after": r[-1]["after"],
+                   "misconceptions": [x["misconception"] for x in r if x["misconception"]],
+                   "resolved": sum(x["resolved"] for x in r)}
+        await ctx.emit({"type": "phase", "phase": "summary", "topic": res["topic"]})
+        await ctx.emit(summary)
+        out["test_complete"] = True
+        out["instruction"] = ("That was the last question. Now give a short warm spoken summary (what went well, the "
+                              "misconception found, how mastery moved), then call get_mission.")
     return out
 
 

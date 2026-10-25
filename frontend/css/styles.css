@@ -123,3 +123,26 @@ button, input, select { font: inherit; color: inherit; }
 .toast.ok { background: var(--high); color: #fff; } .toast.bad { background: var(--low); color: #fff; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* topic picker, phase, summary, history */
+.hint-top { color: var(--muted); font-size: 14px; margin: -4px 0 12px; }
+.mrow { cursor: pointer; padding: 6px 8px; margin: 0 -8px; border-radius: 10px; }
+.mrow:hover { background: var(--surface-2); }
+.mrow.selected { background: var(--accent-soft); outline: 2px solid var(--accent); }
+.topic h3 { font-size: 20px; }
+.topic .meta { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
+.topic .notes { max-height: 200px; overflow-y: auto; background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 14px; display: grid; gap: 8px; }
+.topic .notes strong { display: block; }
+.topic .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.topic .warn { margin-top: 10px; padding: 8px 12px; border-radius: 10px; background: var(--bad-bg); font-size: 14px; }
+.phase { padding: 10px 16px; border-radius: 12px; background: var(--accent-soft); font-weight: 600; display: flex; gap: 10px; align-items: center; }
+.phase[hidden] { display: none; }
+.phase .step { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.summary h3 { font-size: 20px; margin-bottom: 4px; }
+.summary .score { font-size: 32px; font-weight: 800; }
+.summary ul { margin: 8px 0 0; padding-left: 20px; }
+.summary .resolved { color: var(--high); font-weight: 600; margin-top: 8px; }
+.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.history li { display: grid; gap: 2px; font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); border-left: 4px solid var(--line); }
+.history li.right { border-left-color: var(--high); } .history li.wrong { border-left-color: var(--low); }
+.history .delta { color: var(--muted); font-variant-numeric: tabular-nums; }

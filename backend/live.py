@@ -23,11 +23,48 @@ PERSONA_PATH = os.path.join(os.path.dirname(__file__), "..", "prompts", "persona
 LANGUAGE_NAMES = {"english": "English", "hindi": "Hindi", "hinglish": "Hinglish (Hindi and English mixed)"}
 
 
-def build_system_prompt(language: str, topics: list) -> str:
+def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
+    """Extra instructions when the student picked a topic: teach it step by step, then test by voice."""
+    if mode == "learn":
+        return (f'# This session\'s plan: LEARN, then TEST. Topic: "{topic_name}"\n'
+                f'The student chose to learn "{topic_name}". Follow these steps in order, in short spoken turns:\n'
+                f'1. Right away call search_notes with "{topic_name}" and teach the topic from what it returns, in 3-4 small steps. '
+                'One idea per turn, each with a simple everyday example. After each step ask ONE quick question to check they got it, '
+                'wait for their answer, and adapt if they are confused.\n'
+                f'2. When the topic is covered, say you will now take a short voice test ({total} questions) and check they are ready.\n'
+                '3. Test: call ask_quiz_question (it stays on this topic), read the question and the four options, wait for the spoken '
+                'answer, call grade_answer, then react as described in Quiz mode. Then ask the next question.\n'
+                '4. When a tool result says test_complete, give a short warm spoken summary of how they did, then call get_mission '
+                'and tell them what to do next.\n'
+                'Do not skip steps and do not start the test before teaching.')
+    if mode == "test":
+        return (f'# This session\'s plan: TEST. Topic: "{topic_name}"\n'
+                f'The student chose to be tested on "{topic_name}" by voice ({total} questions). Do not teach first.\n'
+                '1. Say one short line that you will start, then call ask_quiz_question, read the question and the four options, '
+                'wait for the spoken answer, call grade_answer, react as described in Quiz mode, and ask the next question.\n'
+                '2. When a tool result says test_complete, give a short warm spoken summary, then call get_mission and tell them what to do next.')
+    return ""
+
+
+def build_system_prompt(language: str, topics: list, mode: str = "free", focus_topic: Optional[dict] = None) -> str:
     with open(PERSONA_PATH, encoding="utf-8") as f:
         text = f.read()
+    plan = session_plan(mode, focus_topic["topic_name"]) if focus_topic and mode in ("learn", "test") else ""
     return (text.replace("{{LANGUAGE}}", LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["hinglish"]))
-                .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "not specified"))
+                .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "not specified")
+                .replace("{{SESSION_PLAN}}", plan))
+
+
+def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> str:
+    lang = LANGUAGE_NAMES.get(language, "Hinglish")
+    if focus_topic and mode == "learn":
+        return (f'[The student chose to learn "{focus_topic["topic_name"]}". Say one short friendly line in {lang} that you will '
+                'teach it step by step and then take a short voice test, then start step 1 right away.]')
+    if focus_topic and mode == "test":
+        return (f'[The student chose to be tested on "{focus_topic["topic_name"]}" by voice. Say one short line in {lang}, '
+                'then start the test.]')
+    return (f"[The student just joined. Greet them warmly in {lang}, in one or two short sentences, "
+            "and ask what they want to work on.]")
 
 
 def build_config(system_prompt: str) -> types.LiveConnectConfig:
@@ -57,11 +94,13 @@ def default_connect(system_prompt: str):
 
 class LiveTutorSession:
     def __init__(self, ws: WebSocket, user_id: int, language: str, document_id: Optional[int],
-                 topics: list, connect=None):
+                 topics: list, connect=None, mode: str = "free", focus_topic: Optional[dict] = None):
         self.ws, self.user_id, self.language = ws, user_id, language
         self.topics = topics
+        self.mode, self.focus_topic = mode, focus_topic
         self.connect = connect or default_connect
-        self.ctx = ToolContext(user_id=user_id, document_id=document_id, emit=self.emit, topics=topics)
+        self.ctx = ToolContext(user_id=user_id, document_id=document_id, emit=self.emit, topics=topics,
+                               focus_topic_id=focus_topic["id"] if focus_topic else None, mode=mode)
         self.user_buf, self.tutor_buf = "", ""
         self.turns = 0
         self.session_id = None
@@ -170,10 +209,12 @@ class LiveTutorSession:
             db.execute, "INSERT INTO voice_sessions (user_id, mode, language) VALUES (?, ?, ?)",
             (self.user_id, "gemini-live", self.language))
         try:
-            async with self.connect(build_system_prompt(self.language, self.topics)) as session:
-                await session.send_realtime_input(text=(
-                    f"[The student just joined. Greet them warmly in {LANGUAGE_NAMES.get(self.language, 'Hinglish')}, "
-                    "in one or two short sentences, and ask what they want to work on.]"))
+            prompt = build_system_prompt(self.language, self.topics, self.mode, self.focus_topic)
+            async with self.connect(prompt) as session:
+                if self.focus_topic and self.mode in ("learn", "test"):
+                    await self.emit({"type": "phase", "phase": "teaching" if self.mode == "learn" else "test",
+                                     "topic": self.focus_topic["topic_name"]})
+                await session.send_realtime_input(text=opening_message(self.language, self.mode, self.focus_topic))
                 tasks = [asyncio.create_task(self._gemini_to_browser(session)),
                          asyncio.create_task(self._browser_to_gemini(session)),
                          asyncio.create_task(asyncio.sleep(config.SESSION_CAP_SECONDS))]

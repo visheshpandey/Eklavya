@@ -57,9 +57,11 @@ P3's `search_notes` needs P2's `retrieve()`; P3's quiz tools need P2's grading a
 ## Frozen contracts
 REST (PRD s8): `/api/upload-document`, `/api/tutor/ask`, `/api/quiz/generate`, `/api/quiz/submit`, `/api/missions/generate`, `/api/dashboard`, `/api/demo/seed`.
 
-WebSocket `/ws/voice?user_id=1&lang=hinglish` — binary = PCM audio; browser can also send JSON `{"type":"user_text","text":"..."}` (typed message to the same Gemini tutor), `{"type":"audio_stream_end"}` (mic paused >1 s) or `{"type":"end"}`. Server JSON:
+WebSocket `/ws/voice?user_id=1&lang=hinglish[&mode=learn|test&topic_id=N]` (`learn` = teach the topic then 3-question voice test; `test` = test only; also REST `GET /api/topics/{id}` returns the topic's notes, mastery, open misconceptions) — binary = PCM audio; browser can also send JSON `{"type":"user_text","text":"..."}` (typed message to the same Gemini tutor), `{"type":"audio_stream_end"}` (mic paused >1 s) or `{"type":"end"}`. Server JSON:
 - `{"type":"transcript","role":"user|tutor","text":"...","final":false|true}` — `final:false` are live chunks to append; `final:true` carries the full turn text (replace the chunks with it)
 - `{"type":"quiz_question","question_id":1,"topic":"...","question":"...","options":["A. ..","B. ..","C. ..","D. .."]}` — sent when the tutor asks a quiz question (never contains the answer)
+- `{"type":"phase","phase":"teaching|test|summary","topic":"..."}` — current stage of a learn/test session
+- `{"type":"test_summary","topic":"..","correct":2,"total":3,"mastery_before":38,"mastery_after":47,"misconceptions":["..."],"resolved":0}` — sent after the last graded answer; `quiz_question` also carries `number` and `total` in a focused test
 - `{"type":"turn_complete"}` — tutor finished speaking this turn
 - `{"type":"emotion","topic":"...","confusion":0-1,"confidence":0-1,"frustration":0-1,"note":"..."}`
 - `{"type":"interrupted"}`

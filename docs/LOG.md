@@ -55,3 +55,10 @@
 - Text model switched to `gemini-3.1-flash-lite` (`gemini-flash-latest` and `gemini-3.x-flash` returned 503/timeouts under load); Gemini calls now time out after 30 s (-> 502).
 - Gotcha: `uvicorn --reload` left an old server child bound to port 5000; kill all python uvicorn processes before restarting.
 - Demo numbers: from 38%, three correct answers reach ~57%, not the PRD's 67%; tune seed/start values if the story must match exactly.
+
+## 2026-10-25 (learn-then-test flow)
+- Problem reported: choosing a topic did nothing and the tutor was an open chat; the student wants "teach me the topic, then test me by voice".
+- Built: `GET /api/topics/{id}` (notes, mastery, open misconceptions); WS params `mode=learn|test` + `topic_id`; a session plan injected into the persona (teach in 3-4 steps -> 3-question voice test -> spoken summary -> mission); tools keep the quiz on the chosen topic, never repeat a question, report test completion; new events `phase`, `test_summary`, numbered `quiz_question`.
+- Frontend: tap a topic -> notes card with "Teach me this, then test me (voice)" / "Just test me (voice)"; phase bar, question n of 3, summary card, recent-answers list, labelled decision log (Saw / Decided / Did).
+- Tests: 16 passing (new `tests/test_learn.py`).
+- PRD check (original PRD vs build) gaps still open: PDF export of the study pack (F19; only in legacy.html), progress graph over time (F15, US7), image upload (F16), seed mastery maths does not reach 38 -> 67 (about 57 after 3 correct), decision log has no explicit "result" step, mission title is Gemini-written (not always "Fix Precision vs Recall Confusion").

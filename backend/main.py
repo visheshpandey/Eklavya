@@ -6,7 +6,7 @@ from gemini import generate_study_content, LLMError
 from pdf_extract import extract_text_from_pdf
 import io
 import db
-from routers import documents, tutor, quiz, missions, dashboard, demo, voice_ws
+from routers import documents, tutor, quiz, missions, dashboard, demo, voice_ws, topics
 
 app = FastAPI(title="StudyAI API")
 db.init_db()
@@ -24,7 +24,7 @@ async def llm_error_handler(request, exc):
     return JSONResponse(status_code=502, content={"error": f"Gemini request failed: {exc}"})
 
 
-for _r in (documents, tutor, quiz, missions, dashboard, demo, voice_ws):
+for _r in (documents, tutor, quiz, missions, dashboard, demo, voice_ws, topics):
     app.include_router(_r.router)
 
 

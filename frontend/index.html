@@ -28,6 +28,7 @@
 
   <main class="grid">
     <section class="talk" aria-label="Talk to Eklavya">
+      <div id="topic" class="card topic" hidden></div>
       <div class="orb-wrap">
         <button id="orb" class="orb" data-state="idle" type="button" aria-label="Start voice session">
           <svg viewBox="0 0 24 24" width="38" height="38" aria-hidden="true"><path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.9V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.6a6 6 0 0 0 5-5.9Z"/></svg>
@@ -36,6 +37,7 @@
         <p class="tip">Use headphones for the best experience.</p>
       </div>
 
+      <div id="phase" class="phase" hidden></div>
       <div id="chat" class="chat" aria-live="polite">
         <p class="chat-empty">Try saying: <em>“Mujhe precision aur recall simple example se samjhao”</em></p>
       </div>
@@ -47,11 +49,13 @@
 
       <div id="emotion" class="card emotion" hidden></div>
       <div id="quizcard" class="card quiz" hidden></div>
+      <div id="summary" class="card summary" hidden></div>
     </section>
 
     <aside class="side" aria-label="Your progress">
       <section class="card">
         <h2>Mastery by topic</h2>
+        <p class="hint-top">Tap a topic to see your notes, then learn it or take a voice test.</p>
         <div id="mastery" class="mastery"><p class="empty">Loading…</p></div>
       </section>
       <section class="card">
@@ -59,6 +63,10 @@
         <ul id="alerts" class="alerts"></ul>
       </section>
       <section id="mission" class="card mission" hidden></section>
+      <section class="card">
+        <h2>Recent answers</h2>
+        <ul id="history" class="history"></ul>
+      </section>
       <section class="card">
         <h2>Why the tutor did that</h2>
         <ul id="log" class="log"></ul>
