@@ -6,9 +6,10 @@ backend/.env
 .venv/
 env/
 venv/
-bin/
-lib/
-include/
+/bin/
+/lib/
+backend/lib/
+/include/
 
 # IDEs
 .vscode/

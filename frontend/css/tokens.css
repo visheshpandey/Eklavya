@@ -1,0 +1,134 @@
+/* Design tokens. The only place colours, type, spacing and shape are defined.
+   Light is the default; dark follows the OS (prefers-color-scheme) unless the viewer picked a theme with the toggle
+   (<html data-theme="light|dark">). Both dark blocks hold the same values: one for the OS setting, one for the toggle. */
+:root {
+  color-scheme: light;
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --ink: #111a26;
+  --ink-2: #455163;
+  --ink-3: #5a6677;
+  --line: #dbe1e8;
+  --line-strong: #bcc6d2;
+  --accent-fill: #256abf;
+  --accent-fill-hover: #184f95;
+  --accent-text: #1c5cab;
+  --accent-soft: #e7f0fb;
+  --on-accent: #ffffff;
+  --ok-text: #0a6b3a;
+  --ok-soft: #e4f4ea;
+  --warn-text: #7a4f00;
+  --warn-soft: #fff1cf;
+  --bad-text: #b3261e;
+  --bad-soft: #fdeceb;
+  --speak: #0a7a45;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --shadow: 0 1px 2px rgb(17 26 38 / .07), 0 4px 14px rgb(17 26 38 / .05);
+
+  /* type: one family, a fixed scale. Segoe UI Variable / system UI first; Nirmala UI and Noto cover Devanagari. */
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Nirmala UI", "Noto Sans Devanagari", Roboto, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --leading: 1.5;
+
+  /* space: 4px base */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+
+  /* shape: controls 8px, panels 12px, pills only for status chips */
+  --r-control: 8px;
+  --r-panel: 12px;
+  --r-pill: 999px;
+
+  /* sizes */
+  --tap: 44px;
+  --topbar: 64px;
+  --sidebar: 22rem;
+  --measure: 68ch;
+
+  /* layers */
+  --z-bar: 20;
+  --z-tabs: 30;
+  --z-toast: 40;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+  color-scheme: dark;
+  --bg: #0d1218;
+  --surface: #151c25;
+  --surface-2: #1e2732;
+  --ink: #e9eef4;
+  --ink-2: #bac5d1;
+  --ink-3: #97a4b3;
+  --line: #273341;
+  --line-strong: #3a4a5f;
+  --accent-fill: #256abf;
+  --accent-fill-hover: #2f78d0;
+  --accent-text: #86b6ef;
+  --accent-soft: #17283f;
+  --on-accent: #ffffff;
+  --ok-text: #62d391;
+  --ok-soft: #12281c;
+  --warn-text: #f0b04a;
+  --warn-soft: #2e2410;
+  --bad-text: #ff908a;
+  --bad-soft: #341a19;
+  --speak: #1a8a52;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 6px 18px rgb(0 0 0 / .28);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1218;
+  --surface: #151c25;
+  --surface-2: #1e2732;
+  --ink: #e9eef4;
+  --ink-2: #bac5d1;
+  --ink-3: #97a4b3;
+  --line: #273341;
+  --line-strong: #3a4a5f;
+  --accent-fill: #256abf;
+  --accent-fill-hover: #2f78d0;
+  --accent-text: #86b6ef;
+  --accent-soft: #17283f;
+  --on-accent: #ffffff;
+  --ok-text: #62d391;
+  --ok-soft: #12281c;
+  --warn-text: #f0b04a;
+  --warn-soft: #2e2410;
+  --bad-text: #ff908a;
+  --bad-soft: #341a19;
+  --speak: #1a8a52;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 6px 18px rgb(0 0 0 / .28);
+}

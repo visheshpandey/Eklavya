@@ -90,3 +90,11 @@
 - Gemini: up to 3 attempts with a growing pause for transient errors (503/504/429/overloaded); whole-document topic extraction uses `GEMINI_LONG_TIMEOUT_MS` (90 s) instead of 30 s.
 - Topic filing: a chunk is filed under a topic only when >= 50% of the topic's weighted words match (heading words count 3x); weak one-word matches stay unfiled; the closest-passages fallback drops runner-ups scoring under 40% of the best.
 - Tests now: backend 58, frontend 45.
+
+## Frontend redesign: three sections, design tokens, accessible chart
+- Information architecture: Notes (sidebar on wide screens), Study, Progress; bottom tab bar on phones. State: `ui.view`, library search, collapsed documents, theme.
+- Styles split into `tokens.css`, `base.css`, `layout.css`, `components.css`; light/dark/system theme toggle; Phosphor icons inline.
+- New components: library, study-header, stepper, nav-tabs, theme-toggle, announcer, mastery-chart (SVG, hover + arrow keys, table view). Old mastery-list, topic-card, phase-bar removed.
+- `/api/dashboard` progress rows now carry attempt id, topic name and before/after mastery for the chart.
+- Fix: `.gitignore` ignored every `lib/` folder, so `frontend/js/lib/*` was never committed; the rule is now anchored to the repo root.
+- Checks: axe-core 0 violations (desktop light/dark, tablet, phone), no horizontal scroll, all controls at least 44 px. Tests: backend 59, frontend 56. See `docs/DESIGN.md`.

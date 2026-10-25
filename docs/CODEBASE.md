@@ -39,15 +39,22 @@ studyai/
 │   ├── index.html                page skeleton (element ids the components mount on)
 │   ├── config.js                 environment config: backend URL, user id
 │   ├── serve.py                  static dev server (set PORT inside)
-│   ├── css/styles.css            design tokens, layout, components (sections in that order)
+│   ├── css/                      tokens.css (colours, type, spacing, light/dark), base.css (reset, focus,
+│   │                             reduced motion), layout.css (sidebar + workspace, bottom tabs on phones),
+│   │                             components.css (buttons, library, quiz, chart, lists). See docs/DESIGN.md
 │   ├── js/
 │   │   ├── main.js               entry: wires store + services + controllers + components
-│   │   ├── lib/                  config.js, protocol.js (shared names), dom.js, format.js
+│   │   ├── lib/                  config.js, protocol.js (shared names), dom.js (el, svgEl, render),
+│   │   │                         format.js, icons.js, theme.js, chart-data.js (pure series maths)
 │   │   ├── services/             api-client.js (HTTP), voice-client.js (mic/WebSocket/audio),
 │   │   │                         audio-worklet.js (mic capture processor)
 │   │   ├── state/                store.js, actions.js, reducer.js, selectors.js
 │   │   ├── controllers/          notes-controller, session-controller, notifier (business logic)
-│   │   └── components/           one file per UI piece (render state, report clicks)
+│   │   └── components/           one file per UI piece (render state, report clicks): shell (banner, toasts,
+│   │                             announcer, nav-tabs, theme-toggle), library, study (study-header,
+│   │                             session-orb, stepper, quiz-card, summary-card, chat, text-input,
+│   │                             emotion-card), progress (mission-card, mastery-chart, alerts-list,
+│   │                             history-list, decision-log)
 │   └── tests/                    node:test, no dependencies: `npm test`
 ├── samples/ml_notes.txt          demo notes (also uploadable to try the upload flow)
 └── docs/                         PRD, architecture, this guide, team plan, checklist, log

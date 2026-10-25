@@ -116,3 +116,13 @@ def test_loading_the_demo_again_keeps_the_students_own_uploads(two_documents):
     names = {m["document"] for m in client.get("/api/dashboard").json()["mastery"]}
     assert names == {"ml_notes.txt", "bio.txt"}
     assert db.one("SELECT COUNT(*) AS n FROM documents WHERE file_name = 'ml_notes.txt'")["n"] == 1   # replaced, not duplicated
+
+
+def test_dashboard_progress_rows_carry_what_the_chart_needs(two_documents):
+    tid = topic_id("Precision")
+    for before, after, ok in ((38, 30, 0), (30, 40.5, 1)):
+        db.execute("INSERT INTO quiz_attempts (user_id, topic_id, question_id, question, student_answer, is_correct, confidence, mastery_before, mastery_after) "
+                   "VALUES (1, ?, 1, 'q', 'A', ?, 0.5, ?, ?)", (tid, ok, before, after))
+    rows = [r for r in client.get("/api/dashboard").json()["progress"] if r["topic_name"] == "Precision"]
+    assert [(r["mastery_before"], r["mastery_after"], r["is_correct"]) for r in rows] == [(38, 30, 0), (30, 40.5, 1)]
+    assert rows[0]["attempt_id"] < rows[1]["attempt_id"]                       # oldest first

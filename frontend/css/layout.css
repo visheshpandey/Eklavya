@@ -1,0 +1,75 @@
+/* Page structure: top bar, notes library, workspace, and the section tabs.
+   Wide screens (>= 64rem): the library is a permanent sidebar and the tabs (Study | Progress) sit in the top bar.
+   Narrow screens: one section at a time; the tabs (Notes | Study | Progress) become a bottom bar. */
+.app { min-height: 100dvh; display: flex; flex-direction: column; padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
+
+.topbar {
+  position: sticky; top: 0; z-index: var(--z-bar);
+  display: flex; align-items: center; gap: var(--s-4);
+  min-height: var(--topbar); padding: var(--s-2) var(--s-4);
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: var(--s-3); margin-right: auto; min-width: 0; }
+.brand-mark {
+  display: grid; place-items: center; flex: none; width: 36px; height: 36px;
+  border-radius: var(--r-control); background: var(--accent-fill); color: var(--on-accent); font-weight: 700; font-size: var(--text-lg);
+}
+.brand-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.brand-name { font-size: var(--text-lg); font-weight: 700; }
+.brand-tag { display: none; font-size: var(--text-sm); color: var(--ink-3); }
+.topbar-actions { display: flex; align-items: center; gap: var(--s-2); }
+
+.shell { flex: 1; display: block; min-width: 0; }
+.library { background: var(--surface); padding: var(--s-4); }
+.workspace { padding: var(--s-4); min-width: 0; outline: none; }
+.panel { display: flex; flex-direction: column; gap: var(--s-5); max-width: 62rem; margin-inline: auto; }
+
+/* one section at a time on narrow screens */
+.app[data-view="library"] .workspace,
+.app[data-view="study"] .library,
+.app[data-view="progress"] .library { display: none; }
+.app[data-view="study"] #panel-progress,
+.app[data-view="library"] #panel-progress { display: none; }
+.app[data-view="progress"] #panel-study { display: none; }
+
+/* section tabs: bottom bar on narrow screens */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-tabs);
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tablist { display: grid; grid-template-columns: repeat(3, 1fr); }
+.tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 4rem; padding: var(--s-2) var(--s-1); border: 0; background: transparent;
+  color: var(--ink-3); font-size: var(--text-xs); font-weight: 600; border-top: 3px solid transparent;
+}
+.tab[aria-selected="true"] { color: var(--accent-text); border-top-color: var(--accent-fill); }
+.tab:hover { color: var(--ink); }
+
+@media (min-width: 40rem) {
+  .brand-tag { display: block; }
+  .topbar, .library, .workspace { padding-inline: var(--s-5); }
+}
+
+@media (min-width: 64rem) {
+  .app { padding-bottom: 0; }
+  .shell { display: grid; grid-template-columns: var(--sidebar) minmax(0, 1fr); align-items: start; }
+  .library, .app[data-view] .library {
+    display: block; position: sticky; top: var(--topbar); height: calc(100dvh - var(--topbar)); overflow-y: auto;
+    border-right: 1px solid var(--line); padding: var(--s-5) var(--s-4);
+  }
+  .workspace, .app[data-view] .workspace { display: block; padding: var(--s-6); }
+  .app[data-view="library"] #panel-study { display: flex; }
+  .app[data-view="library"] #panel-progress { display: none; }
+
+  /* tabs move into the top bar */
+  .tabs { position: static; border: 0; background: transparent; padding: 0; order: 2; }
+  .tablist { display: flex; gap: var(--s-1); }
+  .tab {
+    flex-direction: row; gap: var(--s-2); min-height: var(--tap); padding: 0 var(--s-4);
+    border: 0; border-radius: var(--r-control); font-size: var(--text-sm);
+  }
+  .tab[aria-selected="true"] { background: var(--accent-soft); }
+  .tab[data-view="library"] { display: none; }
+}

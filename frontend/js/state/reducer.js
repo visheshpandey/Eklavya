@@ -13,7 +13,18 @@ const emptySession = () => ({
   summary: null,      // end-of-test summary
 });
 
+export const VIEWS = Object.freeze({ LIBRARY: 'library', STUDY: 'study', PROGRESS: 'progress' });
+export const THEMES = Object.freeze({ SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' });
+
+const initialUi = () => ({
+  view: VIEWS.STUDY,          // which section is showing (on wide screens the library is always visible)
+  librarySearch: '',
+  collapsedDocs: {},          // {documentId: true} for notes whose topic list is folded
+  theme: THEMES.SYSTEM,
+});
+
 export const initialState = Object.freeze({
+  ui: initialUi(),
   voiceStatus: VOICE_STATUS.IDLE,
   banner: null,
   toasts: [],
@@ -37,6 +48,7 @@ export function normalizeMission(m) {
 }
 
 const withSession = (state, patch) => ({ ...state, session: { ...state.session, ...patch } });
+const withUi = (state, patch) => ({ ...state, ui: { ...state.ui, ...patch } });
 
 const lastOpenIndex = (messages, role) => {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -78,16 +90,16 @@ export function reducer(state, action) {
     case A.DASHBOARD_LOADED:
       return { ...state, dashboard: payload, mission: payload.mission ? normalizeMission(payload.mission) : state.mission };
 
-    case A.TOPIC_SELECTED:
-      return { ...state, selectedTopicId: payload, topicDetail: state.selectedTopicId === payload ? state.topicDetail : null };
+    case A.TOPIC_SELECTED:   // picking a topic takes the student to the Study section
+      return withUi({ ...state, selectedTopicId: payload, topicDetail: state.selectedTopicId === payload ? state.topicDetail : null }, { view: VIEWS.STUDY });
     case A.TOPIC_LOADED:
       return payload.topic_id === state.selectedTopicId ? { ...state, topicDetail: payload } : state;
 
     case A.NOTES_RESET:
-      return { ...state, banner: null, mission: null, selectedTopicId: null, topicDetail: null, session: emptySession() };
+      return withUi({ ...state, banner: null, mission: null, selectedTopicId: null, topicDetail: null, session: emptySession() }, { librarySearch: '', collapsedDocs: {} });
 
     case A.SESSION_STARTED:
-      return { ...state, banner: null, session: { ...emptySession(), mode: payload.mode, topicId: payload.topicId } };
+      return withUi({ ...state, banner: null, session: { ...emptySession(), mode: payload.mode, topicId: payload.topicId } }, { view: VIEWS.STUDY });
 
     case A.TRANSCRIPT_RECEIVED:
       return receiveTranscript(state, payload);
@@ -109,6 +121,18 @@ export function reducer(state, action) {
       return withSession(state, { summary: payload });
     case A.MISSION_RECEIVED:
       return { ...state, mission: normalizeMission(payload) };
+
+    case A.VIEW_CHANGED:
+      return Object.values(VIEWS).includes(payload) && payload !== state.ui.view ? withUi(state, { view: payload }) : state;
+    case A.LIBRARY_SEARCHED:
+      return payload === state.ui.librarySearch ? state : withUi(state, { librarySearch: payload });
+    case A.DOCUMENT_TOGGLED: {
+      const collapsed = { ...state.ui.collapsedDocs };
+      if (collapsed[payload]) delete collapsed[payload]; else collapsed[payload] = true;
+      return withUi(state, { collapsedDocs: collapsed });
+    }
+    case A.THEME_CHANGED:
+      return Object.values(THEMES).includes(payload) && payload !== state.ui.theme ? withUi(state, { theme: payload }) : state;
 
     default:
       return state;

@@ -4,91 +4,129 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Eklavya — Voice Study Mentor</title>
+  <meta name="color-scheme" content="light dark">
+  <title>Eklavya: voice study mentor</title>
   <meta name="description"
-    content="Talk to a study mentor that answers from your own notes, finds the exact misconception behind your mistakes, and plans what to study next.">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%233b3fd8%27/%3E%3Ctext x=%2732%27 y=%2746%27 font-size=%2742%27 font-family=%27sans-serif%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27white%27%3EE%3C/text%3E%3C/svg%3E">
+    content="Talk to a study mentor that teaches from your own notes, tests you by voice, finds the exact misconception behind your mistakes, and plans what to study next.">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%23256abf%27/%3E%3Ctext x=%2732%27 y=%2746%27 font-size=%2742%27 font-family=%27sans-serif%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27white%27%3EE%3C/text%3E%3C/svg%3E">
 </head>
 
 <body>
-  <header class="top">
-    <div class="brand"><span class="mark" aria-hidden="true">E</span>
-      <div>
-        <h1>Eklavya</h1>
-        <p>Your voice study mentor</p>
+  <a class="skip-link" href="#main">Skip to the study area</a>
+
+  <div id="app" class="app" data-view="study">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">E</span>
+        <div class="brand-text">
+          <h1 class="brand-name">Eklavya</h1>
+          <span class="brand-tag">Your voice study mentor</span>
+        </div>
       </div>
-    </div>
-    <div class="controls">
-      <label class="lang"><span>Language</span>
-        <select id="lang">
+
+      <nav id="tabs" class="tabs" aria-label="Sections">
+        <div class="tablist" role="tablist" aria-label="Sections">
+          <button id="tab-library" class="tab" role="tab" type="button" data-view="library" aria-controls="panel-library"
+            aria-selected="false" tabindex="-1"><span data-icon="notebook"></span><span>Notes</span></button>
+          <button id="tab-study" class="tab" role="tab" type="button" data-view="study" aria-controls="panel-study"
+            aria-selected="true"><span data-icon="chalkboard-teacher"></span><span>Study</span></button>
+          <button id="tab-progress" class="tab" role="tab" type="button" data-view="progress" aria-controls="panel-progress"
+            aria-selected="false" tabindex="-1"><span data-icon="chart-line-up"></span><span>Progress</span></button>
+        </div>
+      </nav>
+
+      <div class="topbar-actions">
+        <label class="visually-hidden" for="lang">Tutor language</label>
+        <select id="lang" class="select">
           <option value="hinglish" selected>Hinglish</option>
           <option value="english">English</option>
-          <option value="hindi">हिन्दी</option>
+          <option value="hindi" lang="hi">हिन्दी</option>
         </select>
-      </label>
-      <button id="btnUpload" class="btn ghost" type="button">Upload notes</button>
-      <input id="file" type="file" accept=".pdf,.txt" hidden>
-      <button id="btnDemo" class="btn" type="button">Load demo notes</button>
-    </div>
-  </header>
-
-  <div id="banner" class="banner" role="alert" hidden></div>
-
-  <main class="grid">
-    <section class="talk" aria-label="Talk to Eklavya">
-      <div id="topic" class="card topic" hidden></div>
-      <div class="orb-wrap">
-        <button id="orb" class="orb" data-state="idle" type="button" aria-label="Start voice session">
-          <svg viewBox="0 0 24 24" width="38" height="38" aria-hidden="true">
-            <path fill="currentColor"
-              d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.9V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.6a6 6 0 0 0 5-5.9Z" />
-          </svg>
-        </button>
-        <p id="status" class="status" aria-live="polite">Tap to talk to Eklavya</p>
-        <p class="tip">Use headphones for the best experience.</p>
+        <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
       </div>
+    </header>
 
-      <div id="phase" class="phase" hidden></div>
-      <div id="chat" class="chat" aria-live="polite">
-        <p class="chat-empty">Try saying: <em>“Mujhe precision aur recall simple example se samjhao”</em></p>
-      </div>
+    <div id="banner" class="banner" role="alert" hidden></div>
 
-      <form id="textform" class="textform" autocomplete="off">
-        <input id="textin" type="text" placeholder="Or type a message to Eklavya" aria-label="Type a message" disabled>
-        <button id="textsend" class="btn" type="submit" disabled>Send</button>
-      </form>
-
-      <div id="emotion" class="card emotion" hidden></div>
-      <div id="quizcard" class="card quiz" hidden></div>
-      <div id="summary" class="card summary" hidden></div>
-    </section>
-
-    <aside class="side" aria-label="Your progress">
-      <section class="card">
-        <h2>Mastery by topic</h2>
-        <p class="hint-top">Tap a topic to see your notes, then learn it or take a voice test.</p>
-        <div id="mastery" class="mastery">
-          <p class="empty">Loading…</p>
+    <div class="shell">
+      <aside id="panel-library" class="library" aria-labelledby="library-title">
+        <div class="library-head">
+          <h2 id="library-title" class="panel-title">Your notes</h2>
+          <div class="library-actions">
+            <button id="btnUpload" class="btn btn-primary" type="button"><span data-icon="upload-simple" data-size="18"></span>Upload notes</button>
+            <button id="btnDemo" class="btn btn-quiet" type="button">Try the demo notes</button>
+            <input id="file" type="file" accept=".pdf,.txt" hidden aria-label="Choose a PDF or text file">
+          </div>
+          <div class="search">
+            <span data-icon="magnifying-glass" data-size="18"></span>
+            <label class="visually-hidden" for="librarySearch">Search topics</label>
+            <input id="librarySearch" class="field" type="search" placeholder="Search topics" autocomplete="off">
+          </div>
         </div>
-      </section>
-      <section class="card">
-        <h2>Misconceptions</h2>
-        <ul id="alerts" class="alerts"></ul>
-      </section>
-      <section id="mission" class="card mission" hidden></section>
-      <section class="card">
-        <h2>Recent answers</h2>
-        <ul id="history" class="history"></ul>
-      </section>
-      <section class="card">
-        <h2>Why the tutor did that</h2>
-        <ul id="log" class="log"></ul>
-      </section>
-    </aside>
-  </main>
+        <div id="library" class="library-list"></div>
+      </aside>
 
-  <div id="toasts" class="toasts" aria-live="polite"></div>
+      <main id="main" class="workspace" tabindex="-1">
+        <section id="panel-study" class="panel" role="tabpanel" aria-labelledby="tab-study">
+          <div id="studyHeader" class="study-header"></div>
+
+          <div class="stage">
+            <button id="orb" class="orb" type="button" data-state="idle" aria-label="Start a voice conversation"></button>
+            <div class="stage-text">
+              <p id="status" class="stage-status">Tap to talk to Eklavya</p>
+              <p class="stage-hint">Headphones work best.</p>
+              <ol id="stepper" class="stepper" aria-label="Lesson steps" hidden></ol>
+            </div>
+          </div>
+
+          <div id="quizcard" class="quiz" hidden></div>
+          <div id="summary" class="summary" hidden></div>
+
+          <div id="chat" class="chat" role="log" aria-live="off" aria-label="Conversation">
+            <p class="chat-empty">Try saying: “Mujhe precision aur recall simple example se samjhao”</p>
+          </div>
+
+          <form id="textform" class="composer" autocomplete="off">
+            <label class="visually-hidden" for="textin">Message to Eklavya</label>
+            <input id="textin" class="field" type="text" placeholder="Or type a message to Eklavya" disabled>
+            <button id="textsend" class="btn btn-primary" type="submit" disabled>Send</button>
+          </form>
+
+          <div id="emotion" class="emotion" hidden></div>
+        </section>
+
+        <section id="panel-progress" class="panel" role="tabpanel" aria-labelledby="tab-progress">
+          <h2 class="panel-title">Your progress</h2>
+          <div id="mission" class="mission" hidden></div>
+          <div class="progress-grid">
+            <section class="block wide" aria-labelledby="h-chart">
+              <h3 id="h-chart">Mastery over time</h3>
+              <div id="chart" class="chart"></div>
+            </section>
+            <section class="block" aria-labelledby="h-mis">
+              <h3 id="h-mis">Misconceptions</h3>
+              <ul id="alerts" class="list"></ul>
+            </section>
+            <section class="block" aria-labelledby="h-hist">
+              <h3 id="h-hist">Recent answers</h3>
+              <ul id="history" class="list history"></ul>
+            </section>
+            <section class="block wide" aria-labelledby="h-log">
+              <h3 id="h-log">Why the tutor did that</h3>
+              <ul id="log" class="list log"></ul>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
   <script src="config.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>

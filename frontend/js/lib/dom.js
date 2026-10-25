@@ -28,3 +28,17 @@ export function byId(id) {
 export function render(root, ...kids) {
   root.replaceChildren(...kids.flat().filter((kid) => kid != null && kid !== false));
 }
+
+/** Like el(), for SVG elements (they need the SVG namespace). Attributes only; text goes in as text nodes. */
+export function svgEl(tag, attrs = {}, ...kids) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [key, value] of Object.entries(attrs)) if (value != null && value !== false) node.setAttribute(key, value);
+  kids.flat().forEach((kid) => kid != null && node.append(kid.nodeType ? kid : document.createTextNode(kid)));
+  return node;
+}
+
+/** Make `parent`'s children exactly `nodes`, touching the DOM only if something differs (keeps CSS transitions alive). */
+export function syncChildren(parent, nodes) {
+  const current = [...parent.children];
+  if (current.length !== nodes.length || current.some((node, i) => node !== nodes[i])) parent.replaceChildren(...nodes);
+}

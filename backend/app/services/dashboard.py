@@ -28,8 +28,8 @@ def build_dashboard(user_id: int) -> dict:
         "FROM quiz_attempts a JOIN topics t ON t.id = a.topic_id WHERE a.user_id = ? ORDER BY a.id DESC LIMIT ?",
         (user_id, HISTORY_LIMIT))
     progress = db.query(
-        "SELECT a.topic_id, t.topic_name, a.mastery_after, a.answered_at FROM quiz_attempts a "
-        "JOIN topics t ON t.id = a.topic_id WHERE a.user_id = ? ORDER BY a.id", (user_id,))
+        "SELECT a.id AS attempt_id, a.topic_id, t.topic_name, a.mastery_before, a.mastery_after, a.is_correct, a.answered_at "
+        "FROM quiz_attempts a JOIN topics t ON t.id = a.topic_id WHERE a.user_id = ? ORDER BY a.id", (user_id,))
     return {
         "mastery": mastery, "weak_topics": weak, "alerts": alerts,
         "mission": study_mission.current(user_id) if has_mission else None,
