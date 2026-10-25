@@ -262,7 +262,7 @@
   pointer-events: auto; max-width: 30rem; padding: var(--s-3) var(--s-4); border-radius: var(--r-control);
   background: var(--ink); color: var(--bg); box-shadow: var(--shadow); font-size: var(--text-sm);
 }
-.toast.ok { background: var(--speak); color: #fff; }
+.toast.ok { background: var(--speak); color: var(--on-accent); }
 .toast.bad { background: var(--bad-text); color: var(--bad-soft); }
 
 @media (min-width: 64rem) {

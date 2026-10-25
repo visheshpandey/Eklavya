@@ -17,8 +17,11 @@ sidebar already shows it.
 
 ## Tokens (`css/tokens.css`)
 
-* Colour: cool paper surfaces, one cobalt accent (`--accent-fill`), green only for the speaking state
-  (`--speak`), red and amber only for wrong and weakest. Light and dark follow the system;
+* Colour: the five-colour palette Lilac Ash `#BCABAE`, Onyx `#0F0F0F`, Graphite `#2D2E2E`, Dim Grey `#716969`,
+  White `#FBFBFB`. Light: white surfaces, Graphite buttons, Lilac tints for hover and selection, Dim Grey-toned
+  secondary text. Dark: Onyx page, Graphite panels, Lilac Ash as the accent (buttons, orb, brand mark).
+  Green marks only the speaking state and correct answers, red only wrong answers. Chart series keep their
+  validated hues (a muted mauve line failed the validator's chroma check). Light and dark follow the system;
   `<html data-theme>` overrides (the header button cycles system, light, dark).
 * Type: system font stack with Devanagari, so Hindi renders without a download. Sentence case everywhere.
 * Shape: radii 8 and 12, borders instead of shadows, 44 px minimum tap size (`--tap`).
