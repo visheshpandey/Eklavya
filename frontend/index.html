@@ -1,15 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Eklavya — Voice Study Mentor</title>
-  <meta name="description" content="Talk to a study mentor that answers from your own notes, finds the exact misconception behind your mistakes, and plans what to study next.">
+  <meta name="description"
+    content="Talk to a study mentor that answers from your own notes, finds the exact misconception behind your mistakes, and plans what to study next.">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%233b3fd8%27/%3E%3Ctext x=%2732%27 y=%2746%27 font-size=%2742%27 font-family=%27sans-serif%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27white%27%3EE%3C/text%3E%3C/svg%3E">
 </head>
+
 <body>
   <header class="top">
-    <div class="brand"><span class="mark" aria-hidden="true">E</span><div><h1>Eklavya</h1><p>Your voice study mentor</p></div></div>
+    <div class="brand"><span class="mark" aria-hidden="true">E</span>
+      <div>
+        <h1>Eklavya</h1>
+        <p>Your voice study mentor</p>
+      </div>
+    </div>
     <div class="controls">
       <label class="lang"><span>Language</span>
         <select id="lang">
@@ -31,7 +40,10 @@
       <div id="topic" class="card topic" hidden></div>
       <div class="orb-wrap">
         <button id="orb" class="orb" data-state="idle" type="button" aria-label="Start voice session">
-          <svg viewBox="0 0 24 24" width="38" height="38" aria-hidden="true"><path fill="currentColor" d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.9V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.6a6 6 0 0 0 5-5.9Z"/></svg>
+          <svg viewBox="0 0 24 24" width="38" height="38" aria-hidden="true">
+            <path fill="currentColor"
+              d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 1 0-7 0v6A3.5 3.5 0 0 0 12 15Zm6-3.5a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.9V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.6a6 6 0 0 0 5-5.9Z" />
+          </svg>
         </button>
         <p id="status" class="status" aria-live="polite">Tap to talk to Eklavya</p>
         <p class="tip">Use headphones for the best experience.</p>
@@ -56,7 +68,9 @@
       <section class="card">
         <h2>Mastery by topic</h2>
         <p class="hint-top">Tap a topic to see your notes, then learn it or take a voice test.</p>
-        <div id="mastery" class="mastery"><p class="empty">Loading…</p></div>
+        <div id="mastery" class="mastery">
+          <p class="empty">Loading…</p>
+        </div>
       </section>
       <section class="card">
         <h2>Misconceptions</h2>
@@ -75,6 +89,8 @@
   </main>
 
   <div id="toasts" class="toasts" aria-live="polite"></div>
-  <script type="module" src="js/app.js"></script>
+  <script src="config.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
+
 </html>

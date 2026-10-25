@@ -7,9 +7,9 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-import db
-import live
-from agents import quiz
+from app import db
+from app.agents import quiz
+from app.ai import live
 from main import app
 from test_live import FakeSession, call, collect, fake_connect, sc, seeded  # noqa: F401  (seeded = autouse fixture)
 

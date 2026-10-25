@@ -15,10 +15,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from google import genai  # noqa: E402
 from google.genai import types  # noqa: E402
 
-import config  # noqa: E402
-from gemini import LLMError, llm_json  # noqa: E402
-from live import build_config, build_system_prompt  # noqa: E402
-from tools import TOOLS  # noqa: E402,F401
+from app.ai.gemini import llm_json  # noqa: E402
+from app.ai.live import build_config, build_system_prompt  # noqa: E402
+from app.config import settings  # noqa: E402
+from app.errors import LLMError  # noqa: E402
 
 
 def step(title):
@@ -30,7 +30,7 @@ async def live_check(client):
     prompt = build_system_prompt("hinglish", topics)
     audio = 0
     transcript, calls = "", []
-    async with client.aio.live.connect(model=config.GEMINI_LIVE_MODEL, config=build_config(prompt)) as s:
+    async with client.aio.live.connect(model=settings.gemini_live_model, config=build_config(prompt)) as s:
         await s.send_realtime_input(text="Namaste! Mujhe precision samjhao, short mein.")
         for _ in range(3):  # a few turns: the model may call search_notes first
             async for m in s.receive():
@@ -62,16 +62,16 @@ async def live_check(client):
 
 
 def main():
-    if not config.GEMINI_API_KEY:
+    if not settings.gemini_api_key:
         sys.exit("GEMINI_API_KEY is not set in backend/.env")
-    client = genai.Client(api_key=config.GEMINI_API_KEY, http_options=types.HttpOptions(api_version="v1beta"))
+    client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(api_version="v1beta"))
 
     step("models available to this key (flash / live / audio)")
     names = [m.name for m in client.models.list()]
     for n in names:
         if any(k in n.lower() for k in ("flash", "live", "audio")):
             print(" ", n)
-    print(f"\nconfigured: GEMINI_MODEL={config.GEMINI_MODEL}  GEMINI_LIVE_MODEL={config.GEMINI_LIVE_MODEL}")
+    print(f"\nconfigured: GEMINI_MODEL={settings.gemini_model}  GEMINI_LIVE_MODEL={settings.gemini_live_model}")
 
     step("text JSON call")
     try:

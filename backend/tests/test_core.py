@@ -8,11 +8,11 @@ import os
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-import db  # noqa: E402
-import gemini  # noqa: E402
-import mastery  # noqa: E402
-import retrieval  # noqa: E402
-from agents.evaluation import parse_choice  # noqa: E402
+from app import db  # noqa: E402
+from app.ai import gemini  # noqa: E402
+from app.domain import mastery  # noqa: E402
+from app.domain import retrieval  # noqa: E402
+from app.agents.evaluation import parse_choice  # noqa: E402
 from main import app  # noqa: E402
 
 client = TestClient(app)

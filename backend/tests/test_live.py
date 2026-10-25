@@ -9,9 +9,8 @@ from types import SimpleNamespace as NS
 import pytest
 from fastapi.testclient import TestClient
 
-import db
-import gemini
-import live
+from app import db
+from app.ai import gemini, live
 from main import app
 
 client = TestClient(app)

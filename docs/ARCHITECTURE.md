@@ -6,24 +6,24 @@ Stack: FastAPI + SQLite + Gemini (text and Live audio), vanilla JS frontend. See
 
 ```
 Browser (Chrome)
- ├─ Presenter  (audio-only now │ avatar later)        frontend/js/presenter.js
+ ├─ Presenter  (audio-only now │ avatar later)        (planned) frontend/js/components
  ├─ Mic ─ AudioWorklet ─ PCM16 16 kHz ─┐
- ├─ Speaker ◄─ PCM 24 kHz ◄────────────┤  WebSocket /ws/voice   frontend/js/voice.js
+ ├─ Speaker ◄─ PCM 24 kHz ◄────────────┤  WebSocket /ws/voice   frontend/js/services/voice-client.js
  ├─ Transcript + emotion chips · Quiz · Mission · Dashboard
  └─ REST (upload, dashboard, text channel)
                   │
                   ▼
-FastAPI (backend/main.py)
- ├─ routers/voice_ws.py   ── session proxy ──► Gemini Live API (native audio)
+FastAPI (backend/app/main.py)
+ ├─ api/routes/voice_ws.py ── session proxy ──► Gemini Live API (native audio)
  │      ▲  tool calls                                 │ audio + transcripts + tool calls
- │      └────────── tools.py (dispatcher) ◄───────────┘
- │             ├─ search_notes        → retrieval.py → SQLite chunks
+ │      └────────── ai/tools.py (dispatcher) ◄────────┘
+ │             ├─ search_notes        → domain/retrieval.py → SQLite chunks
  │             ├─ report_learner_state→ learner_state + agent_logs
  │             ├─ ask_quiz_question   → agents/quiz.py
- │             ├─ grade_answer        → agents/evaluation.py + misconception.py + mastery.py
+ │             ├─ grade_answer        → agents/evaluation.py + misconception.py + domain/mastery.py
  │             └─ get_mission         → agents/study_mission.py
- ├─ routers/{documents,tutor,quiz,missions,dashboard,demo}.py   (REST)
- └─ db.py (SQLite)   gemini.py (call_llm_json, cache)
+ ├─ api/routes/{documents,tutor,quiz,missions,dashboard,topics,demo}.py   (REST)
+ └─ db.py (SQLite)   ai/gemini.py (llm_json, cache)
 ```
 
 The browser never sees the API key; the backend holds the Live session (keys, tool execution and logging stay server-side, matching the API rules).
@@ -49,37 +49,9 @@ Gemini is the only model and vendor. If it fails (connection, quota, bad JSON af
 
 ## 4. File layout
 
-```
-studyai/
-├── backend/
-│   ├── main.py                 app, CORS, router registration
-│   ├── config.py               env, constants (model IDs, session cap, top-k)
-│   ├── gemini.py               call_llm_json + cache (text agents)
-│   ├── live.py                 NEW Gemini Live session wrapper (open, send audio, receive, tools)
-│   ├── tools.py                NEW tool declarations + dispatcher → agents/db
-│   ├── db.py · schemas.py · retrieval.py · mastery.py · seed.py · pdf_extract.py
-│   ├── agents/                 document_intelligence, learner_profile, voice_tutor, quiz,
-│   │                           evaluation, misconception, study_mission, logger
-│   ├── routers/
-│   │   ├── voice_ws.py         NEW WS /ws/voice
-│   │   └── documents, tutor (text channel), quiz, missions, dashboard, demo
-│   └── data/                   SQLite file (gitignored)
-├── frontend/
-│   ├── index.html
-│   ├── css/styles.css
-│   └── js/
-│       ├── api.js · language.js · tutor.js · quiz.js · mission.js · dashboard.js
-│       ├── voice.js            WS client, mic capture, playback queue, barge-in
-│       ├── audio-worklet.js    NEW PCM16 capture processor
-│       ├── presenter.js        NEW Presenter interface (audio-only │ avatar)
-│       └── emotion.js          NEW emotion chips + tone indicator
-├── prompts/
-│   ├── master_prompt.md
-│   ├── persona_eklavya.md      NEW persona + style rules + examples
-│   └── misconception_taxonomy.md  NEW fixed taxonomy for few-shot
-├── samples/ml_notes.txt
-└── docs/  PRD.md · ARCHITECTURE.md · CHECKLIST.md · LOG.md
-```
+The current tree, the layering rules and how to extend each layer are in [CODEBASE.md](CODEBASE.md).
+In short: `backend/app/{api, services, agents, domain, ai, prompts}` and
+`frontend/js/{components, controllers, services, state, lib}`.
 
 ## 5. Data model changes
 Base 9 tables unchanged, plus:

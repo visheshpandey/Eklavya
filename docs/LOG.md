@@ -62,3 +62,13 @@
 - Frontend: tap a topic -> notes card with "Teach me this, then test me (voice)" / "Just test me (voice)"; phase bar, question n of 3, summary card, recent-answers list, labelled decision log (Saw / Decided / Did).
 - Tests: 16 passing (new `tests/test_learn.py`).
 - PRD check (original PRD vs build) gaps still open: PDF export of the study pack (F19; only in legacy.html), progress graph over time (F15, US7), image upload (F16), seed mastery maths does not reach 38 -> 67 (about 57 after 3 correct), decision log has no explicit "result" step, mission title is Gemini-written (not always "Fix Precision vs Recall Confusion").
+
+## 2026-10-25 (codebase restructure)
+- Request: clean structure, separate logic from UI, remove dead/duplicate code, consistent naming, proper error handling, config separated from code, modular components, state management, documentation.
+- Backend: flat modules moved (git mv, history kept) into `backend/app/{api, services, agents, domain, ai, prompts}`; `backend/main.py` is now a shim so `uvicorn main:app` and `python main.py` still work. Layering: api -> services/agents -> domain/db/ai.
+- Config: `app/config.py` is the only reader of environment variables (frozen `Settings`, validated, fail-fast `ConfigError`); new settings HOST, PORT, RELOAD, CORS_ORIGINS, LOG_LEVEL, MAX_UPLOAD_MB, GEMINI_TIMEOUT_MS, DEMO_USER_ID, DB_PATH, SAMPLES_DIR; `.env.example` documents all.
+- Errors: `app/errors.py` (BadRequest 400, NotFound 404, PayloadTooLarge 413, LLM 502) + handlers so every failure is `{"error","code"}`; 422 validation names fields; unexpected errors are logged and answered generically; DB writes roll back; PDF/upload validation (type, size, unreadable); blocking Gemini work moved off the event loop (`run_in_threadpool`) so it cannot stall the voice WebSocket; prompts loaded via a cached loader with a clear missing-file error.
+- Dead code removed: legacy summary page + `/api/generate`, `build_prompt`/`generate_study_content`, unused `learner_profile` agent, stale `master_prompt.md`, empty frontend stubs (`tutor.js`, `presenter.js`, `language.js`), duplicated LABELS, repeated try/except boilerplate in routes.
+- Frontend: split into `lib/ services/ state/ controllers/ components/`; one-way flow (click/event -> controller -> action -> reducer -> store -> component); pure reducer + tiny store; 15 single-purpose components; `config.js` holds the backend URL (`?api=` overrides); `serve.py` now uses a threaded server (the earlier single-threaded version stalled Chrome's parallel connections).
+- Tests: backend 25 (new `test_errors.py`), frontend 31 (`npm test`: reducer, store, controllers, API client).
+- Docs: new `docs/CODEBASE.md`, rewritten readme, architecture paths updated.
