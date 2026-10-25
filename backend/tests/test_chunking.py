@@ -61,7 +61,7 @@ def test_pdf_text_clean_up():
 def test_topic_extraction_sees_the_whole_document_and_caps_the_topic_count(monkeypatch):
     seen = {}
 
-    def fake(system, prompt, required_keys=(), temperature=0.7):
+    def fake(system, prompt, required_keys=(), temperature=0.7, **_):
         if "topic structure" in system:
             seen["prompt"] = prompt
             return {"success": True, "data": {"topics": [f"Topic {i}" for i in range(45)] + ["Topic 3"]}}
@@ -94,3 +94,42 @@ def test_a_topic_without_its_own_chunk_shows_the_closest_passages_instead_of_not
     assert detail["notes_are_related"] is False and detail["notes"]
     detail = topic_detail(lonely["id"], 1)
     assert detail["notes_are_related"] is True                                          # flagged so the UI can say so
+
+
+def test_a_weak_one_word_match_does_not_file_a_chunk_under_a_topic():
+    """Reported: a C-programming passage appeared under "Formal Grammars and Hierarchy" only because it said "hierarchy"."""
+    topics = [{"id": 1, "topic_name": "TOC: Formal Grammars and Hierarchy"}, {"id": 2, "topic_name": "C: Basics of Programming"}]
+    weights = docs._topic_tokens(topics)
+    c_chunk = {"heading": "Unit-I Basics of programming", "text": "Character set, constants, variables, hierarchy of operations."}
+    assert docs._assign_topic(c_chunk, topics, weights) == 2                      # its heading names the C topic
+    stray = {"heading": "Appendix", "text": "Notes on the hierarchy of operations in expressions."}
+    assert docs._assign_topic(stray, topics, weights) is None                      # one shared word is not enough
+    only_topic = [{"id": 9, "topic_name": "Notes"}]
+    assert docs._assign_topic(stray, only_topic, docs._topic_tokens(only_topic)) == 9   # a single-topic document keeps everything
+
+
+def test_reading_a_whole_document_uses_the_longer_gemini_limit(monkeypatch):
+    seen = []
+
+    def fake(system, prompt, required_keys=(), temperature=0.7, timeout_ms=None):
+        seen.append(timeout_ms)
+        return {"success": True, "data": {"topics": ["Automata"]}}
+
+    monkeypatch.setattr(gemini, "call_llm_json", fake)
+    docs._llm_topics("some notes")
+    gemini.llm_json("system", "prompt")                       # an ordinary call keeps the default limit
+    assert seen == [docs.settings.gemini_long_timeout_ms, None]
+    assert docs.settings.gemini_long_timeout_ms > docs.settings.gemini_timeout_ms
+
+
+def test_closest_passages_drop_a_weak_runner_up(monkeypatch):
+    from app.services import topics as topics_service
+
+    monkeypatch.setattr(topics_service.retrieval, "retrieve", lambda *a, **k: [
+        {"heading": "Unit-V Big Data Tools", "text": "strong", "score": 6.0},
+        {"heading": "CO5", "text": "weak", "score": 1.0},
+    ])
+    doc = db.execute("INSERT INTO documents (user_id, file_name) VALUES (1, 'related.txt')")
+    topic = db.execute("INSERT INTO topics (document_id, topic_name) VALUES (?, 'Big Data Tools')", (doc,))
+    notes = topic_detail(topic, 1)["notes"]
+    assert [n["text"] for n in notes] == ["strong"]

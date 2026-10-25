@@ -19,7 +19,7 @@ client = TestClient(app)
 GEMINI_DOWN = {"on": False}
 
 
-def fake_gemini(system, prompt, required_keys=(), temperature=0.7):
+def fake_gemini(system, prompt, required_keys=(), temperature=0.7, **_):
     """Stands in for Gemini; keyed on which agent is calling."""
     if GEMINI_DOWN["on"]:
         return {"success": False, "error": "Generation failed: simulated outage"}

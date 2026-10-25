@@ -15,7 +15,7 @@ BIO = ("Photosynthesis\n\nPlants make glucose from sunlight, water and carbon di
        "Respiration\n\nCells release energy from glucose in the mitochondria.")
 
 
-def fake_topics(system, prompt, required_keys=(), temperature=0.7):
+def fake_topics(system, prompt, required_keys=(), temperature=0.7, **_):
     if "topic structure" in system:
         return {"success": True, "data": {"topics": ["Photosynthesis", "Respiration"]}}
     return {"success": False, "error": "unexpected call in test"}

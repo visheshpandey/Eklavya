@@ -23,7 +23,9 @@ from app.errors import LLMError
 log = logging.getLogger(__name__)
 
 CACHE_TTL_SECONDS = 600   # identical prompts within 10 minutes reuse the previous answer
-ATTEMPTS = 2              # one retry on a bad call
+ATTEMPTS = 3              # tries per call (Gemini is sometimes briefly overloaded)
+RETRY_PAUSE_SECONDS = 2   # grows with each retry
+TRANSIENT = ("503", "504", "429", "UNAVAILABLE", "DEADLINE", "RESOURCE_EXHAUSTED", "overloaded", "timed out")
 
 _client: genai.Client | None = None
 _cache: dict[str, tuple[float, dict]] = {}
@@ -45,11 +47,11 @@ def _parse_json(raw: str) -> dict:
     return json.loads(text)
 
 
-def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7) -> dict:
+def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7, timeout_ms: int | None = None) -> dict:
     """Call Gemini in JSON mode and validate the keys.
 
     Returns ``{"success": True, "data": {...}}`` or ``{"success": False, "error": "..."}``.
-    Results are cached for ``CACHE_TTL_SECONDS``.
+    ``timeout_ms`` overrides the default limit for one heavy call. Results are cached for ``CACHE_TTL_SECONDS``.
     """
     cache_key = hashlib.sha256(f"{settings.gemini_model}|{system}|{prompt}|{temperature}".encode()).hexdigest()
     hit = _cache.get(cache_key)
@@ -66,6 +68,7 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
                     system_instruction=system,
                     response_mime_type="application/json",
                     temperature=temperature,
+                    http_options=types.HttpOptions(timeout=timeout_ms) if timeout_ms else None,
                 ),
             )
             data = _parse_json(response.text or "")
@@ -80,12 +83,15 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
         except Exception as exc:  # noqa: BLE001 - network/quota/SDK errors all mean "try again, then fail"
             last_error = str(exc)
         log.warning("Gemini call failed (attempt %d/%d): %s", attempt, ATTEMPTS, last_error)
+        if attempt < ATTEMPTS and any(marker.lower() in last_error.lower() for marker in TRANSIENT):
+            time.sleep(RETRY_PAUSE_SECONDS * attempt)   # give an overloaded model a moment before trying again
     return {"success": False, "error": last_error}
 
 
-def llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7) -> dict | list:
-    """Like ``call_llm_json`` but returns the data dict or raises ``LLMError``."""
-    result = call_llm_json(system, prompt, required_keys, temperature)
+def llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7, timeout_ms: int | None = None) -> dict | list:
+    """Like ``call_llm_json`` but returns the data or raises ``LLMError``. ``timeout_ms`` lengthens the limit for one call."""
+    extra = {} if timeout_ms is None else {"timeout_ms": timeout_ms}   # keeps simple test doubles working
+    result = call_llm_json(system, prompt, required_keys, temperature, **extra)
     if not result["success"]:
         raise LLMError(f"Gemini request failed: {result['error']}")
     return result["data"]

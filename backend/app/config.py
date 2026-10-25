@@ -56,6 +56,7 @@ class Settings:
     gemini_model: str            # text agents (JSON mode)
     gemini_live_model: str       # live voice tutor
     gemini_timeout_ms: int       # a slow call becomes a 502 instead of hanging
+    gemini_long_timeout_ms: int  # for one-off heavy calls such as reading a whole uploaded document
     live_voice: str
     live_affective_dialog: bool  # not supported by every Live model
     session_cap_seconds: int     # Live audio sessions are limited to ~15 minutes
@@ -78,6 +79,7 @@ class Settings:
             gemini_model=_str("GEMINI_MODEL", "gemini-3.1-flash-lite"),
             gemini_live_model=_str("GEMINI_LIVE_MODEL", "gemini-3.8-live"),
             gemini_timeout_ms=_int("GEMINI_TIMEOUT_MS", 30_000, minimum=1_000),
+            gemini_long_timeout_ms=_int("GEMINI_LONG_TIMEOUT_MS", 90_000, minimum=1_000),
             live_voice=_str("LIVE_VOICE", "Kore"),
             live_affective_dialog=_bool("LIVE_AFFECTIVE_DIALOG", False),
             session_cap_seconds=_int("SESSION_CAP_SECONDS", 840, minimum=30),

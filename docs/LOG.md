@@ -81,3 +81,12 @@
 - To use it on the existing data: press Remove next to `5th sem_syllabus.pdf` and upload the PDF again (the old copy was stored as one chunk and is not reprocessed automatically).
 - Observed: Gemini sometimes times out (504, 30 s limit); a retry usually succeeds. Browser test harness flaked twice (page made no API calls); the app itself was fine on reruns.
 - Remove on a notes group is now a visible button with an in-page confirmation (Yes, remove / Cancel) instead of a small link plus a browser pop-up that can be blocked.
+
+## 2026-10-25 (microphone error, Gemini retries, stricter topic filing)
+- Report: "Could not start the microphone: Cannot read properties of null (reading 'audioWorklet')" after tapping Teach me / Test me.
+- Cause: `VoiceClient` cleanup was per-instance, so a slow leftover from an OLD session (its socket's `close` event, or a start cancelled while the mic prompt was open) wiped the audio objects of the NEW session while it was starting.
+- Fix: sessions are numbered; every async continuation checks it is still the current session and releases only its own resources; a socket's handlers act only if it is still the live socket; a start cancelled by stop() resolves quietly. Teardown helper also swallows rejected promises (closing a closed AudioContext rejects).
+- Tests: `tests/voice-client.test.js` (8, fake audio/socket/mic; 3 of them fail on the old code with the exact reported message) + a real-Chrome run: quick double start, switching topic/mode mid-session, stop right after start, fresh start after that, console clean.
+- Gemini: up to 3 attempts with a growing pause for transient errors (503/504/429/overloaded); whole-document topic extraction uses `GEMINI_LONG_TIMEOUT_MS` (90 s) instead of 30 s.
+- Topic filing: a chunk is filed under a topic only when >= 50% of the topic's weighted words match (heading words count 3x); weak one-word matches stay unfiled; the closest-passages fallback drops runner-ups scoring under 40% of the best.
+- Tests now: backend 58, frontend 45.

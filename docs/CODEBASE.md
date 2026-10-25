@@ -129,6 +129,9 @@ user click / server event
   an action in `actions.js`.
 * **lib/** holds pure helpers and shared names (`protocol.js` mirrors the backend's event names).
 * Model output is only ever written with `textContent`, never HTML.
+* **Async work must not outlive its session.** `services/voice-client.js` numbers every session; anything that finishes later
+  (a socket closing, a mic prompt being answered) first checks it still belongs to the current session, so a slow leftover
+  can never tear down a newer one. Follow the same rule for any new service that holds browser resources.
 * **Config:** `config.js` (loaded before the app) sets `apiBase`; `?api=http://localhost:5099` in the URL
   overrides it for one-off tests. It must match the backend `PORT`.
 

@@ -2,6 +2,7 @@
 from app import db
 from app.agents.logger import log_agent
 from app.ai.gemini import extract_list, llm_json
+from app.config import settings
 from app.domain import retrieval
 from app.errors import BadRequestError, LLMError
 
@@ -19,7 +20,7 @@ def _llm_topics(text: str):
         'subject name so topics are distinguishable (for example "DBMS: Normalization"). Skip administrative parts such as '
         "reference books or marks.\n\nNotes:\n" + text[:TOPIC_TEXT_CHARS]
     )
-    data = llm_json(SYSTEM, prompt, temperature=0.2)
+    data = llm_json(SYSTEM, prompt, temperature=0.2, timeout_ms=settings.gemini_long_timeout_ms)
     names = [str(t).strip() for t in extract_list(data, "topics") if str(t).strip()]
     if not names:
         raise LLMError("Gemini returned no topics")
@@ -36,7 +37,8 @@ def _heading_topics(chunks):
     return names
 
 
-HEADING_WEIGHT = 3   # a topic word found in the chunk's heading counts this many times more than one in its body
+HEADING_WEIGHT = 3        # a topic word found in the chunk's heading counts this many times more than one in its body
+MIN_ASSIGN_SCORE = 0.5    # a chunk is filed under a topic only if at least this share of the topic's words match it
 
 
 def _topic_tokens(topics):
@@ -53,7 +55,8 @@ def _assign_topic(chunk, topics, weights):
     """Pick the topic a chunk belongs to: exact heading match, else the best weighted word overlap.
 
     The score is the share of the topic's (weighted) words that appear in the chunk, with extra credit for words
-    in the heading, so a long or generic topic name cannot win just by matching common words.
+    in the heading, so a long or generic topic name cannot win just by matching common words. Chunks that match no
+    topic well stay unfiled (still searchable); a topic without a chunk shows its closest passages instead.
     """
     heading = chunk["heading"].lower()
     for t in topics:
@@ -72,7 +75,10 @@ def _assign_topic(chunk, topics, weights):
         score = matched / total
         if score > best_score:
             best, best_score = t["id"], score
-    return best if best is not None else (topics[0]["id"] if topics else None)
+    if best_score >= MIN_ASSIGN_SCORE:
+        return best
+    # a weak match (one shared word such as "hierarchy") is not enough; a single-topic document is the only exception
+    return topics[0]["id"] if len(topics) == 1 else None
 
 
 def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = True):

@@ -68,7 +68,7 @@ def collect(ws, until="turn_complete"):
             return events, audio
 
 
-def fake_text_gemini(system, prompt, required_keys=(), temperature=0.7):
+def fake_text_gemini(system, prompt, required_keys=(), temperature=0.7, **_):
     """Text-model double: get_mission and misconception classification call Gemini text under the hood."""
     if "study coach" in system:
         return {"success": True, "data": {"mission_title": "Fix Precision vs Recall Confusion", "reason": "r",

@@ -67,7 +67,7 @@ def test_extract_list_handles_each_shape():
 def test_warm_up_writes_missing_questions_once_and_never_raises(monkeypatch, topic_id):
     calls = []
 
-    def fake(system, prompt, required_keys=(), temperature=0.7):
+    def fake(system, prompt, required_keys=(), temperature=0.7, **_):
         calls.append(1)
         return {"success": True, "data": {"questions": [QUESTION]}}
 
@@ -79,3 +79,47 @@ def test_warm_up_writes_missing_questions_once_and_never_raises(monkeypatch, top
 
     monkeypatch.setattr(gemini, "call_llm_json", lambda *a, **k: {"success": False, "error": "timeout"})
     quiz.warm_up(topic_id, count=3)                                           # Gemini down: swallowed (logged), not raised
+
+
+class _FakeResponse:
+    text = '{"ok": true}'
+
+
+def test_a_briefly_overloaded_gemini_is_retried_after_a_pause(monkeypatch):
+    attempts, pauses = [], []
+
+    class Models:
+        def generate_content(self, **_):
+            attempts.append(1)
+            if len(attempts) < 3:
+                raise RuntimeError("503 UNAVAILABLE. This model is currently experiencing high demand.")
+            return _FakeResponse()
+
+    class Client:
+        models = Models()
+
+    monkeypatch.setattr(gemini, "_get_client", lambda: Client())
+    monkeypatch.setattr(gemini.time, "sleep", lambda seconds: pauses.append(seconds))
+    gemini._cache.clear()
+    result = gemini.call_llm_json("s", "retry-prompt-1")
+    assert result == {"success": True, "data": {"ok": True}} and len(attempts) == 3
+    assert pauses == [2, 4]                                                       # a growing pause between tries
+
+
+def test_errors_that_will_not_get_better_are_not_retried_slowly(monkeypatch):
+    attempts, pauses = [], []
+
+    class Models:
+        def generate_content(self, **_):
+            attempts.append(1)
+            raise RuntimeError("400 INVALID_ARGUMENT: bad request")
+
+    class Client:
+        models = Models()
+
+    monkeypatch.setattr(gemini, "_get_client", lambda: Client())
+    monkeypatch.setattr(gemini.time, "sleep", lambda seconds: pauses.append(seconds))
+    gemini._cache.clear()
+    result = gemini.call_llm_json("s", "retry-prompt-2")
+    assert result["success"] is False and "INVALID_ARGUMENT" in result["error"]
+    assert pauses == []                                                           # no waiting for a hopeless request
