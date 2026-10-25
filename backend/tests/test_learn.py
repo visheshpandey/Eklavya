@@ -117,6 +117,9 @@ def test_debate_mode_sets_side_and_motion_and_skips_quiz_warmup(monkeypatch):
     assert "Precision beats recall" in fake.system_prompt and "{{" not in fake.system_prompt
     assert any('debate "Precision"' in str(s.get("text", "")) for s in fake.sent)
     assert warmed == []
+    # the debater persona replaces the warm tutor persona, so it cannot nod along
+    assert "Never be a yes-man" in fake.system_prompt and "Be Socratic" not in fake.system_prompt
+    assert "Precision" in fake.system_prompt and "{{" not in fake.system_prompt
 
 
 def test_debate_without_a_motion_lets_the_tutor_pick_and_bad_side_defaults_to_for(monkeypatch):
@@ -133,3 +136,12 @@ def test_debate_needs_a_topic():
     with client.websocket_connect("/ws/voice?mode=debate") as ws:
         ev = ws.receive_json()
     assert ev["type"] == "error" and "Pick a topic" in ev["message"]
+
+
+def test_non_debate_sessions_keep_the_tutor_persona(monkeypatch):
+    tid = topic_id("Recall")
+    fake = FakeSession([[sc(turn_complete=True)]])
+    monkeypatch.setattr(live, "default_connect", fake_connect(fake))
+    with client.websocket_connect(f"/ws/voice?mode=learn&topic_id={tid}") as ws:
+        collect(ws)
+    assert "Be Socratic" in fake.system_prompt and "Never be a yes-man" not in fake.system_prompt

@@ -58,7 +58,7 @@ def debate_plan(topic_name: str, side: str, motion: str) -> str:
 
 def build_system_prompt(language: str, topics: list, mode: str = "free", focus_topic: Optional[dict] = None,
                         debate: Optional[dict] = None) -> str:
-    text = prompts.load("persona_eklavya.md")
+    text = prompts.load("persona_debater.md" if mode == "debate" and focus_topic and debate else "persona_eklavya.md")
     plan = ""
     if focus_topic and mode in ("learn", "test"):
         plan = session_plan(mode, focus_topic["topic_name"])

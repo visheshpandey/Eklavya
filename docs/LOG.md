@@ -104,3 +104,5 @@
 - Backend: `mode=debate&side=&motion=` on `/ws/voice`; rules in `app/prompts/debate_plan.md` (notes as evidence, opening, three rebuttal exchanges, closing, spoken verdict with one strength and one improvement); `phase` event carries side and motion. No quiz warm-up in this mode.
 - Frontend: `SESSION_MODE.DEBATE`, `onDebate` flow, `debate-tag` component (motion and side while the debate runs).
 - Verified in real Chrome with the real Gemini Live: tag shown, Eklavya opens with a notes-based argument, a typed rebuttal gets a counter-argument. Tests: backend 62, frontend 59.
+
+- Debater persona: debate sessions now use their own persona (`app/prompts/persona_debater.md`) instead of the warm tutor one. It must never open with agreement, attacks the last claim every turn (restate, find the weak spot, counter, add one new point), demands reasons and examples, concedes at most one small point, and only becomes the mentor again at the verdict. Live check: it rejected "everyone knows that", conceded one point and pivoted, and called out the student for switching to its side. Backend tests: 63.
