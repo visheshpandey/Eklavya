@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StudyAI — Smart Notes & Quiz Generator</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #070708;
+            --surface: rgba(22, 22, 26, 0.7);
+            --surface2: rgba(30, 30, 36, 0.5);
+            --border: rgba(42, 42, 53, 0.5);
+            --accent: #d4f55a;
+            --accent2: #8b79ff;
+            --text: #f0f0f0;
+            --muted: #8e8e9f;
+            --glass: rgba(255, 255, 255, 0.03);
+            --correct: #4ade80;
+            --wrong: #f87171;
+            --radius: 20px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--muted);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* NOISE OVERLAY */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* HEADER */
+        header {
+            position: relative;
+            z-index: 1;
+            padding: 2.5rem 2rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 1px solid var(--border);
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .logo-dot {
+            width: 38px;
+            height: 38px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 0 24px rgba(200, 240, 74, 0.4);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 24px rgba(200, 240, 74, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(200, 240, 74, 0.7);
+            }
+        }
+
+        header h1 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.6rem;
+            font-weight: 400;
+            letter-spacing: -0.02em;
+        }
+
+        header h1 span {
+            color: var(--accent);
+            font-style: italic;
+        }
+
+        .header-tag {
+            margin-left: auto;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* MAIN */
+        main {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2.5rem 2rem 4rem;
+        }
+
+        /* INPUT SECTION */
+        .input-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(12px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .input-card:focus-within {
+            border-color: var(--accent2);
+        }
+
+        .card-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            padding: 1rem 1.2rem;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent2);
+        }
+
+        textarea::placeholder {
+            color: var(--muted);
+        }
+
+        .divider-or {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.8rem;
+            margin: 1rem 0;
+            position: relative;
+        }
+
+        .divider-or::before,
+        .divider-or::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 44%;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .divider-or::before {
+            left: 0;
+        }
+
+        .divider-or::after {
+            right: 0;
+        }
+
+        .upload-zone {
+            border: 1.5px dashed var(--border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--surface2);
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(200, 240, 74, 0.04);
+        }
+
+        .upload-zone .icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        .upload-zone p strong {
+            color: var(--accent);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 0.6rem;
+            font-size: 0.8rem;
+            color: var(--accent);
+            display: none;
+        }
+
+        /* CONTROLS */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .control-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.5rem;
+        }
+
+        .control-card label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 0.8rem;
+        }
+
+        .difficulty-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .diff-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1.5px solid var(--border);
+            background: var(--surface2);
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .diff-btn:hover {
+            border-color: var(--accent2);
+            color: var(--text);
+        }
+
+        .diff-btn.active {
+            border-color: var(--accent);
+            background: rgba(200, 240, 74, 0.1);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .slider-wrap {
+            position: relative;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 3px solid var(--bg);
+            box-shadow: 0 0 8px rgba(200, 240, 74, 0.5);
+        }
+
+        .slider-val {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--bg);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.1rem 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 0.6rem;
+        }
+
+        /* GENERATE BUTTON */
+        .generate-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .generate-btn:hover {
+            background: #d4f55a;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(200, 240, 74, 0.3);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-inner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        /* LOADER */
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        .loader-ring {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loader p {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .loader p span {
+            color: var(--accent);
+            font-style: italic;
+        }
+
+        /* ERROR */
+        .error-box {
+            display: none;
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: var(--radius);
+            padding: 1rem 1.2rem;
+            color: var(--wrong);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .error-box.active {
+            display: block;
+        }
+
+        /* RESULTS */
+        #results {
+            display: none;
+        }
+
+        #results.active {
+            display: block;
+            animation: fadeUp 0.4s ease;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .staggered-item {
+            opacity: 0;
+            animation: fadeUp 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        .stagger-1 { animation-delay: 0.1s; }
+        .stagger-2 { animation-delay: 0.2s; }
+        .stagger-3 { animation-delay: 0.3s; }
+        .stagger-4 { animation-delay: 0.4s; }
+        .stagger-5 { animation-delay: 0.5s; }
+        .stagger-6 { animation-delay: 0.6s; }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .results-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            font-style: italic;
+            color: var(--text);
+        }
+
+        .download-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            background: var(--surface2);
+            border: 1.5px solid var(--accent);
+            border-radius: 8px;
+            color: var(--accent);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .download-btn:hover {
+            background: rgba(200, 240, 74, 0.1);
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.3rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 0.55rem;
+            border-radius: 7px;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tab-btn.active {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* TAB PANELS */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+            animation: fadeUp 0.3s ease;
+        }
+
+        /* SUMMARY */
+        .topic-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.4rem 1.6rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--accent2);
+        }
+
+        .topic-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+            color: var(--text);
+        }
+
+        .topic-points {
+            list-style: none;
+        }
+
+        .topic-points li {
+            padding: 0.35rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+            font-size: 0.88rem;
+            line-height: 1.6;
+            color: #c8c8d8;
+            border-bottom: 1px solid rgba(42, 42, 53, 0.5);
+        }
+
+        .topic-points li:last-child {
+            border-bottom: none;
+        }
+
+        .topic-points li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-size: 0.75rem;
+            top: 0.45rem;
+        }
+
+        /* QUIZ */
+        .quiz-progress {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .question-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.6rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-num {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent2);
+            margin-bottom: 0.6rem;
+        }
+
+        .question-text {
+            font-size: 0.95rem;
+            font-weight: 500;
+            line-height: 1.6;
+            margin-bottom: 1.2rem;
+            color: var(--text);
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .option-btn {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--surface2);
+            border: 1.5px solid var(--border);
+            border-radius: 9px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.87rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--accent2);
+            background: rgba(124, 106, 245, 0.08);
+        }
+
+        .option-btn.selected {
+            border-color: var(--accent2);
+            background: rgba(124, 106, 245, 0.15);
+        }
+
+        .option-btn.correct {
+            border-color: var(--correct);
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--correct);
+        }
+
+        .option-btn.wrong {
+            border-color: var(--wrong);
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--wrong);
+        }
+
+        .option-btn:disabled {
+            cursor: default;
+        }
+
+        .option-letter {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 1.5px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            opacity: 0.7;
+        }
+
+        .explanation {
+            display: none;
+            margin-top: 1rem;
+            padding: 0.8rem 1rem;
+            background: rgba(200, 240, 74, 0.06);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            font-size: 0.84rem;
+            line-height: 1.6;
+            color: #c8c8d8;
+        }
+
+        .explanation.show {
+            display: block;
+            animation: fadeUp 0.2s ease;
+        }
+
+        .explanation strong {
+            color: var(--accent);
+        }
+
+        .quiz-score {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .quiz-score.show {
+            display: block;
+            animation: fadeUp 0.4s ease;
+        }
+
+        .score-circle {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: 3px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.8rem;
+            color: var(--accent);
+            box-shadow: 0 0 30px rgba(200, 240, 74, 0.2);
+        }
+
+        .score-label {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+        }
+
+        .retry-btn {
+            padding: 0.6rem 1.4rem;
+            background: transparent;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--muted);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .retry-btn:hover {
+            border-color: var(--accent2);
+            color: var(--text);
+        }
+
+        /* KEY TERMS */
+        .terms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .term-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.4rem;
+            transition: border-color 0.2s;
+        }
+
+        .term-card:hover {
+            border-color: var(--accent2);
+        }
+
+        .term-word {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+        }
+
+        .term-def {
+            font-size: 0.84rem;
+            color: #a0a0b8;
+            line-height: 1.6;
+        }
+
+        /* MOBILE */
+        @media (max-width: 640px) {
+            header {
+                padding: 1.5rem 1rem 1rem;
+            }
+
+            main {
+                padding: 1.5rem 1rem 3rem;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            .results-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .terms-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo-dot">✦</div>
+        <h1>Study<span>AI</span></h1>
+        <span class="header-tag">Hack-A-Sprint 2026</span>
+    </header>
+
+    <main>
+
+        <!-- INPUT -->
+        <div class="input-card">
+            <div class="card-label">Your Study Material</div>
+            <textarea id="studyText"
+                placeholder="Paste your lecture notes, textbook excerpt, or any study content here..."></textarea>
+            <div class="divider-or">or upload a file</div>
+            <div class="upload-zone" id="uploadZone">
+                <div class="icon">📄</div>
+                <p>Drag & drop your <strong>PDF or TXT</strong> file here</p>
+                <p style="margin-top:0.3rem;font-size:0.75rem;">Click to browse</p>
+                <div class="file-name" id="fileName"></div>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf,.txt" />
+        </div>
+
+        <!-- CONTROLS -->
+        <div class="controls">
+            <div class="control-card">
+                <label>Difficulty Level</label>
+                <div class="difficulty-options">
+                    <button class="diff-btn" data-val="Easy">Easy</button>
+                    <button class="diff-btn active" data-val="Medium">Medium</button>
+                    <button class="diff-btn" data-val="Hard">Hard</button>
+                </div>
+            </div>
+            <div class="control-card">
+                <label>Questions: <span class="slider-val" id="qCountVal">5</span></label>
+                <div class="slider-wrap">
+                    <input type="range" id="qCount" min="3" max="10" value="5" />
+                </div>
+            </div>
+        </div>
+
+        <!-- GENERATE -->
+        <button class="generate-btn" id="generateBtn" onclick="generate()">
+            <div class="btn-inner">
+                <span>✦</span>
+                <span>Generate Summary & Quiz</span>
+            </div>
+        </button>
+
+        <!-- ERROR -->
+        <div class="error-box" id="errorBox"></div>
+
+        <!-- LOADER -->
+        <div class="loader" id="loader">
+            <div class="loader-ring"></div>
+            <p>Processing with <span>Gemini 3 Flash</span>...</p>
+        </div>
+
+        <!-- RESULTS -->
+        <div id="results">
+            <div class="results-header">
+                <div class="results-title">Your Study Kit is ready ✦</div>
+                <button class="download-btn" onclick="downloadPDF()">⬇ Download PDF</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('summary', this)">📋 Summary</button>
+                <button class="tab-btn" onclick="switchTab('quiz', this)">🧠 Quiz</button>
+                <button class="tab-btn" onclick="switchTab('terms', this)">📖 Key Terms</button>
+            </div>
+
+            <!-- SUMMARY TAB -->
+            <div class="tab-panel active" id="tab-summary">
+                <div id="summaryContent"></div>
+            </div>
+
+            <!-- QUIZ TAB -->
+            <div class="tab-panel" id="tab-quiz">
+                <div class="quiz-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="quizProgress" style="width:0%"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0 answered</div>
+                </div>
+                <div id="quizContent"></div>
+                <div class="quiz-score" id="quizScore">
+                    <div class="score-circle" id="scoreCircle">0/0</div>
+                    <div class="score-label">Quiz Complete! Review your answers above.</div>
+                    <button class="retry-btn" onclick="retryQuiz()">↺ Retry Quiz</button>
+                </div>
+            </div>
+
+            <!-- TERMS TAB -->
+            <div class="tab-panel" id="tab-terms">
+                <div class="terms-grid" id="termsContent"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // CONFIG - change this to your deployed backend URL
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:5000'
+            : 'https://YOUR-RENDER-URL.onrender.com'; // ← update this after deploying
+
+        let currentData = null;
+        let selectedFile = null;
+        let quizAnswered = 0;
+        let quizCorrect = 0;
+        let quizTotal = 0;
+
+        // FILE UPLOAD
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+        function handleFile(file) {
+            if (!file) return;
+            selectedFile = file;
+            const fn = document.getElementById('fileName');
+            fn.textContent = '✓ ' + file.name;
+            fn.style.display = 'block';
+            document.getElementById('studyText').value = '';
+        }
+
+        // DIFFICULTY
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // SLIDER
+        const qCount = document.getElementById('qCount');
+        const qCountVal = document.getElementById('qCountVal');
+        qCount.addEventListener('input', () => qCountVal.textContent = qCount.value);
+
+        // GENERATE
+        async function generate() {
+            const text = document.getElementById('studyText').value.trim();
+            const difficulty = document.querySelector('.diff-btn.active').dataset.val;
+            const numQ = parseInt(qCount.value);
+
+            if (!text && !selectedFile) {
+                showError('Please paste some text or upload a file first.');
+                return;
+            }
+
+            setLoading(true);
+            hideError();
+            document.getElementById('results').classList.remove('active');
+
+            try {
+                const formData = new FormData();
+                if (selectedFile) formData.append('file', selectedFile);
+                else formData.append('text', text);
+                formData.append('difficulty', difficulty);
+                formData.append('num_questions', numQ);
+
+                const res = await fetch(`${API_BASE}/api/generate`, { method: 'POST', body: formData });
+                const json = await res.json();
+
+                if (!json.success) {
+                    showError(json.error || 'Something went wrong. Please try again.');
+                    return;
+                }
+
+                currentData = json.data;
+                renderResults(json.data);
+            } catch (err) {
+                showError('Cannot connect to the server. Make sure the backend is running.');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function renderResults(data) {
+            renderSummary(data.summary);
+            renderQuiz(data.quiz);
+            renderTerms(data.key_terms);
+            document.getElementById('results').classList.add('active');
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // SUMMARY
+        function renderSummary(summary) {
+            const el = document.getElementById('summaryContent');
+            el.innerHTML = summary.map((topic, i) => `
+      <div class="topic-card staggered-item stagger-${(i % 6) + 1}">
+        <div style="display:flex; justify-content:space-between; align-items:start;">
+            <div class="topic-title">${topic.topic}</div>
+            <button class="retry-btn" style="padding: 2px 8px; font-size: 10px;" onclick="copyItem(this, '${topic.points.join('\\n').replace(/'/g, "\\'")}')">Copy</button>
+        </div>
+        <ul class="topic-points">
+          ${topic.points.map(p => `<li>${p}</li>`).join('')}
+        </ul>
+      </div>
+    `).join('');
+        }
+
+        // QUIZ
+        function renderQuiz(quiz) {
+            quizAnswered = 0; quizCorrect = 0; quizTotal = quiz.length;
+            updateProgress();
+            const el = document.getElementById('quizContent');
+            document.getElementById('quizScore').classList.remove('show');
+
+            el.innerHTML = quiz.map((q, i) => `
+      <div class="question-card" id="qcard-${i}">
+        <div class="question-num">Question ${i + 1} of ${quiz.length}</div>
+        <div class="question-text">${q.question}</div>
+        <div class="options">
+          ${q.options.map((opt, oi) => {
+                const letter = ['A', 'B', 'C', 'D'][oi];
+                return `<button class="option-btn" id="opt-${i}-${letter}" onclick="selectAnswer(${i}, '${letter}', '${q.correct}', this)">
+              <span class="option-letter">${letter}</span>
+              ${opt}
+            </button>`;
+            }).join('')}
+        </div>
+        <div class="explanation" id="exp-${i}">
+          <strong>💡 Explanation:</strong> ${q.explanation}
+        </div>
+      </div>
+    `).join('');
+        }
+
+        function selectAnswer(qIdx, chosen, correct, btn) {
+            const card = document.getElementById(`qcard-${qIdx}`);
+            if (card.dataset.answered) return;
+            card.dataset.answered = 'true';
+            quizAnswered++;
+
+            const isCorrect = chosen === correct;
+            if (isCorrect) quizCorrect++;
+
+            // Disable all options in this card
+            card.querySelectorAll('.option-btn').forEach(b => {
+                b.disabled = true;
+                const letter = b.querySelector('.option-letter').textContent;
+                if (letter === correct) b.classList.add('correct');
+                else if (b === btn && !isCorrect) b.classList.add('wrong');
+            });
+
+            document.getElementById(`exp-${qIdx}`).classList.add('show');
+            updateProgress();
+
+            if (quizAnswered === quizTotal) {
+                setTimeout(() => {
+                    const score = document.getElementById('quizScore');
+                    document.getElementById('scoreCircle').textContent = `${quizCorrect}/${quizTotal}`;
+                    score.classList.add('show');
+                }, 500);
+            }
+        }
+
+        function retryQuiz() {
+            if (currentData) renderQuiz(currentData.quiz);
+        }
+
+        function updateProgress() {
+            const pct = quizTotal ? (quizAnswered / quizTotal) * 100 : 0;
+            document.getElementById('quizProgress').style.width = pct + '%';
+            document.getElementById('progressText').textContent = `${quizAnswered} of ${quizTotal} answered`;
+        }
+
+        // TERMS
+        function renderTerms(terms) {
+            const el = document.getElementById('termsContent');
+            el.innerHTML = terms.map((t, i) => `
+      <div class="term-card staggered-item stagger-${(i % 6) + 1}">
+        <div style="display:flex; justify-content:space-between; align-items:start;">
+            <div class="term-word">${t.term}</div>
+            <button class="retry-btn" style="padding: 2px 8px; font-size: 10px;" onclick="copyItem(this, '${t.definition.replace(/'/g, "\\'")}')">Copy</button>
+        </div>
+        <div class="term-def">${t.definition}</div>
+      </div>
+    `).join('');
+        }
+
+        function copyItem(btn, text) {
+            navigator.clipboard.writeText(text);
+            const originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.style.color = 'var(--accent)';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.color = '';
+            }, 2000);
+        }
+
+        // TABS
+        function switchTab(name, btn) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${name}`).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // PDF DOWNLOAD
+        function downloadPDF() {
+            if (!currentData) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+            const margin = 18;
+            let y = margin;
+            const pageH = 297;
+            const maxW = 210 - margin * 2;
+
+            function checkPage(h = 10) {
+                if (y + h > pageH - 15) { doc.addPage(); y = margin; }
+            }
+
+            function writeText(text, size, bold, color, indent = 0) {
+                doc.setFontSize(size);
+                doc.setFont('helvetica', bold ? 'bold' : 'normal');
+                doc.setTextColor(...color);
+                const lines = doc.splitTextToSize(text, maxW - indent);
+                lines.forEach(line => {
+                    checkPage(size * 0.5);
+                    doc.text(line, margin + indent, y);
+                    y += size * 0.45;
+                });
+            }
+
+            // Header
+            doc.setFillColor(200, 240, 74);
+            doc.rect(0, 0, 210, 22, 'F');
+            doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+            doc.setTextColor(13, 13, 15);
+            doc.text('StudyAI — Study Kit', margin, 14);
+            doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+            doc.text(`Generated ${new Date().toLocaleDateString()}`, 210 - margin, 14, { align: 'right' });
+            y = 32;
+
+            // SUMMARY
+            writeText('SUMMARY', 13, true, [200, 240, 74]);
+            y += 4;
+            currentData.summary.forEach(topic => {
+                checkPage(12);
+                writeText(topic.topic, 11, true, [240, 240, 240]);
+                y += 1;
+                topic.points.forEach(pt => {
+                    checkPage(8);
+                    writeText(`→  ${pt}`, 9, false, [180, 180, 200], 3);
+                    y += 1;
+                });
+                y += 3;
+            });
+
+            // QUIZ
+            y += 4;
+            writeText('QUIZ', 13, true, [200, 240, 74]);
+            y += 4;
+            currentData.quiz.forEach((q, i) => {
+                checkPage(14);
+                writeText(`Q${i + 1}. ${q.question}`, 10, true, [240, 240, 240]);
+                y += 1;
+                q.options.forEach(opt => {
+                    checkPage(6);
+                    const isCorrect = opt.startsWith(q.correct + '.');
+                    writeText(opt, 9, false, isCorrect ? [74, 222, 128] : [160, 160, 180], 4);
+                });
+                writeText(`Explanation: ${q.explanation}`, 8, false, [150, 150, 180], 4);
+                y += 4;
+            });
+
+            // KEY TERMS
+            y += 4;
+            writeText('KEY TERMS', 13, true, [200, 240, 74]);
+            y += 4;
+            currentData.key_terms.forEach(t => {
+                checkPage(10);
+                writeText(`${t.term}`, 10, true, [200, 240, 74]);
+                writeText(t.definition, 9, false, [180, 180, 200], 3);
+                y += 3;
+            });
+
+            doc.save('studyai-notes.pdf');
+        }
+
+        // HELPERS
+        function setLoading(val) {
+            document.getElementById('loader').classList.toggle('active', val);
+            document.getElementById('generateBtn').disabled = val;
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorBox');
+            el.textContent = '⚠ ' + msg;
+            el.classList.add('active');
+        }
+
+        function hideError() {
+            document.getElementById('errorBox').classList.remove('active');
+        }
+    </script>
+</body>
+
+</html>

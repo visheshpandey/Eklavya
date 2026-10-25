@@ -47,3 +47,11 @@
 - Models on this key include `gemini-3.8-live`, `gemini-3.1-flash-live-preview`, `gemini-2.5-flash-native-audio-*`, `gemini-3.8-flash`, `gemini-flash-latest`. Defaults kept: `GEMINI_MODEL=gemini-flash-latest`, `GEMINI_LIVE_MODEL=gemini-3.8-live`.
 - Observed: output transcription chunks can join without a space ("kitneactually"); watch for this when finalizing tutor text in `live.py` / the UI.
 - Still unjudged: Hindi/Hinglish voice quality by ear, spoken latency, interrupt behaviour on a real mic, session limits.
+
+## 2026-10-25 (frontend + real Live verification)
+- New frontend (`frontend/index.html`, `css/styles.css`, `js/{api,dom,voice,audio-worklet,emotion,quiz,mission,dashboard,language,app}.js`): orb to start/stop a Gemini Live session, live transcript bubbles, emotion meters, tappable quiz card, mastery bars, misconception alerts, mission card, decision log. Old summary page kept as `legacy.html`. JS syntax-checked; mic/speaker behaviour NOT tested (no mic available to the agent).
+- Real Gemini Live check through our app, typed input: Hinglish greeting (~0.8-1.3 s to first audio), notes-grounded explanation with spoken numbers, quiz read aloud with options, server-side grading via tool, spoken reaction naming the confusion, emotion reports, barge-in works.
+- Findings: a tool call ends the model's turn with `turn_complete`; the spoken reply arrives in the next turn (UI handles this, since `turn_complete` just refreshes the dashboard). The tutor repeated its greeting after calling report_learner_state on it -> persona now forbids that.
+- Text model switched to `gemini-3.1-flash-lite` (`gemini-flash-latest` and `gemini-3.x-flash` returned 503/timeouts under load); Gemini calls now time out after 30 s (-> 502).
+- Gotcha: `uvicorn --reload` left an old server child bound to port 5000; kill all python uvicorn processes before restarting.
+- Demo numbers: from 38%, three correct answers reach ~57%, not the PRD's 67%; tune seed/start values if the story must match exactly.

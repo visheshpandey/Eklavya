@@ -1,1 +1,4 @@
-// English | Hindi | Hinglish toggle, sent with every request (Phase 1)
+// Language the tutor starts in (it follows the student if they switch mid-sentence).
+import { $ } from './dom.js';
+
+export const getLanguage = () => $('lang').value;

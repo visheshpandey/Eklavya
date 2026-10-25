@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+TIMEOUT_MS = 30000  # a slow Gemini call becomes an error (502), not a hung request
 CACHE_TTL = 600  # 10 minutes
 
 _client = None
@@ -22,7 +23,7 @@ def _get_client():
         key = os.getenv("GEMINI_API_KEY")
         if not key:
             raise RuntimeError("GEMINI_API_KEY is not set in backend/.env")
-        _client = genai.Client(api_key=key)
+        _client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=TIMEOUT_MS))
     return _client
 
 

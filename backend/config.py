@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "data", "studypilot.db"))
 DEMO_USER_ID = 1  # single seeded student, no login
 
