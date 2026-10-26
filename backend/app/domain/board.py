@@ -20,8 +20,13 @@ MAX_CELL = 60
 
 def _text(value, limit: int) -> str:
     """One line of plain text: whitespace collapsed, cut to `limit` characters with an ellipsis."""
-    text = " ".join(str(value or "").split())
+    text = " ".join(str("" if value is None else value).split())   # keep a numeric 0
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _cells(value) -> list:
+    """Table cells from a row the model sent as "a | b | c" or (against the schema) as a list."""
+    return value if isinstance(value, (list, tuple)) else str(value).split("|")
 
 
 def _lines(values, limit: int, count: int) -> list:
@@ -60,12 +65,17 @@ def clean_board(args: dict) -> dict:
 
     else:  # table
         raw_headers = args.get("headers") or []
-        headers = [_text(h, MAX_CELL) for h in ([raw_headers] if isinstance(raw_headers, str) else raw_headers)[:MAX_COLUMNS]]
+        if isinstance(raw_headers, str):   # one "a | b | c" line instead of a list
+            raw_headers = raw_headers.split("|")
+        headers = [_text(h, MAX_CELL) for h in raw_headers[:MAX_COLUMNS]]
         if not any(headers):   # an empty corner cell is fine; all-empty is not
             raise ValueError("a table board needs headers")
         rows = []
-        for raw in (args.get("rows") or [])[:MAX_ROWS]:
-            cells = [_text(c, MAX_CELL) for c in str(raw).split("|")][: len(headers)]
+        raw_rows = args.get("rows") or []
+        if isinstance(raw_rows, str):      # a single row sent as a string, not a list of rows
+            raw_rows = [line for line in raw_rows.splitlines() if line.strip()]
+        for raw in raw_rows[:MAX_ROWS]:
+            cells = [_text(c, MAX_CELL) for c in _cells(raw)][: len(headers)]
             if any(cells):
                 rows.append(cells + [""] * (len(headers) - len(cells)))
         if not rows:

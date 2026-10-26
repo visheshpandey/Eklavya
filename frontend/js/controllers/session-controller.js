@@ -3,6 +3,9 @@
 import { actions } from '../state/actions.js';
 import { SERVER_EVENT as EVENT, SESSION_MODE, VOICE_STATUS } from '../lib/protocol.js';
 
+/** Server events carry `type`; state keeps only the payload. */
+const stripType = ({ type: _type, ...rest }) => rest;
+
 /**
  * @param {object} deps
  * @param {*} deps.store
@@ -11,9 +14,6 @@ import { SERVER_EVENT as EVENT, SESSION_MODE, VOICE_STATUS } from '../lib/protoc
  * @param {() => string} deps.getLanguage current value of the language selector
  * @param {number} deps.userId
  */
-/** Server events carry `type`; state keeps only the payload. */
-const stripType = ({ type: _type, ...rest }) => rest;
-
 export function createSessionController({ store, notes, notifier, getLanguage, userId }) {
   let voice = null;   // set by attach(); the VoiceClient needs this controller's handlers, so it is created after
 

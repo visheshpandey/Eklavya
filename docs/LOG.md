@@ -113,3 +113,10 @@
 - Frontend: `lib/formula.js` (stacked fractions), `BOARD_SHOWN`/`BOARD_PICKED` in the reducer (same title updates in place, at most 12 boards, cleared when a new session starts), `components/whiteboard.js`, announcer reads new boards.
 - Verified with real Chrome + real Gemini Live: in learn mode Eklavya drew the Precision formula with a worked example (8 / 10 = 0.8) while saying "dekho board pe"; light, dark and 390 px phone checked; axe-core 0 violations on the board. In one of three runs it only drew after being asked, so the model does not always draw unprompted.
 - Tests: backend 75, frontend 66.
+- Review pass on the whiteboard (code review + web interface guidelines + axe), all fixed with tests:
+  - Formula fractions follow operator precedence: "1 - correct / total" and "TP / (TP + FP) x 100" stay plain text instead of being drawn wrong; >=, <=, ==, != are no longer split as equals.
+  - Tables sent as plain strings ("a | b | c") are read as rows and columns, not letter by letter; numeric 0 is kept.
+  - Going back to an earlier board updates it instead of adding a duplicate chip.
+  - The reveal animation now plays (a double redraw used to remove it); keyboard focus stays on the picked chip; an updated step is not announced again.
+  - Empty table corner is a plain cell, board heading is h2, formulas are `translate="no"`, long titles keep a tooltip, long terms wrap on phones. axe 0 violations at 390 px.
+  - Tests: backend 77, frontend 69.

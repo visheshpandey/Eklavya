@@ -72,3 +72,18 @@ def test_a_bad_board_is_reported_to_the_model_and_nothing_is_shown():
 def test_the_tutor_is_told_about_the_whiteboard_and_the_tool_is_declared():
     assert "show_board" in [d.name for d in tools.TOOL_DECLARATIONS]
     assert "# The whiteboard" in build_system_prompt("english", [{"topic_name": "Precision"}])
+
+
+def test_a_table_sent_as_strings_is_read_as_rows_and_columns_not_letters():
+    card = clean_board({"kind": "table", "title": "t", "headers": "Metric | Precision | Recall",
+                        "rows": "Asks | of flagged | of real"})
+    assert card["headers"] == ["Metric", "Precision", "Recall"]
+    assert card["rows"] == [["Asks", "of flagged", "of real"]]
+    nested = clean_board({"kind": "table", "title": "t", "headers": ["a", "b"], "rows": [["1", "2"]]})
+    assert nested["rows"] == [["1", "2"]]
+
+
+def test_a_numeric_zero_is_kept():
+    card = clean_board({"kind": "steps", "title": "t", "items": [0, 1]})
+    assert card["items"] == ["0", "1"]
+    assert clean_board({"kind": "formula", "title": "t", "formula": "x = 0", "result": 0})["result"] == "0"

@@ -24,9 +24,31 @@ test('a slash inside brackets or with a missing side is not a fraction', () => {
   assert.deepEqual(parseFormula(''), []);
 });
 
+test('a fraction is drawn only when it means the same formula', () => {
+  assert.deepEqual(parseFormula('Error rate = 1 - correct / total'), [{ text: 'Error rate' }, { text: '1 - correct / total' }]);
+  assert.deepEqual(parseFormula('Accuracy % = TP / (TP + FP) x 100'), [{ text: 'Accuracy %' }, { text: 'TP / (TP + FP) x 100' }]);
+  assert.deepEqual(parseFormula('y = a / b x c'), [{ text: 'y' }, { text: 'a / b x c' }]);
+  assert.deepEqual(parseFormula('z = -3 / 4'), [{ text: 'z' }, { num: '-3', den: '4' }]);
+  assert.deepEqual(parseFormula('max = 1/x'), [{ text: 'max' }, { num: '1', den: 'x' }]);   // a lone x is a variable, not "times"
+});
+
+test('comparison signs are not split as equals', () => {
+  assert.deepEqual(parseFormula('threshold >= 0.5'), [{ text: 'threshold >= 0.5' }]);
+  assert.deepEqual(parseFormula('a != b'), [{ text: 'a != b' }]);
+  assert.deepEqual(parseFormula('x == y'), [{ text: 'x == y' }]);
+  assert.deepEqual(parseFormula('p <= 1 = q'), [{ text: 'p <= 1' }, { text: 'q' }]);
+});
+
 test('only brackets that wrap the whole text are removed', () => {
   assert.equal(stripOuterParens('(a + b)'), 'a + b');
   assert.equal(stripOuterParens('(a) + (b)'), '(a) + (b)');
+});
+
+test('going back to an earlier title updates that board instead of adding a duplicate', () => {
+  const state = run(actions.boardShown(steps('Precision', 0)), actions.boardShown(steps('Recall', 0)), actions.boardShown(steps('Precision', 2)));
+  assert.deepEqual(state.session.boards.map((b) => b.title), ['Precision', 'Recall']);
+  assert.equal(state.session.boards[0].highlight, 2);
+  assert.equal(state.session.boardIndex, 0);
 });
 
 test('each new board goes on screen; the same title again updates it in place', () => {

@@ -62,15 +62,14 @@ const lastOpenIndex = (messages, role) => {
 };
 
 /**
- * A new board goes on screen. The same title and kind again means the tutor is updating it (next step,
- * filled-in result), so it replaces the last card instead of adding one.
+ * A new board goes on screen. A board with the same title and kind as one already shown means the tutor is
+ * updating it (next step, filled-in result, or going back to it), so that card is replaced and brought into view.
  */
 function showBoard(state, board) {
   const { boards } = state.session;
-  const last = boards[boards.length - 1];
-  const next = last && last.title === board.title && last.kind === board.kind
-    ? [...boards.slice(0, -1), board]
-    : [...boards, board].slice(-MAX_BOARDS);
+  const same = boards.findIndex((b) => b.title === board.title && b.kind === board.kind);
+  if (same >= 0) return withSession(state, { boards: boards.map((b, i) => (i === same ? board : b)), boardIndex: same });
+  const next = [...boards, board].slice(-MAX_BOARDS);
   return withSession(state, { boards: next, boardIndex: next.length - 1 });
 }
 

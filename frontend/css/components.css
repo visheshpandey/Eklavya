@@ -308,6 +308,7 @@
 }
 .formula-sm { font-size: clamp(1.125rem, 1rem + .6vw, 1.5rem); }
 .formula .eq { color: var(--ink-3); font-weight: 400; }
+.formula .term, .frac { min-width: 0; overflow-wrap: anywhere; }   /* a long term wraps instead of overflowing a phone */
 .frac { display: inline-grid; text-align: center; }
 .frac .num { padding: 0 var(--s-2) 2px; border-bottom: 2px solid currentColor; }
 .frac .den { padding: 2px var(--s-2) 0; }

@@ -16,9 +16,10 @@ export function mountAnnouncer({ store, root }) {
     const last = [...messages].reverse().find((m) => m.role === 'tutor' && m.final);
     if (last && last.text !== lastSaid) { lastSaid = last.text; root.textContent = `Eklavya: ${last.text}`; }
   });
+  let boardsAnnounced = 0;   // a board updated in place (next step) is not announced again
   store.select(selectBoards, (boards) => {
-    const board = boards[boards.length - 1];
-    if (board) root.textContent = `On the whiteboard: ${board.title}.`;
+    if (boards.length > boardsAnnounced) root.textContent = `On the whiteboard: ${boards[boards.length - 1].title}.`;
+    boardsAnnounced = boards.length;
   });
   store.select(selectVoiceStatus, (status) => {
     if (first) { first = false; return; }                          // nothing to announce at page load
