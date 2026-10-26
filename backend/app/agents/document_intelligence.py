@@ -1,6 +1,7 @@
 """Document Intelligence agent: chunk uploaded text, extract topics, store everything."""
 from app import db
 from app.agents.logger import log_agent
+from app.ai import embeddings
 from app.ai.gemini import extract_list, llm_json
 from app.config import settings
 from app.domain import retrieval
@@ -100,14 +101,19 @@ def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = Tru
         topics.append({"id": tid, "topic_name": n})
         db.execute("INSERT OR IGNORE INTO learner_mastery (user_id, topic_id) VALUES (?, ?)", (user_id, tid))
     weights = _topic_tokens(topics)
+    stored = []
     for c in chunks:
-        db.execute(
+        chunk_id = db.execute(
             "INSERT INTO chunks (document_id, topic_id, heading, text) VALUES (?, ?, ?, ?)",
             (doc_id, _assign_topic(c, topics, weights), c["heading"], c["text"]),
         )
+        stored.append({"id": chunk_id, **c})
+    embedded = embeddings.embed_chunks(stored)   # meaning search; 0 if Gemini embeddings failed (logged)
 
     log_agent(user_id, "document_intelligence",
               f"Uploaded {file_name}: {len(chunks)} chunks",
               f"Found {len(topics)} topics via {source}",
-              "Stored chunks, topics and starting mastery (50)", 0.9)
+              "Stored chunks, topics and starting mastery (50)"
+              + (f"; embedded {embedded} chunks for meaning search" if embedded else "; search by words only (embedding failed)"),
+              0.9)
     return {"document_id": doc_id, "status": "processed", "topics_found": topics}

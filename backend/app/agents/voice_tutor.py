@@ -6,6 +6,7 @@ from app.agents.logger import log_agent
 from app.ai.gemini import llm_json
 from app.domain import retrieval
 from app.errors import BadRequestError
+from app.services.search import search
 
 LANG_RULES = {
     "english": "Reply in simple English.",
@@ -19,7 +20,7 @@ SYSTEM = ("You are Eklavya, a warm study mentor. Answer ONLY from the notes prov
 def ask(user_id: int, question: str, language: str = "hinglish", document_id: int = None):
     if not document_id and not retrieval.has_notes(user_id):
         raise BadRequestError("No notes uploaded yet. Upload a document first.")
-    chunks = retrieval.retrieve(document_id, question) if document_id else retrieval.retrieve_for_user(user_id, question)
+    chunks = search(user_id, question, document_id)
     if not chunks:
         log_agent(user_id, "voice_tutor", f"Question: {question}", "No matching notes found", "Told student it is not in the notes", 0.3)
         return {"answer": "I could not find this in your notes. Try rephrasing, or upload the chapter that covers it.",

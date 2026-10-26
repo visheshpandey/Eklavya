@@ -1,6 +1,7 @@
-"""Chunk notes and return top-k chunks for a question (BM25 over chunks in SQLite).
+"""Chunk notes and return top-k chunks for a question.
 
-Upgrade path: swap the scoring in `retrieve` for embeddings; callers do not change.
+Ranking is BM25 word matching, blended with embedding similarity when vectors are given (the vectors come
+from ``app.ai.embeddings`` via ``app.services.search``; this module stays pure).
 """
 import math
 import re
@@ -132,12 +133,38 @@ _CHUNKS_SQL = (
 )
 
 
-def _rank(rows, query: str, k: int):
-    """Best-first chunks for ``query``; empty when nothing matches."""
+SEMANTIC_WEIGHT = 0.5     # share of the final score that comes from embedding similarity
+MIN_SIMILARITY = 0.68     # measured on gemini-embedding-001: related questions score >= 0.70, unrelated ones <= 0.64
+
+
+def cosine(a, b) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    norm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))
+    return dot / norm if norm else 0.0
+
+
+def blend(word_scores, similarities):
+    """Word scores scaled to 0-1, mixed with meaning similarity (0 below MIN_SIMILARITY). Pure."""
+    top = max(word_scores) if word_scores else 0
+    out = []
+    for word, sim in zip(word_scores, similarities):
+        meaning = 0.0 if sim is None or sim < MIN_SIMILARITY else (sim - MIN_SIMILARITY) / (1 - MIN_SIMILARITY)
+        out.append((1 - SEMANTIC_WEIGHT) * (word / top if top else 0) + SEMANTIC_WEIGHT * meaning)
+    return out
+
+
+def rank(rows, query: str, k: int, query_vector=None, vectors=None):
+    """Best-first chunks for ``query``; empty when nothing matches.
+
+    With ``query_vector`` and ``vectors`` ({chunk_id: vector}) the score also counts meaning, so "kitne spam
+    pakde" can find the recall passage even without the word "recall".
+    """
     if not rows:
         return []
     # the heading is searched too so "precision" finds the Precision section
     scores = bm25_rank(query, [(r["heading"] or "") + " " + r["text"] for r in rows])
+    if query_vector is not None and vectors:
+        scores = blend(scores, [cosine(query_vector, vectors[r["id"]]) if vectors.get(r["id"]) else None for r in rows])
     ranked = sorted(zip(scores, rows), key=lambda pair: pair[0], reverse=True)
     return [
         {"text": r["text"], "topic": r["topic"], "topic_id": r["topic_id"], "heading": r["heading"], "page": r["page"],
@@ -146,14 +173,22 @@ def _rank(rows, query: str, k: int):
     ]
 
 
-def retrieve(document_id: int, query: str, k: int = RETRIEVAL_TOP_K):
+def chunks_of_document(document_id: int):
+    return db.query(_CHUNKS_SQL + "WHERE c.document_id = ?", (document_id,))
+
+
+def chunks_of_user(user_id: int):
+    return db.query(_CHUNKS_SQL + "WHERE d.user_id = ?", (user_id,))
+
+
+def retrieve(document_id: int, query: str, k: int = RETRIEVAL_TOP_K, query_vector=None, vectors=None):
     """Top-k chunks of ONE document: list of {text, topic, topic_id, heading, page, document, document_id, score}."""
-    return _rank(db.query(_CHUNKS_SQL + "WHERE c.document_id = ?", (document_id,)), query, k)
+    return rank(chunks_of_document(document_id), query, k, query_vector, vectors)
 
 
-def retrieve_for_user(user_id: int, query: str, k: int = RETRIEVAL_TOP_K):
+def retrieve_for_user(user_id: int, query: str, k: int = RETRIEVAL_TOP_K, query_vector=None, vectors=None):
     """Top-k chunks across ALL of the student's notes (used when no topic is in focus)."""
-    return _rank(db.query(_CHUNKS_SQL + "WHERE d.user_id = ?", (user_id,)), query, k)
+    return rank(chunks_of_user(user_id), query, k, query_vector, vectors)
 
 
 def has_notes(user_id: int) -> bool:

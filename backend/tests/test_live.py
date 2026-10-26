@@ -48,8 +48,8 @@ class FakeSession:
 
 def fake_connect(session):
     @asynccontextmanager
-    async def _c(system_prompt):
-        session.system_prompt = system_prompt
+    async def _c(system_prompt, tools=None):
+        session.system_prompt, session.tools = system_prompt, tools
         yield session
     return _c
 
@@ -164,7 +164,7 @@ def test_grade_without_question_and_unknown_tool_are_reported_to_the_model_not_c
 
 def test_gemini_connection_failure_is_an_error_event_not_a_crash(monkeypatch):
     @asynccontextmanager
-    async def boom(system_prompt):
+    async def boom(system_prompt, tools=None):
         raise RuntimeError("model not found")
         yield  # pragma: no cover
 

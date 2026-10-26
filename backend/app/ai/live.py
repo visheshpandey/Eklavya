@@ -7,6 +7,8 @@ Wire format with the browser (see docs/TEAM_PLAN.md):
 Gemini is the only model; any failure is sent to the client as {"type":"error","message":...}.
 """
 import asyncio
+import base64
+import binascii
 import json
 import logging
 from typing import Optional
@@ -17,12 +19,23 @@ from google.genai import types
 
 from app import db
 from app.ai import prompts
-from app.ai.tools import TOOLS, ToolContext, dispatch
+from app.ai.tools import ToolContext, dispatch, tools_for
+from app.domain.scoring import VIVA_QUESTIONS
 from app.config import settings
 
 log = logging.getLogger(__name__)
 
 INPUT_AUDIO_MIME = "audio/pcm;rate=16000"   # browser -> Gemini
+PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp")
+MAX_PHOTO_BYTES = 4 * 1024 * 1024            # a phone photo after the browser shrinks it is far smaller
+FOCUSED_MODES = ("learn", "test", "revise", "viva", "debate")   # modes that need a topic
+REVISE_QUESTIONS = 2
+DEBATE_STYLES = {
+    "tough": ("Tough opponent. Press hard on every weak spot, ask for proof every time, and concede almost nothing. "
+              "Stay respectful."),
+    "friendly": ("Friendly sparring partner. Still never agree by default and still argue your side every turn, but use "
+                 "a lighter tone, one challenge per turn, and give the student a moment to think. Good for a first debate."),
+}
 LANGUAGE_NAMES = {"english": "English", "hindi": "Hindi", "hinglish": "Hinglish (Hindi and English mixed)"}
 
 
@@ -48,7 +61,36 @@ def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
                 '1. Say one short line that you will start, then call ask_quiz_question, read the question and the four options, '
                 'wait for the spoken answer, call grade_answer, react as described in Quiz mode, and ask the next question.\n'
                 '2. When a tool result says test_complete, give a short warm spoken summary, then call get_mission and tell them what to do next.')
+    if mode == "revise":
+        return (f'# This session\'s plan: QUICK REVISION (about 5 minutes). Topic: "{topic_name}"\n'
+                f'The student practised "{topic_name}" before and it is due for revision, so it does not fade.\n'
+                f'1. Call search_notes for "{topic_name}", then call show_board with the single most important formula or idea '
+                '(with a worked example from the notes) and recap it in two or three short sentences. No long lesson.\n'
+                f'2. Then a {total}-question check: call ask_quiz_question, read the question and options, wait, call grade_answer, '
+                'react in one line, next question.\n'
+                '3. When a tool result says test_complete, say in one or two sentences how it went and that Eklavya will bring '
+                'this topic back at the right time. Do not start anything new.')
     return ""
+
+
+def viva_plan(topic_name: str) -> str:
+    return (f'# This session\'s plan: VIVA. Topic: "{topic_name}"\n'
+            f'Take a {VIVA_QUESTIONS}-question viva on "{topic_name}" only.\n'
+            '1. Greet the student in one line like an examiner, say there will be five questions and a report card at the end, '
+            'and ask if they are ready.\n'
+            f'2. Call search_notes for "{topic_name}". Then for each of the {VIVA_QUESTIONS} questions: ask it aloud and call '
+            'ask_viva_question at the same time, listen, probe at most twice, call mark_viva_answer, say a neutral one-liner, '
+            'move on.\n'
+            '3. After the last mark call finish_viva with honest strengths and one thing to improve, then tell the student '
+            'their marks out of ten, what went well and what to work on, warmly. That is the only time you may encourage them.')
+
+
+def debate_scoring_rules() -> str:
+    return ("\n\n# Scoring (silent)\n"
+            "- Right after each argument the student makes, call score_argument with fair 0-10 scores for evidence, logic and "
+            "rebuttal. Never say the scores aloud; they appear on the student's screen.\n"
+            "- After both closing statements and before the verdict, call finish_debate with honest overall scores for the "
+            "student and for yourself. If the student argued better, say so: an honest verdict is part of the game.")
 
 
 def debate_plan(topic_name: str, side: str, motion: str) -> str:
@@ -60,15 +102,22 @@ def debate_plan(topic_name: str, side: str, motion: str) -> str:
 
 def build_system_prompt(language: str, topics: list, mode: str = "free", focus_topic: Optional[dict] = None,
                         debate: Optional[dict] = None) -> str:
-    text = prompts.load("persona_debater.md" if mode == "debate" and focus_topic and debate else "persona_eklavya.md")
+    persona = "persona_eklavya.md"
     plan = ""
     if focus_topic and mode in ("learn", "test"):
         plan = session_plan(mode, focus_topic["topic_name"])
+    elif focus_topic and mode == "revise":
+        plan = session_plan(mode, focus_topic["topic_name"], REVISE_QUESTIONS)
+    elif focus_topic and mode == "viva":
+        persona, plan = "persona_examiner.md", viva_plan(focus_topic["topic_name"])
     elif focus_topic and mode == "debate" and debate:
-        plan = debate_plan(focus_topic["topic_name"], debate["side"], debate["motion"])
-    return (text.replace("{{LANGUAGE}}", LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["hinglish"]))
-                .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "not specified")
-                .replace("{{SESSION_PLAN}}", plan))
+        persona = "persona_debater.md"
+        plan = debate_plan(focus_topic["topic_name"], debate["side"], debate["motion"]) + debate_scoring_rules()
+    style = DEBATE_STYLES.get((debate or {}).get("style"), DEBATE_STYLES["tough"])
+    return (prompts.load(persona).replace("{{LANGUAGE}}", LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["hinglish"]))
+            .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "not specified")
+            .replace("{{STYLE}}", style)
+            .replace("{{SESSION_PLAN}}", plan))
 
 
 def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> str:
@@ -84,15 +133,21 @@ def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> st
     if focus_topic and mode == "test":
         return (f'[The student chose to be tested on "{focus_topic["topic_name"]}" by voice. Say one short line in {lang}, '
                 'then start the test.]')
+    if focus_topic and mode == "revise":
+        return (f'[Quick revision of "{focus_topic["topic_name"]}". Say one short line in {lang}, then call search_notes and '
+                'show_board right away and give the recap.]')
+    if focus_topic and mode == "viva":
+        return (f'[The student is ready for a viva on "{focus_topic["topic_name"]}". Greet them as the examiner in one line in '
+                f'{lang} and begin.]')
     return (f"[The student just joined. Greet them warmly in {lang}, in one or two short sentences, "
             "and ask what they want to work on.]")
 
 
-def build_config(system_prompt: str) -> types.LiveConnectConfig:
+def build_config(system_prompt: str, tools=None) -> types.LiveConnectConfig:
     kwargs = dict(
         response_modalities=["AUDIO"],
         system_instruction=system_prompt,
-        tools=TOOLS,
+        tools=tools or tools_for("free"),
         speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
             prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=settings.live_voice))),
         input_audio_transcription=types.AudioTranscriptionConfig(),
@@ -105,12 +160,12 @@ def build_config(system_prompt: str) -> types.LiveConnectConfig:
     return types.LiveConnectConfig(**kwargs)
 
 
-def default_connect(system_prompt: str):
+def default_connect(system_prompt: str, tools=None):
     """Real Gemini Live connection (an async context manager). Replaced in tests."""
     if not settings.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set in backend/.env")
     client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(api_version="v1beta"))
-    return client.aio.live.connect(model=settings.gemini_live_model, config=build_config(system_prompt))
+    return client.aio.live.connect(model=settings.gemini_live_model, config=build_config(system_prompt, tools))
 
 
 class LiveTutorSession:
@@ -122,7 +177,8 @@ class LiveTutorSession:
         self.mode, self.focus_topic, self.debate = mode, focus_topic, debate   # debate: {"side": "for"|"against", "motion": str}
         self.connect = connect or default_connect
         self.ctx = ToolContext(user_id=user_id, document_id=document_id, emit=self.emit, topics=topics,
-                               focus_topic_id=focus_topic["id"] if focus_topic else None, mode=mode)
+                               focus_topic_id=focus_topic["id"] if focus_topic else None, mode=mode, debate=debate,
+                               test_total=REVISE_QUESTIONS if mode == "revise" else 3)
         self.user_buf, self.tutor_buf = "", ""
         self.turns = 0
         self.session_id = None
@@ -228,20 +284,42 @@ class LiveTutorSession:
                     self.user_buf = text
                     await self._final("user")
                     await session.send_realtime_input(text=text)
+                elif kind == "photo":
+                    await self._send_photo(session, data)
+
+    async def _send_photo(self, session, data: dict):
+        """A photo from the student's camera or files ("snap a doubt"): Gemini Live sees it as one video frame."""
+        mime = str(data.get("mime", ""))
+        try:
+            raw = base64.b64decode(str(data.get("data", "")), validate=True)
+        except (binascii.Error, ValueError):
+            raw = b""
+        if mime not in PHOTO_TYPES or not raw or len(raw) > MAX_PHOTO_BYTES:
+            await self.emit({"type": "error", "message": "That photo could not be sent. Use a JPG, PNG or WebP under 4 MB."})
+            return
+        await session.send_realtime_input(video=types.Blob(data=raw, mime_type=mime))
+        note = " ".join(str(data.get("note", "")).split())[:300]
+        await session.send_realtime_input(text=(
+            "[The student just showed you a photo (a textbook page, notes or a question). Look at it carefully. Say in one "
+            "line what you see, then help with it: if it is a question, guide them to solve it step by step; use show_board "
+            "for any formula or working." + (f' The student said: "{note}"' if note else "") + "]"))
 
     async def run(self):
         self.session_id = await asyncio.to_thread(
-            db.execute, "INSERT INTO voice_sessions (user_id, mode, language) VALUES (?, ?, ?)",
-            (self.user_id, "gemini-live", self.language))
+            db.execute, "INSERT INTO voice_sessions (user_id, mode, language, study_mode, topic_id) VALUES (?, ?, ?, ?, ?)",
+            (self.user_id, "gemini-live", self.language, self.mode, self.focus_topic["id"] if self.focus_topic else None))
         try:
             prompt = build_system_prompt(self.language, self.topics, self.mode, self.focus_topic, self.debate)
-            async with self.connect(prompt) as session:
+            async with self.connect(prompt, tools_for(self.mode)) as session:
                 if self.focus_topic and self.mode in ("learn", "test"):
                     await self.emit({"type": "phase", "phase": "teaching" if self.mode == "learn" else "test",
                                      "topic": self.focus_topic["topic_name"]})
                 elif self.focus_topic and self.mode == "debate" and self.debate:
                     await self.emit({"type": "phase", "phase": "debate", "topic": self.focus_topic["topic_name"],
-                                     "side": self.debate["side"], "motion": self.debate["motion"]})
+                                     "side": self.debate["side"], "motion": self.debate["motion"],
+                                     "style": self.debate.get("style", "tough")})
+                elif self.focus_topic and self.mode in ("viva", "revise"):
+                    await self.emit({"type": "phase", "phase": self.mode, "topic": self.focus_topic["topic_name"]})
                 await session.send_realtime_input(text=opening_message(self.language, self.mode, self.focus_topic))
                 tasks = [asyncio.create_task(self._gemini_to_browser(session)),
                          asyncio.create_task(self._browser_to_gemini(session)),

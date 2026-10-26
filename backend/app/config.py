@@ -55,6 +55,7 @@ class Settings:
     gemini_api_key: str
     gemini_model: str            # text agents (JSON mode)
     gemini_live_model: str       # live voice tutor
+    gemini_embed_model: str      # note search (embeddings)
     gemini_timeout_ms: int       # a slow call becomes a 502 instead of hanging
     gemini_long_timeout_ms: int  # for one-off heavy calls such as reading a whole uploaded document
     live_voice: str
@@ -78,6 +79,7 @@ class Settings:
             gemini_api_key=_str("GEMINI_API_KEY"),
             gemini_model=_str("GEMINI_MODEL", "gemini-3.1-flash-lite"),
             gemini_live_model=_str("GEMINI_LIVE_MODEL", "gemini-3.8-live"),
+            gemini_embed_model=_str("GEMINI_EMBED_MODEL", "gemini-embedding-001"),
             gemini_timeout_ms=_int("GEMINI_TIMEOUT_MS", 30_000, minimum=1_000),
             gemini_long_timeout_ms=_int("GEMINI_LONG_TIMEOUT_MS", 90_000, minimum=1_000),
             live_voice=_str("LIVE_VOICE", "Kore"),

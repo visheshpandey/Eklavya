@@ -30,3 +30,14 @@ class QuizSubmitRequest(BaseModel):
 
 class MissionRequest(BaseModel):
     user_id: int = DEMO_USER
+
+
+class PlanRequest(BaseModel):
+    user_id: int = DEMO_USER
+    exam_date: str = Field(min_length=10, max_length=10)        # YYYY-MM-DD
+    minutes_per_day: int = Field(default=30, ge=15, le=240)
+
+
+class FlashcardsRequest(BaseModel):
+    user_id: int = DEMO_USER
+    topic_id: int

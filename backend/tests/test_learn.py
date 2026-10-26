@@ -112,7 +112,7 @@ def test_debate_mode_sets_side_and_motion_and_skips_quiz_warmup(monkeypatch):
     with client.websocket_connect(f"/ws/voice?mode=debate&topic_id={tid}&side=against&motion=Precision%20beats%20recall") as ws:
         ev, _ = collect(ws)
     phase = next(e for e in ev if e["type"] == "phase")
-    assert phase == {"type": "phase", "phase": "debate", "topic": "Precision", "side": "against", "motion": "Precision beats recall"}
+    assert phase == {"type": "phase", "phase": "debate", "topic": "Precision", "side": "against", "motion": "Precision beats recall", "style": "tough"}
     assert "DEBATE" in fake.system_prompt and "you argue against the motion" in fake.system_prompt
     assert "Precision beats recall" in fake.system_prompt and "{{" not in fake.system_prompt
     assert any('debate "Precision"' in str(s.get("text", "")) for s in fake.sent)

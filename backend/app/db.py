@@ -75,7 +75,38 @@ CREATE TABLE IF NOT EXISTS transcripts (
     id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER, role TEXT, text TEXT,
     ts TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS chunk_embeddings (
+    chunk_id INTEGER PRIMARY KEY, vector TEXT
+);
+CREATE TABLE IF NOT EXISTS vivas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER,
+    started_at TEXT DEFAULT CURRENT_TIMESTAMP, finished_at TEXT,
+    marks REAL, out_of INTEGER, strengths TEXT, improve TEXT
+);
+CREATE TABLE IF NOT EXISTS viva_answers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, viva_id INTEGER, question TEXT, answer_summary TEXT,
+    mark REAL, feedback TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS debates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER, motion TEXT,
+    tutor_side TEXT, style TEXT, started_at TEXT DEFAULT CURRENT_TIMESTAMP, finished_at TEXT,
+    winner TEXT, student_score REAL, tutor_score REAL, strength TEXT, improve TEXT
+);
+CREATE TABLE IF NOT EXISTS debate_rounds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, debate_id INTEGER, evidence REAL, logic REAL,
+    rebuttal REAL, strength REAL, note TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS flashcards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER, front TEXT, back TEXT,
+    source TEXT DEFAULT 'notes', created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
+
+# Columns added after the first release: (table, column, type). init_db adds any that an older database lacks.
+MIGRATIONS = (
+    ("voice_sessions", "study_mode", "TEXT"),
+    ("voice_sessions", "topic_id", "INTEGER"),
+)
 
 
 @contextmanager
@@ -98,6 +129,10 @@ def get_conn():
 def init_db():
     with get_conn() as c:
         c.executescript(SCHEMA)
+        for table, column, kind in MIGRATIONS:
+            existing = {row[1] for row in c.execute(f"PRAGMA table_info({table})")}
+            if column not in existing:
+                c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
 
 
 def query(sql, args=()):

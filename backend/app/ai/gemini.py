@@ -112,3 +112,31 @@ def extract_list(data, *keys) -> list:
         if len(lists) == 1:
             return lists[0]
     return []
+
+
+IMAGE_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp", "heic": "image/heic"}
+IMAGE_PROMPT = ("This is a photo of a student's study material (a textbook page, handwritten notes, a slide or a "
+                "question). Write out all of its study content as clean plain text: keep headings on their own "
+                "lines, keep formulas (write them in plain text, e.g. TP / (TP + FP)), and describe any diagram in "
+                "one sentence in square brackets. Do not add anything that is not in the photo. If there is no "
+                "readable study content, answer exactly: NO_TEXT")
+
+
+def read_image(data: bytes, mime_type: str) -> str:
+    """Text of a photographed page (Gemini multimodal). Raises ``LLMError`` if Gemini fails."""
+    last_error = "unknown error"
+    for attempt in range(1, ATTEMPTS + 1):
+        try:
+            response = _get_client().models.generate_content(
+                model=settings.gemini_model,
+                contents=[types.Part.from_bytes(data=data, mime_type=mime_type), IMAGE_PROMPT],
+                config=types.GenerateContentConfig(temperature=0.1, http_options=types.HttpOptions(timeout=settings.gemini_long_timeout_ms)),
+            )
+            text = (response.text or "").strip()
+            return "" if text == "NO_TEXT" else text
+        except Exception as exc:  # noqa: BLE001
+            last_error = str(exc)
+        log.warning("Gemini image read failed (attempt %d/%d): %s", attempt, ATTEMPTS, last_error)
+        if attempt < ATTEMPTS and any(marker.lower() in last_error.lower() for marker in TRANSIENT):
+            time.sleep(RETRY_PAUSE_SECONDS * attempt)
+    raise LLMError(f"Gemini could not read the photo: {last_error}")
