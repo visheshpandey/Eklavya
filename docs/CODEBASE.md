@@ -23,13 +23,14 @@ studyai/
 │   │   │                         document_intelligence, voice_tutor, quiz, evaluation,
 │   │   │                         misconception, study_mission, logger
 │   │   ├── domain/               pure rules, no network: mastery maths, retrieval (BM25),
-│   │   │                         misconception labels, file text extraction (pdf)
+│   │   │                         misconception labels, file text extraction (pdf), whiteboard cards (board)
 │   │   ├── ai/                   everything that talks to Gemini
 │   │   │   ├── gemini.py         text client (JSON mode, cache, retry)
 │   │   │   ├── live.py           Gemini Live voice session (browser <-> Gemini)
 │   │   │   ├── tools.py          tools the live tutor can call
 │   │   │   └── prompts.py        loads app/prompts/*.md
-│   │   └── prompts/              persona_eklavya.md, misconception_taxonomy.md
+│   │   └── prompts/              persona_eklavya.md, persona_debater.md, debate_plan.md,
+│   │                             misconception_taxonomy.md
 │   ├── tests/                    pytest (Gemini replaced by test doubles)
 │   ├── scripts/check_gemini.py   real-key check of model IDs, text, and a Live round trip
 │   ├── data/                     SQLite file (gitignored)
@@ -45,15 +46,16 @@ studyai/
 │   ├── js/
 │   │   ├── main.js               entry: wires store + services + controllers + components
 │   │   ├── lib/                  config.js, protocol.js (shared names), dom.js (el, svgEl, render),
-│   │   │                         format.js, icons.js, theme.js, chart-data.js (pure series maths)
+│   │   │                         format.js, icons.js, theme.js, chart-data.js (pure series maths),
+│   │   │                         formula.js (pure: formula text -> stacked fractions)
 │   │   ├── services/             api-client.js (HTTP), voice-client.js (mic/WebSocket/audio),
 │   │   │                         audio-worklet.js (mic capture processor)
 │   │   ├── state/                store.js, actions.js, reducer.js, selectors.js
 │   │   ├── controllers/          notes-controller, session-controller, notifier (business logic)
 │   │   └── components/           one file per UI piece (render state, report clicks): shell (banner, toasts,
 │   │                             announcer, nav-tabs, theme-toggle), library, study (study-header,
-│   │                             session-orb, stepper, quiz-card, summary-card, chat, text-input,
-│   │                             emotion-card), progress (mission-card, mastery-chart, alerts-list,
+│   │                             session-orb, stepper, debate-tag, whiteboard, quiz-card, summary-card,
+│   │                             chat, text-input, emotion-card), progress (mission-card, mastery-chart, alerts-list,
 │   │                             history-list, decision-log)
 │   └── tests/                    node:test, no dependencies: `npm test`
 ├── samples/ml_notes.txt          demo notes (also uploadable to try the upload flow)
@@ -182,7 +184,13 @@ Binary frames: mic audio up (PCM16 mono 16 kHz), tutor audio down (PCM16 mono 24
 | Direction | JSON message |
 |---|---|
 | browser to server | `{"type":"user_text","text":"..."}`, `{"type":"audio_stream_end"}`, `{"type":"end"}` |
-| server to browser | `transcript` (`role`, `text`, `final`), `emotion`, `phase`, `quiz_question`, `mastery`, `test_summary`, `mission`, `interrupted`, `turn_complete`, `error` |
+| server to browser | `transcript` (`role`, `text`, `final`), `emotion`, `phase`, `quiz_question`, `mastery`, `test_summary`, `mission`, `board`, `interrupted`, `turn_complete`, `error` |
+
+`board` (whiteboard card, sent when the tutor calls the `show_board` tool; cleaned by `app/domain/board.py`):
+`{"type":"board","kind":"formula","title","formula","items":[...],"result"}`,
+`{"type":"board","kind":"steps","title","items":[...],"highlight":0..n}` or
+`{"type":"board","kind":"table","title","headers":[...],"rows":[[...],...]}`. The same title and kind again updates
+the card on screen (for example the next highlighted step) instead of adding a new one.
 
 Field-level details: [TEAM_PLAN.md](TEAM_PLAN.md) ("Frozen contracts").
 

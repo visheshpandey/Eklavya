@@ -25,6 +25,7 @@ import { mountDebateTag } from './components/debate-tag.js';
 import { mountTextInput } from './components/text-input.js';
 import { mountChat } from './components/chat.js';
 import { mountEmotionCard } from './components/emotion-card.js';
+import { mountWhiteboard } from './components/whiteboard.js';
 import { mountQuizCard } from './components/quiz-card.js';
 import { mountSummaryCard } from './components/summary-card.js';
 import { mountMissionCard } from './components/mission-card.js';
@@ -77,6 +78,7 @@ mountStudyHeader({
 mountSessionOrb({ store, orb: byId('orb'), status: byId('status'), onToggle: session.toggle });
 mountStepper({ store, root: byId('stepper') });
 mountDebateTag({ store, root: byId('debateTag') });
+mountWhiteboard({ store, root: byId('board'), onPick: (index) => store.dispatch(actions.boardPicked(index)) });
 mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.sendText });
 mountSummaryCard({ store, root: byId('summary') });
 mountChat({ store, root: byId('chat') });

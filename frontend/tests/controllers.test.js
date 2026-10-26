@@ -101,12 +101,14 @@ test('session: server events update the matching state', () => {
   session.handleEvent({ type: 'emotion', topic: 'Precision', confusion: 0.7, confidence: 0.3, frustration: 0 });
   session.handleEvent({ type: 'phase', phase: 'teaching', topic: 'Precision' });
   session.handleEvent({ type: 'quiz_question', question_id: 9, question: 'Q?', options: ['A. x'], topic: 'Precision', number: 1, total: 3 });
+  session.handleEvent({ type: 'board', kind: 'steps', title: 'F1', items: ['a'], highlight: 1 });
   session.handleEvent({ type: 'mission', title: 'Fix it', duration_minutes: 15, priority: 'High', reason: 'r', tasks: ['t'] });
   const s = store.getState();
   assert.equal(s.session.messages[0].text, 'Hi');
   assert.equal(s.session.emotion.confusion, 0.7);
   assert.deepEqual(s.session.phase, { phase: 'teaching', topic: 'Precision' });
   assert.equal(s.session.question.question_id, 9);
+  assert.deepEqual(s.session.boards, [{ kind: 'steps', title: 'F1', items: ['a'], highlight: 1 }]);   // `type` is dropped
   assert.equal(s.mission.title, 'Fix it');
 });
 

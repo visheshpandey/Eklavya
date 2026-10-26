@@ -9,7 +9,7 @@ export const VOICE_STATUS = Object.freeze({
 export const SERVER_EVENT = Object.freeze({
   TRANSCRIPT: 'transcript', EMOTION: 'emotion', PHASE: 'phase', QUIZ_QUESTION: 'quiz_question',
   TEST_SUMMARY: 'test_summary', MASTERY: 'mastery', MISSION: 'mission',
-  INTERRUPTED: 'interrupted', TURN_COMPLETE: 'turn_complete', ERROR: 'error',
+  BOARD: 'board', INTERRUPTED: 'interrupted', TURN_COMPLETE: 'turn_complete', ERROR: 'error',
 });
 
 /** What the tutor does when a session starts. DEBATE: the student argues against the tutor on a topic. */

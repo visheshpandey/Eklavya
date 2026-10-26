@@ -2,7 +2,7 @@
 
 Each tool runs server-side against P2's modules (retrieval, quiz, evaluation, study_mission, db),
 logs to agent_logs, and pushes a UI event through ctx.emit so the frontend can react
-(emotion chip, quiz card, mastery animation, mission card).
+(emotion chip, quiz card, mastery animation, mission card, whiteboard).
 """
 import asyncio
 from dataclasses import dataclass, field
@@ -14,7 +14,7 @@ from google.genai import types
 from app import db
 from app.agents import evaluation, quiz, study_mission
 from app.agents.logger import log_agent
-from app.domain import retrieval
+from app.domain import board as boards, retrieval
 
 S = types.Schema
 T = types.Type
@@ -49,6 +49,22 @@ TOOL_DECLARATIONS = [
             "student_answer": S(type=T.STRING, description="Exactly what the student said, e.g. 'B' or 'option c' or the option text."),
             "confidence": S(type=T.NUMBER, description="Optional 0-1 confidence in their answer based on how it sounded."),
         }, required=["student_answer"])),
+    types.FunctionDeclaration(
+        name="show_board",
+        description=("Put what you are explaining on the student's whiteboard while you say it: a formula, numbered steps, "
+                     "or a small table. Content must come from search_notes results. Call it again with the same title and a "
+                     "new highlight to move through steps."),
+        parameters=S(type=T.OBJECT, properties={
+            "kind": S(type=T.STRING, enum=list(boards.KINDS), description="formula, steps or table."),
+            "title": S(type=T.STRING, description="Short heading, e.g. 'Precision'."),
+            "formula": S(type=T.STRING, description="formula only: e.g. 'Precision = TP / (TP + FP)'."),
+            "items": S(type=T.ARRAY, items=S(type=T.STRING),
+                       description="steps: the steps in order. formula: optional 'where' lines, e.g. 'TP = spam correctly caught'."),
+            "result": S(type=T.STRING, description="formula only, optional: a worked example, e.g. '8 / (8 + 2) = 0.8'."),
+            "highlight": S(type=T.INTEGER, description="steps only, optional: the step number you are on now (1-based)."),
+            "headers": S(type=T.ARRAY, items=S(type=T.STRING), description="table only: column headings."),
+            "rows": S(type=T.ARRAY, items=S(type=T.STRING), description="table only: one string per row, cells separated by |."),
+        }, required=["kind", "title"])),
     types.FunctionDeclaration(
         name="get_mission",
         description="Get the student's current study mission to tell them what to do next.",
@@ -179,9 +195,19 @@ async def get_mission(ctx: ToolContext, **_):
             "reason": m["reason"], "tasks": m["tasks"]}
 
 
+async def show_board(ctx: ToolContext, **args):
+    try:
+        card = boards.clean_board(args)
+    except ValueError as e:
+        return {"shown": False, "error": str(e)}
+    await ctx.emit({"type": "board", **card})
+    return {"shown": True}
+
+
 HANDLERS = {
     "search_notes": search_notes, "report_learner_state": report_learner_state,
     "ask_quiz_question": ask_quiz_question, "grade_answer": grade_answer, "get_mission": get_mission,
+    "show_board": show_board,
 }
 
 

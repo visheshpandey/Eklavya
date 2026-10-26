@@ -18,6 +18,8 @@ export const ActionType = Object.freeze({
   ANSWER_GRADED: 'session/graded',
   TEST_SUMMARIZED: 'session/summary',
   MISSION_RECEIVED: 'session/mission',
+  BOARD_SHOWN: 'session/boardShown',
+  BOARD_PICKED: 'session/boardPicked',
   VIEW_CHANGED: 'ui/viewChanged',
   LIBRARY_SEARCHED: 'ui/librarySearched',
   DOCUMENT_TOGGLED: 'ui/documentToggled',
@@ -44,6 +46,8 @@ export const actions = {
   answerGraded: make(ActionType.ANSWER_GRADED),                // server `mastery` event
   testSummarized: make(ActionType.TEST_SUMMARIZED),            // server `test_summary` event
   missionReceived: make(ActionType.MISSION_RECEIVED),          // server `mission` event
+  boardShown: make(ActionType.BOARD_SHOWN),                    // server `board` event: {kind, title, ...}
+  boardPicked: make(ActionType.BOARD_PICKED),                  // index of an earlier board to look at again
   viewChanged: make(ActionType.VIEW_CHANGED),                  // 'library' | 'study' | 'progress'
   librarySearched: make(ActionType.LIBRARY_SEARCHED),          // search text typed in the notes library
   documentToggled: make(ActionType.DOCUMENT_TOGGLED),          // documentId: collapse/expand its topic list

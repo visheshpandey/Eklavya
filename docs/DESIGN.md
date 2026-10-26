@@ -35,6 +35,14 @@ legend for two or more series, end labels only when they fit, more than four top
 "more topics (see the table)". Hover and the arrow keys both show a readout; "View as table" gives the
 same data as text. Text uses ink colours, never the series colour.
 
+## Whiteboard (`whiteboard.js`)
+
+The only place with large display type: what the tutor is explaining, drawn while it talks. Three kinds:
+formula (stacked fractions, "where" lines, a worked example), steps (the spoken step highlighted, earlier ones
+muted), table (a small comparison). Earlier boards stay one tap away as chips. One short reveal animation per
+new board (off with reduced motion). Formulas carry `role="math"` and the plain formula text as their label;
+each new board is announced once ("On the whiteboard: Precision").
+
 ## Accessibility checklist
 
 * Skip link, one `h1`, landmarks (header, nav, aside, main), tablist with arrow-key support.

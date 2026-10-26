@@ -36,7 +36,7 @@ test('a new session clears the old one and any banner, but keeps the mission', (
   );
   s = reducer(s, actions.sessionStarted({ mode: 'learn', topicId: 7 }));
   assert.equal(s.banner, null);
-  assert.deepEqual(s.session, { mode: 'learn', topicId: 7, phase: null, messages: [], emotion: null, question: null, result: null, summary: null });
+  assert.deepEqual(s.session, { mode: 'learn', topicId: 7, phase: null, messages: [], emotion: null, question: null, result: null, summary: null, boards: [], boardIndex: -1 });
   assert.equal(s.mission.title, 'Fix it');
 });
 

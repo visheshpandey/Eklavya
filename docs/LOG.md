@@ -106,3 +106,10 @@
 - Verified in real Chrome with the real Gemini Live: tag shown, Eklavya opens with a notes-based argument, a typed rebuttal gets a counter-argument. Tests: backend 62, frontend 59.
 
 - Debater persona: debate sessions now use their own persona (`app/prompts/persona_debater.md`) instead of the warm tutor one. It must never open with agreement, attacks the last claim every turn (restate, find the weak spot, counter, add one new point), demands reasons and examples, concedes at most one small point, and only becomes the mentor again at the verdict. Live check: it rejected "everyone knows that", conceded one point and pivoted, and called out the student for switching to its side. Backend tests: 63.
+
+## Whiteboard: Eklavya talks and draws
+- New Live tool `show_board` (`app/ai/tools.py`) with board rules in `app/domain/board.py` (formula, steps, table; text cut to size, bad boards explained back to the model). Event `board` to the browser.
+- Persona and learn-mode plan tell the tutor to draw in every teaching step; the learn opening message names the first board, because the voice model follows the opening instruction more reliably than system rules.
+- Frontend: `lib/formula.js` (stacked fractions), `BOARD_SHOWN`/`BOARD_PICKED` in the reducer (same title updates in place, at most 12 boards, cleared when a new session starts), `components/whiteboard.js`, announcer reads new boards.
+- Verified with real Chrome + real Gemini Live: in learn mode Eklavya drew the Precision formula with a worked example (8 / 10 = 0.8) while saying "dekho board pe"; light, dark and 390 px phone checked; axe-core 0 violations on the board. In one of three runs it only drew after being asked, so the model does not always draw unprompted.
+- Tests: backend 75, frontend 66.

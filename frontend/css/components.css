@@ -285,3 +285,45 @@
 .choice input { width: 18px; height: 18px; accent-color: var(--accent-fill); flex: none; }
 .field-label { font-weight: 600; font-size: var(--text-sm); }
 .debate-tag { margin: 0; padding: var(--s-2) var(--s-3); border: 1px solid var(--line-strong); border-radius: var(--r-control); background: var(--accent-soft); color: var(--ink); font-size: var(--text-sm); }
+
+/* ---------- whiteboard: the one place with large display type; everything else stays quiet */
+.board { display: grid; gap: var(--s-3); padding: var(--s-4) var(--s-5); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-panel); }
+.board-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2); }
+.board-label { font-size: var(--text-xs); font-weight: 600; color: var(--ink-3); }
+.board-history { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.chip {
+  min-height: var(--tap); padding: 0 var(--s-3); border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+  background: transparent; color: var(--ink-2); font-size: var(--text-xs); font-weight: 600; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chip:hover { background: var(--surface-2); }
+.chip[aria-pressed="true"] { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
+.board-title { font-size: var(--text-lg); font-weight: 700; }
+.board-card { display: grid; gap: var(--s-4); }
+.board-card.is-new { animation: board-in .35s ease-out; }
+@keyframes board-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.formula {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3);
+  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.25rem); font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums;
+}
+.formula-sm { font-size: clamp(1.125rem, 1rem + .6vw, 1.5rem); }
+.formula .eq { color: var(--ink-3); font-weight: 400; }
+.frac { display: inline-grid; text-align: center; }
+.frac .num { padding: 0 var(--s-2) 2px; border-bottom: 2px solid currentColor; }
+.frac .den { padding: 2px var(--s-2) 0; }
+.board-where { display: grid; gap: var(--s-1); color: var(--ink-2); }
+.board-result { display: grid; gap: var(--s-1); padding-top: var(--s-3); border-top: 1px solid var(--line); }
+
+.board-steps { display: grid; gap: var(--s-2); }
+.board-step { display: flex; gap: var(--s-3); align-items: baseline; padding: var(--s-2) var(--s-3); border-radius: var(--r-control); font-size: var(--text-lg); color: var(--ink-2); transition: background .2s, color .2s; }
+.board-step .step-num { flex: none; display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--line-strong); font-size: var(--text-sm); }
+.board-step.is-done { color: var(--ink-3); }
+.board-step.is-done .step-num { background: var(--surface-2); }
+.board-step.is-now { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+.board-step.is-now .step-num { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
+
+.board-table-wrap { overflow-x: auto; }
+.board-table { width: 100%; border-collapse: collapse; font-size: var(--text-md); }
+.board-table th, .board-table td { padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.board-table thead th { font-size: var(--text-sm); color: var(--ink-3); font-weight: 600; }
+.board-table tbody th { font-weight: 600; }

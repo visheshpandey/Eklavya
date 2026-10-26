@@ -11,6 +11,9 @@ import { SERVER_EVENT as EVENT, SESSION_MODE, VOICE_STATUS } from '../lib/protoc
  * @param {() => string} deps.getLanguage current value of the language selector
  * @param {number} deps.userId
  */
+/** Server events carry `type`; state keeps only the payload. */
+const stripType = ({ type: _type, ...rest }) => rest;
+
 export function createSessionController({ store, notes, notifier, getLanguage, userId }) {
   let voice = null;   // set by attach(); the VoiceClient needs this controller's handlers, so it is created after
 
@@ -30,6 +33,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, u
       case EVENT.PHASE: store.dispatch(actions.phaseChanged(event)); break;
       case EVENT.QUIZ_QUESTION: store.dispatch(actions.questionAsked(event)); break;
       case EVENT.TEST_SUMMARY: store.dispatch(actions.testSummarized(event)); break;
+      case EVENT.BOARD: store.dispatch(actions.boardShown(stripType(event))); break;
       case EVENT.MASTERY:
         store.dispatch(actions.answerGraded(event));
         notifier.toast(event.is_correct ? 'ok' : 'bad', `${event.topic}: ${event.before}% → ${event.after}%`);

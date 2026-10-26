@@ -16,6 +16,8 @@ export const selectEmotion = (s) => s.session.emotion;
 export const selectQuestion = (s) => s.session.question;
 export const selectResult = (s) => s.session.result;
 export const selectSummary = (s) => s.session.summary;
+export const selectBoards = (s) => s.session.boards;
+export const selectBoardIndex = (s) => s.session.boardIndex;
 export const selectView = (s) => s.ui.view;
 export const selectLibrarySearch = (s) => s.ui.librarySearch;
 export const selectCollapsedDocs = (s) => s.ui.collapsedDocs;

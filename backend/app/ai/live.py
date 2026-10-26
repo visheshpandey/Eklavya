@@ -32,7 +32,9 @@ def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
         return (f'# This session\'s plan: LEARN, then TEST. Topic: "{topic_name}"\n'
                 f'The student chose to learn "{topic_name}". Follow these steps in order, in short spoken turns:\n'
                 f'1. Right away call search_notes with "{topic_name}" and teach the topic from what it returns, in 3-4 small steps. '
-                'One idea per turn, each with a simple everyday example. After each step ask ONE quick question to check they got it, '
+                'One idea per turn, each with a simple everyday example. In EVERY step call show_board at the same moment you speak '
+                '(the definition as steps, the formula with a worked example from the notes, or a small comparison table), so the '
+                'student sees it while hearing it. After each step ask ONE quick question to check they got it, '
                 'wait for their answer, and adapt if they are confused.\n'
                 f'2. When the topic is covered, say you will now take a short voice test ({total} questions) and check they are ready.\n'
                 '3. Test: call ask_quiz_question (it stays on this topic), read the question and the four options, wait for the spoken '
@@ -76,7 +78,9 @@ def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> st
                 'then give your opening statement right away.]')
     if focus_topic and mode == "learn":
         return (f'[The student chose to learn "{focus_topic["topic_name"]}". Say one short friendly line in {lang} that you will '
-                'teach it step by step and then take a short voice test, then start step 1 right away.]')
+                'teach it step by step and then take a short voice test. Then start step 1 right away: call search_notes, then '
+                'call show_board with the first idea (a formula with a worked example, or the definition as steps) and talk '
+                'the student through the board. Keep using show_board in every step after this.]')
     if focus_topic and mode == "test":
         return (f'[The student chose to be tested on "{focus_topic["topic_name"]}" by voice. Say one short line in {lang}, '
                 'then start the test.]')

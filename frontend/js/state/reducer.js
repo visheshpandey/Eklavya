@@ -11,7 +11,11 @@ const emptySession = () => ({
   question: null,     // quiz question currently on screen
   result: null,       // grade of that question
   summary: null,      // end-of-test summary
+  boards: [],         // whiteboard cards shown this session, oldest first (at most MAX_BOARDS)
+  boardIndex: -1,     // which board is on screen; -1 = none
 });
+
+export const MAX_BOARDS = 12;
 
 export const VIEWS = Object.freeze({ LIBRARY: 'library', STUDY: 'study', PROGRESS: 'progress' });
 export const THEMES = Object.freeze({ SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' });
@@ -56,6 +60,19 @@ const lastOpenIndex = (messages, role) => {
   }
   return -1;
 };
+
+/**
+ * A new board goes on screen. The same title and kind again means the tutor is updating it (next step,
+ * filled-in result), so it replaces the last card instead of adding one.
+ */
+function showBoard(state, board) {
+  const { boards } = state.session;
+  const last = boards[boards.length - 1];
+  const next = last && last.title === board.title && last.kind === board.kind
+    ? [...boards.slice(0, -1), board]
+    : [...boards, board].slice(-MAX_BOARDS);
+  return withSession(state, { boards: next, boardIndex: next.length - 1 });
+}
 
 /** Live transcript: chunks (final=false) grow the open bubble; the final text replaces it. */
 function receiveTranscript(state, { role, text, final }) {
@@ -119,6 +136,11 @@ export function reducer(state, action) {
       return withSession(state, { result: payload });
     case A.TEST_SUMMARIZED:
       return withSession(state, { summary: payload });
+    case A.BOARD_SHOWN:
+      return showBoard(state, payload);
+    case A.BOARD_PICKED:
+      return Number.isInteger(payload) && payload >= 0 && payload < state.session.boards.length && payload !== state.session.boardIndex
+        ? withSession(state, { boardIndex: payload }) : state;
     case A.MISSION_RECEIVED:
       return { ...state, mission: normalizeMission(payload) };
 
