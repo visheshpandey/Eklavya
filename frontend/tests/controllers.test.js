@@ -77,14 +77,14 @@ test('session: start passes mode, topic and language to the voice client and res
   voice.status = 'listening';                                   // a session is already running
   await session.start('learn', 5);
   assert.equal(voice.stopped, 1);                               // it was ended first
-  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'learn', topicId: 5, side: undefined, motion: undefined }]);
+  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'learn', topicId: 5, side: undefined, motion: undefined, style: undefined }]);
   assert.equal(store.getState().session.mode, 'learn');
 });
 
 test('session: a debate passes the side Eklavya takes and the motion to the voice client', async () => {
   const { store, session, voice } = setup();
   await session.start('debate', 5, { side: 'against', motion: 'Precision beats recall' });
-  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'debate', topicId: 5, side: 'against', motion: 'Precision beats recall' }]);
+  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'debate', topicId: 5, side: 'against', motion: 'Precision beats recall', style: undefined }]);
   assert.equal(store.getState().session.mode, 'debate');
 });
 

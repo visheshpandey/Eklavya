@@ -1,0 +1,14 @@
+/* Printing (and "Save as PDF"): only the study pack, in plain black on white. */
+body > *:not(#printPack) { display: none !important; }
+#printPack { display: block !important; color: #000; background: #fff; font: 11pt/1.45 system-ui, "Segoe UI", "Nirmala UI", sans-serif; }
+#printPack h1 { font-size: 20pt; margin: 0 0 4pt; }
+#printPack h2 { font-size: 14pt; margin: 16pt 0 6pt; break-after: avoid; }
+#printPack h3 { font-size: 12pt; margin: 10pt 0 4pt; }
+#printPack .pack-date { color: #444; margin: 0 0 12pt; }
+#printPack table { border-collapse: collapse; width: 100%; }
+#printPack th, #printPack td { border-bottom: 1px solid #999; padding: 3pt 6pt; text-align: left; }
+#printPack pre { white-space: pre-wrap; font: 11pt/1.4 ui-monospace, Consolas, monospace; margin: 0; }
+#printPack .pack-board, #printPack dt, #printPack dd { break-inside: avoid; }
+#printPack dt { font-weight: 700; margin-top: 8pt; }
+#printPack dd { margin: 2pt 0 0 12pt; }
+@page { margin: 16mm; }

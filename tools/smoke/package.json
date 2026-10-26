@@ -1,0 +1,14 @@
+{
+  "name": "eklavya-smoke",
+  "private": true,
+  "type": "module",
+  "description": "Real-browser smoke tests for Eklavya (Chrome + fake microphone + the real backend and Gemini).",
+  "scripts": {
+    "ui": "node ui.mjs",
+    "voice": "node voice.mjs"
+  },
+  "devDependencies": {
+    "axe-core": "4.14.0",
+    "puppeteer-core": "25.16.0"
+  }
+}

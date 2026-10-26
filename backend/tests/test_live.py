@@ -34,6 +34,9 @@ class FakeSession:
     async def send_realtime_input(self, **kw):
         self.sent.append(kw)
 
+    async def send_client_content(self, turns=None, turn_complete=True):
+        self.sent.append({"content": turns, "turn_complete": turn_complete})
+
     async def send_tool_response(self, function_responses):
         self.tool_responses.extend(function_responses)
 

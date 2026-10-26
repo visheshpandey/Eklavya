@@ -41,6 +41,15 @@ export const backend = {
   topic: (topicId, userId) => request(`/api/topics/${topicId}?user_id=${userId}`),
   deleteDocument: (documentId, userId) => request(`/api/documents/${documentId}?user_id=${userId}`, { method: 'DELETE' }),
   seedDemo: (userId) => request(`/api/demo/seed?user_id=${userId}`, { method: 'POST' }),
+  today: (userId) => request(`/api/today?user_id=${userId}`),
+  history: (userId) => request(`/api/history?user_id=${userId}`),
+  plan: (userId) => request(`/api/plan?user_id=${userId}`),
+  savePlan: (examDate, minutesPerDay, userId) => request('/api/plan', { method: 'PUT', json: { user_id: userId, exam_date: examDate, minutes_per_day: minutesPerDay } }),
+  clearPlan: (userId) => request(`/api/plan?user_id=${userId}`, { method: 'DELETE' }),
+  conceptMap: (userId) => request(`/api/concept-map?user_id=${userId}`),
+  flashcards: (topicId, userId) => request(`/api/flashcards?user_id=${userId}${topicId ? `&topic_id=${topicId}` : ''}`),
+  makeFlashcards: (topicId, userId) => request('/api/flashcards/generate', { method: 'POST', json: { user_id: userId, topic_id: topicId } }),
+  /** A PDF, a text file, or a photo of a page (the backend has Gemini read the photo). */
   uploadDocument: (file, userId) => {
     const form = new FormData();
     form.append('user_id', String(userId));

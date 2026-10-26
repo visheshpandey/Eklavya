@@ -89,7 +89,7 @@ test('a debate adds the side and the encoded motion to the socket URL; other mod
   await settle();
   sockets[0].open();
   await started;
-  assert.match(sockets[0].url, /&mode=debate&topic_id=7&side=against&motion=Recall%20%3E%20precision%3F$/);
+  assert.match(sockets[0].url, /&mode=debate&topic_id=7&side=against&motion=Recall%20%3E%20precision%3F&style=tough$/);   // no style given: tough
 });
 
 test('stopping while the microphone prompt is open cancels quietly and releases everything', async () => {

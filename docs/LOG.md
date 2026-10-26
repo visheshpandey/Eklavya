@@ -120,3 +120,21 @@
   - The reveal animation now plays (a double redraw used to remove it); keyboard focus stays on the picked chip; an updated step is not announced again.
   - Empty table corner is a plain cell, board heading is h2, formulas are `translate="no"`, long titles keep a tooltip, long terms wrap on phones. axe 0 violations at 390 px.
   - Tests: backend 77, frontend 69.
+
+## Phases 2-4: Today, study modes, retention
+- Today screen (new default section): streak, days to the exam, today's plan (due revisions first, then the mission or the weakest new topic), one Start button, last session. `GET /api/today`.
+- First-run guide (language, notes, mic explainer); Hindi interface labels; captions; orb halo that follows the live voice level; small celebrations for real wins.
+- Study modes: viva practice (examiner persona, timer, marks out of 10, report card, marks move mastery and appear in the chart); debate scoreboard (argument strength per turn, verdict card, tough or friendly opponent, saved results); quick revision (recap board + 2 questions).
+- Snap a doubt: a photo of notes becomes a notes document (Gemini reads it); a photo during a call is shown to Eklavya.
+- Retention: spaced revision intervals (1 day for weak topics up to 14 for mastered), exam-date planner, concept map, flashcards from notes and mistakes, printable study pack.
+- Search: Gemini embeddings blended with BM25. Cutoff measured on the demo notes with real embeddings: related questions score >= 0.70, unrelated ones (cricket, cooking, physics) <= 0.64, so 0.68.
+- Installable app: manifest, service worker (network first, cached shell offline), icons.
+- Bugs found and fixed on the way:
+  - tests were calling real Gemini embeddings (backend/.env refilled the key): conftest now sets the key to empty; test time 20-50 s -> 7 s.
+  - removing a document left its embeddings, flashcards, vivas and debates behind.
+  - Gemini Live ignores a photo sent as a single video frame ("I cannot see the image"): sent as a normal user turn now, verified against the real API.
+  - transcript markers like `<no speech>{pause}` were shown as a bubble.
+  - `serve.py` refused some of the ~50 module requests on Windows (listen queue of 5): queue raised to 128. This was also the cause of earlier "first load" flakes in browser tests.
+  - viva timer restarted at full time when a mark arrived; the upload button lost its icon after use.
+- Smoke tests now live in `tools/smoke/` (UI flow with axe on every screen; voice modes against real Gemini).
+- Tests: backend 97, frontend 82. axe-core: 0 violations on the guide, Today, Progress, phone Today and Progress.

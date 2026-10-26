@@ -8,8 +8,8 @@ import { buildSeries, valuesAt, MAX_SERIES } from '../js/lib/chart-data.js';
 
 const run = (...acts) => acts.reduce((state, action) => reducer(state, action), initialState);
 
-test('the app opens on the Study section with an empty library search and nothing folded', () => {
-  assert.deepEqual(initialState.ui, { view: 'study', librarySearch: '', collapsedDocs: {}, theme: 'system' });
+test('the app opens on the Today section with an empty library search, nothing folded, captions off', () => {
+  assert.deepEqual(initialState.ui, { view: 'today', librarySearch: '', collapsedDocs: {}, theme: 'system', language: 'hinglish', captions: false, onboarding: false, celebration: null });
 });
 
 test('sections can be switched, and unknown sections are ignored', () => {

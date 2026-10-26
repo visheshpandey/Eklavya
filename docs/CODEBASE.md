@@ -17,20 +17,26 @@ studyai/
 │   │   ├── api/                  HTTP/WebSocket layer (thin)
 │   │   │   ├── schemas.py        request bodies (validation)
 │   │   │   └── routes/           one file per resource: documents, tutor, quiz, missions,
-│   │   │                         dashboard, topics, demo, voice_ws
-│   │   ├── services/             orchestration for the API: dashboard, topic detail, demo seed
+│   │   │                         dashboard, topics, demo, today (+history), plan (+concept map),
+│   │   │                         flashcards, voice_ws
+│   │   ├── services/             orchestration for the API: dashboard, topic detail, demo seed, documents,
+│   │   │                         search (words + meaning), today, study_plan (exam plan, concept map),
+│   │   │                         history, progress_data (shared reads, UTC -> local days)
 │   │   ├── agents/               the learning "agents": each = rules + (optionally) one Gemini call
 │   │   │                         document_intelligence, voice_tutor, quiz, evaluation,
-│   │   │                         misconception, study_mission, logger
+│   │   │                         misconception, study_mission, flashcards, logger
 │   │   ├── domain/               pure rules, no network: mastery maths, retrieval (BM25),
-│   │   │                         misconception labels, file text extraction (pdf), whiteboard cards (board)
+│   │   │                         misconception labels, file text extraction (pdf), whiteboard cards (board),
+│   │   │                         streak, revision (spacing), planner (exam plan), concept_map, scoring
+│   │   │                         (viva marks, debate scores)
 │   │   ├── ai/                   everything that talks to Gemini
-│   │   │   ├── gemini.py         text client (JSON mode, cache, retry)
+│   │   │   ├── gemini.py         text client (JSON mode, cache, retry) + read_image (photo of notes)
+│   │   │   ├── embeddings.py     gemini-embedding-001 vectors for note search
 │   │   │   ├── live.py           Gemini Live voice session (browser <-> Gemini)
-│   │   │   ├── tools.py          tools the live tutor can call
+│   │   │   ├── tools.py          tools the live tutor can call (a different set per mode)
 │   │   │   └── prompts.py        loads app/prompts/*.md
-│   │   └── prompts/              persona_eklavya.md, persona_debater.md, debate_plan.md,
-│   │                             misconception_taxonomy.md
+│   │   └── prompts/              persona_eklavya.md (tutor), persona_debater.md, debate_plan.md,
+│   │                             persona_examiner.md (viva), misconception_taxonomy.md
 │   ├── tests/                    pytest (Gemini replaced by test doubles)
 │   ├── scripts/check_gemini.py   real-key check of model IDs, text, and a Live round trip
 │   ├── data/                     SQLite file (gitignored)
@@ -40,25 +46,32 @@ studyai/
 │   ├── index.html                page skeleton (element ids the components mount on)
 │   ├── config.js                 environment config: backend URL, user id
 │   ├── serve.py                  static dev server (set PORT inside)
+│   ├── manifest.webmanifest, sw.js, icons/   installable app (offline start of the page shell)
 │   ├── css/                      tokens.css (colours, type, spacing, light/dark), base.css (reset, focus,
 │   │                             reduced motion), layout.css (sidebar + workspace, bottom tabs on phones),
-│   │                             components.css (buttons, library, quiz, chart, lists). See docs/DESIGN.md
+│   │                             components.css (buttons, library, quiz, chart, lists), print.css (study
+│   │                             pack). See docs/DESIGN.md
 │   ├── js/
 │   │   ├── main.js               entry: wires store + services + controllers + components
 │   │   ├── lib/                  config.js, protocol.js (shared names), dom.js (el, svgEl, render),
 │   │   │                         format.js, icons.js, theme.js, chart-data.js (pure series maths),
-│   │   │                         formula.js (pure: formula text -> stacked fractions)
-│   │   ├── services/             api-client.js (HTTP), voice-client.js (mic/WebSocket/audio),
-│   │   │                         audio-worklet.js (mic capture processor)
+│   │   │                         formula.js (pure: formula text -> stacked fractions), strings.js
+│   │   │                         (interface text in English and Hindi, t())
+│   │   ├── services/             api-client.js (HTTP), voice-client.js (mic/WebSocket/audio, voice level),
+│   │   │                         audio-worklet.js (mic capture processor), photo.js (shrink a photo)
 │   │   ├── state/                store.js, actions.js, reducer.js, selectors.js
-│   │   ├── controllers/          notes-controller, session-controller, notifier (business logic)
+│   │   ├── controllers/          notes-controller, session-controller, home-controller (Today, plan, map,
+│   │   │                         flashcards, history), notifier (business logic)
 │   │   └── components/           one file per UI piece (render state, report clicks): shell (banner, toasts,
-│   │                             announcer, nav-tabs, theme-toggle), library, study (study-header,
-│   │                             session-orb, stepper, debate-tag, whiteboard, quiz-card, summary-card,
-│   │                             chat, text-input, emotion-card), progress (mission-card, mastery-chart, alerts-list,
-│   │                             history-list, decision-log)
+│   │                             announcer, i18n, nav-tabs, theme-toggle, onboarding), today (today-view,
+│   │                             exam-planner), library, study (study-header, session-orb, stage-tools,
+│   │                             celebration, stepper, debate-tag, whiteboard, viva-card, debate-score,
+│   │                             quiz-card, summary-card, chat, text-input, emotion-card), progress
+│   │                             (mission-card, mastery-chart, concept-map, flashcards, results-list,
+│   │                             study-pack, alerts-list, history-list, decision-log)
 │   └── tests/                    node:test, no dependencies: `npm test`
 ├── samples/ml_notes.txt          demo notes (also uploadable to try the upload flow)
+├── tools/smoke/                  real-browser smoke tests (Chrome + fake mic + real Gemini), see its README
 └── docs/                         PRD, architecture, this guide, team plan, checklist, log
 ```
 
@@ -175,7 +188,11 @@ user click / server event
 
 ## 4. WebSocket protocol (`/ws/voice`)
 
-`ws://<api>/ws/voice?user_id=1&lang=hinglish[&mode=learn|test|debate&topic_id=N&side=for|against&motion=...]`
+`ws://<api>/ws/voice?user_id=1&lang=hinglish[&mode=learn|test|revise|viva|debate&topic_id=N&side=for|against&motion=...&style=tough|friendly]`
+
+Modes: `learn` (teach, then a 3-question test), `test`, `revise` (recap board + 2 questions, for spaced revision),
+`viva` (examiner persona, 5 questions with probing, marks out of 10, report card), `debate` (below), free (no mode).
+Each mode gets its own tool set (`tools.declarations_for`), e.g. a viva cannot start a multiple-choice quiz.
 
 `debate`: the student debates Eklavya on the topic. `side` is the side **Eklavya** argues (default `for`); `motion` is optional free text up to 200 characters (empty = Eklavya picks one). The rules live in `app/prompts/debate_plan.md`. The server sends `{"type":"phase","phase":"debate","topic","side","motion"}` first.
 
@@ -183,14 +200,22 @@ Binary frames: mic audio up (PCM16 mono 16 kHz), tutor audio down (PCM16 mono 24
 
 | Direction | JSON message |
 |---|---|
-| browser to server | `{"type":"user_text","text":"..."}`, `{"type":"audio_stream_end"}`, `{"type":"end"}` |
-| server to browser | `transcript` (`role`, `text`, `final`), `emotion`, `phase`, `quiz_question`, `mastery`, `test_summary`, `mission`, `board`, `interrupted`, `turn_complete`, `error` |
+| browser to server | `{"type":"user_text","text":"..."}`, `{"type":"photo","mime":"image/jpeg","data":"<base64>","note":""}`, `{"type":"audio_stream_end"}`, `{"type":"end"}` |
+| server to browser | `transcript` (`role`, `text`, `final`), `emotion`, `phase`, `quiz_question`, `mastery`, `test_summary`, `mission`, `board`, `viva_question`, `viva_mark`, `viva_report`, `debate_score`, `debate_verdict`, `interrupted`, `turn_complete`, `error` |
 
 `board` (whiteboard card, sent when the tutor calls the `show_board` tool; cleaned by `app/domain/board.py`):
 `{"type":"board","kind":"formula","title","formula","items":[...],"result"}`,
 `{"type":"board","kind":"steps","title","items":[...],"highlight":0..n}` or
 `{"type":"board","kind":"table","title","headers":[...],"rows":[[...],...]}`. The same title and kind again updates
 the card on screen (for example the next highlighted step) instead of adding a new one.
+
+A `photo` reaches Gemini Live as a normal user turn (image part + instruction), not as a video frame: the Live
+API ignores a single frame sent as video. Transcription markers such as `<no speech>` or `{pause}` are removed
+before anything is shown.
+
+HTTP endpoints added with the study features: `GET /api/today`, `GET /api/history`, `GET|PUT|DELETE /api/plan`,
+`GET /api/concept-map`, `GET /api/flashcards`, `POST /api/flashcards/generate`; `POST /api/upload-document` also
+accepts a photo of notes (png, jpg, webp, heic), read by Gemini.
 
 Field-level details: [TEAM_PLAN.md](TEAM_PLAN.md) ("Frozen contracts").
 

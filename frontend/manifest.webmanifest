@@ -1,0 +1,19 @@
+{
+  "name": "Eklavya: voice study mentor",
+  "short_name": "Eklavya",
+  "description": "Talk to a study mentor that teaches from your own notes, draws while it explains, tests you by voice, takes a viva and plans your revision.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f2eeef",
+  "theme_color": "#2d2e2e",
+  "lang": "en-IN",
+  "categories": ["education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

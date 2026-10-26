@@ -282,9 +282,12 @@ def test_a_photo_in_a_live_session_is_sent_to_gemini_as_an_image(monkeypatch):
     fake, _ = run_session(monkeypatch, "/ws/voice", [[sc(turn_complete=True)]], send=photo)
     import time
     time.sleep(0.2)
-    images = [s["video"] for s in fake.sent if s.get("video") is not None]
-    assert images and images[0].mime_type == "image/jpeg" and images[0].data == jpeg
-    assert any("showed you a photo" in str(s.get("text", "")) and "yeh sawal" in str(s.get("text", "")) for s in fake.sent)
+    turns = [s["content"] for s in fake.sent if s.get("content") is not None]
+    assert turns and turns[0].role == "user"                        # a normal turn, not a video frame (Live ignores those)
+    image, text = turns[0].parts
+    assert image.inline_data.mime_type == "image/jpeg" and image.inline_data.data == jpeg
+    assert "showed you this photo" in text.text and "yeh sawal" in text.text
+    assert not any(s.get("video") is not None for s in fake.sent)
 
 
 def test_a_bad_photo_is_refused_with_a_clear_message(monkeypatch):
@@ -294,3 +297,13 @@ def test_a_bad_photo_is_refused_with_a_clear_message(monkeypatch):
         ws.send_json({"type": "photo", "mime": "image/gif", "data": base64.b64encode(b"GIF89a").decode()})
         msg = ws.receive_json()
     assert msg["type"] == "error" and "JPG, PNG or WebP" in msg["message"]
+
+
+def test_transcription_markers_never_reach_the_student(monkeypatch):
+    script = [[sc(output_transcription=NS(text="<no speech>")), sc(output_transcription=NS(text="{pause}")), sc(turn_complete=True)],
+              [sc(output_transcription=NS(text="Haan, ")), sc(output_transcription=NS(text="{pause}theek hai.")), sc(turn_complete=True)]]
+    fake, events = run_session(monkeypatch, "/ws/voice", script)
+    texts = [e["text"] for e in events if e["type"] == "transcript"]
+    assert all("<no speech>" not in t and "{pause}" not in t for t in texts)
+    finals = [e["text"] for e in events if e["type"] == "transcript" and e["final"]]
+    assert finals == ["Haan, theek hai."]                      # the marker-only turn left no empty bubble

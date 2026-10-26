@@ -20,6 +20,20 @@ export const ActionType = Object.freeze({
   MISSION_RECEIVED: 'session/mission',
   BOARD_SHOWN: 'session/boardShown',
   BOARD_PICKED: 'session/boardPicked',
+  VIVA_QUESTION_ASKED: 'session/vivaQuestion',
+  VIVA_MARKED: 'session/vivaMarked',
+  VIVA_REPORTED: 'session/vivaReport',
+  DEBATE_SCORED: 'session/debateScored',
+  DEBATE_JUDGED: 'session/debateJudged',
+  TODAY_LOADED: 'data/todayLoaded',
+  HISTORY_LOADED: 'data/historyLoaded',
+  PLAN_LOADED: 'data/planLoaded',
+  CONCEPT_MAP_LOADED: 'data/conceptMapLoaded',
+  FLASHCARDS_LOADED: 'data/flashcardsLoaded',
+  CAPTIONS_TOGGLED: 'ui/captionsToggled',
+  LANGUAGE_CHANGED: 'ui/languageChanged',
+  ONBOARDING_SET: 'ui/onboardingSet',
+  CELEBRATED: 'ui/celebrated',
   VIEW_CHANGED: 'ui/viewChanged',
   LIBRARY_SEARCHED: 'ui/librarySearched',
   DOCUMENT_TOGGLED: 'ui/documentToggled',
@@ -48,6 +62,20 @@ export const actions = {
   missionReceived: make(ActionType.MISSION_RECEIVED),          // server `mission` event
   boardShown: make(ActionType.BOARD_SHOWN),                    // server `board` event: {kind, title, ...}
   boardPicked: make(ActionType.BOARD_PICKED),                  // index of an earlier board to look at again
+  vivaQuestionAsked: make(ActionType.VIVA_QUESTION_ASKED),     // server `viva_question`: {number, total, question, seconds, topic}
+  vivaMarked: make(ActionType.VIVA_MARKED),                    // server `viva_mark`: {number, mark, out_of, feedback, ...}
+  vivaReported: make(ActionType.VIVA_REPORTED),                // server `viva_report`: the report card
+  debateScored: make(ActionType.DEBATE_SCORED),                // server `debate_score`: one argument's scores
+  debateJudged: make(ActionType.DEBATE_JUDGED),                // server `debate_verdict`
+  todayLoaded: make(ActionType.TODAY_LOADED),                  // GET /api/today
+  historyLoaded: make(ActionType.HISTORY_LOADED),              // GET /api/history: {vivas, debates}
+  planLoaded: make(ActionType.PLAN_LOADED),                    // GET/PUT /api/plan
+  conceptMapLoaded: make(ActionType.CONCEPT_MAP_LOADED),       // GET /api/concept-map: {nodes, links}
+  flashcardsLoaded: make(ActionType.FLASHCARDS_LOADED),        // {topicId, cards}
+  captionsToggled: make(ActionType.CAPTIONS_TOGGLED),          // big live captions on/off
+  languageChanged: make(ActionType.LANGUAGE_CHANGED),          // 'hinglish' | 'english' | 'hindi'
+  onboardingSet: make(ActionType.ONBOARDING_SET),              // true: show the first-run guide
+  celebrated: make(ActionType.CELEBRATED),                     // {id, text}: a small moment for a win
   viewChanged: make(ActionType.VIEW_CHANGED),                  // 'library' | 'study' | 'progress'
   librarySearched: make(ActionType.LIBRARY_SEARCHED),          // search text typed in the notes library
   documentToggled: make(ActionType.DOCUMENT_TOGGLED),          // documentId: collapse/expand its topic list

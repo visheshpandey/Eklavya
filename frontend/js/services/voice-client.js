@@ -10,6 +10,21 @@ import { VOICE_STATUS } from '../lib/protocol.js';
 const PLAYBACK_RATE = 24000;
 const CAPTURE_RATE = 16000;
 
+/** A function that returns how loud `node` is right now (0-1), or null if this browser cannot measure it. */
+function meter(ctx, node) {
+  if (typeof ctx.createAnalyser !== 'function') return null;
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 512;
+  node.connect(analyser);
+  const samples = new Float32Array(analyser.fftSize);
+  return () => {
+    analyser.getFloatTimeDomainData(samples);
+    let sum = 0;
+    for (const v of samples) sum += v * v;
+    return Math.min(1, Math.sqrt(sum / samples.length) * 4);   // speech RMS is small; x4 fills the 0-1 range
+  };
+}
+
 /** Best-effort teardown: ignore errors, including a rejected promise (closing an already closed AudioContext rejects). */
 const quiet = (fn) => {
   try {
@@ -20,11 +35,13 @@ const quiet = (fn) => {
 
 export class VoiceClient {
   /**
-   * @param {{onEvent: (event: object) => void, onStatus: (status: string) => void}} handlers
+   * @param {{onEvent: (event: object) => void, onStatus: (status: string) => void, onLevel?: (level: number) => void}} handlers
+   *   onLevel gets the loudness (0-1) of whoever is talking, about 60 times a second, for the orb animation.
    */
-  constructor({ onEvent, onStatus }) {
+  constructor({ onEvent, onStatus, onLevel = () => {} }) {
     this.onEvent = onEvent;
     this.onStatus = onStatus;
+    this.onLevel = onLevel;
     this.status = VOICE_STATUS.IDLE;
     this.ws = null;
     this.session = 0;           // bumped by every cleanup; a start that sees a different number was cancelled
@@ -42,7 +59,7 @@ export class VoiceClient {
    * Open the mic and the WebSocket. Rejects with a readable Error if either fails.
    * Resolves quietly (and releases everything) if stop() is called while it is still starting.
    */
-  async start({ userId = 1, lang = 'hinglish', mode = 'free', topicId = null, side = null, motion = '' } = {}) {
+  async start({ userId = 1, lang = 'hinglish', mode = 'free', topicId = null, side = null, motion = '', style = 'tough' } = {}) {
     if (this.ws) return;
     const id = ++this.session;       // starting a new session cancels any start that is still waiting
     const current = () => this.session === id;
@@ -79,7 +96,9 @@ export class VoiceClient {
     }
 
     let extra = topicId ? `&mode=${encodeURIComponent(mode)}&topic_id=${topicId}` : '';
-    if (topicId && mode === 'debate') extra += `&side=${side === 'against' ? 'against' : 'for'}&motion=${encodeURIComponent(motion)}`;
+    if (topicId && mode === 'debate') {
+      extra += `&side=${side === 'against' ? 'against' : 'for'}&motion=${encodeURIComponent(motion)}&style=${style === 'friendly' ? 'friendly' : 'tough'}`;
+    }
     ws = new WebSocket(`${WS_BASE}/ws/voice?user_id=${userId}&lang=${encodeURIComponent(lang)}${extra}`);
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
@@ -101,12 +120,33 @@ export class VoiceClient {
     this.node = new AudioWorkletNode(micCtx, 'pcm-capture');
     this.node.port.onmessage = (e) => { if (this.ws === ws && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
     source.connect(this.node);
+    this.micMeter = meter(micCtx, source);
     this._setStatus(VOICE_STATUS.LISTENING);
+    this._watchLevel(id);
+  }
+
+  /** Report who is talking and how loud, once per frame, until the session ends. */
+  _watchLevel(id) {
+    if (typeof requestAnimationFrame !== 'function') return;
+    const tick = () => {
+      if (this.session !== id) { this.onLevel(0); return; }
+      const speaking = this.status === VOICE_STATUS.SPEAKING;
+      this.onLevel((speaking ? this.playMeter : this.micMeter)?.() ?? 0);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   /** Send typed text to the same Gemini session. */
   sendText(text) {
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: 'user_text', text }));
+  }
+
+  /** Show Eklavya a photo during the call: {mime, data (base64)}. Returns false when no call is open. */
+  sendPhoto({ mime, data, note = '' }) {
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;
+    this.ws.send(JSON.stringify({ type: 'photo', mime, data, note }));
+    return true;
   }
 
   stop() {
@@ -130,7 +170,12 @@ export class VoiceClient {
     audio.copyToChannel(float32, 0);
     const source = this.playCtx.createBufferSource();
     source.buffer = audio;
-    source.connect(this.playCtx.destination);
+    if (!this.playOut) {   // one meter in front of the speakers measures Eklavya's voice for the orb
+      this.playOut = this.playCtx.createGain ? this.playCtx.createGain() : this.playCtx.destination;
+      if (this.playOut !== this.playCtx.destination) this.playOut.connect(this.playCtx.destination);
+      this.playMeter = meter(this.playCtx, this.playOut);
+    }
+    source.connect(this.playOut);
     const startAt = Math.max(this.playCtx.currentTime + 0.02, this.nextTime);
     source.start(startAt);
     this.nextTime = startAt + audio.duration;
@@ -160,7 +205,7 @@ export class VoiceClient {
     quiet(() => this.micCtx?.close());
     quiet(() => this.playCtx?.close());
     this.sources.clear();
-    this.ws = this.node = this.stream = this.micCtx = this.playCtx = null;
+    this.ws = this.node = this.stream = this.micCtx = this.playCtx = this.playOut = this.micMeter = this.playMeter = null;
     this._setStatus(VOICE_STATUS.IDLE);
   }
 }

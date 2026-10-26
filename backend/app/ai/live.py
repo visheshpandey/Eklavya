@@ -10,6 +10,7 @@ import asyncio
 import base64
 import binascii
 import json
+import re
 import logging
 from typing import Optional
 
@@ -28,6 +29,8 @@ log = logging.getLogger(__name__)
 INPUT_AUDIO_MIME = "audio/pcm;rate=16000"   # browser -> Gemini
 PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp")
 MAX_PHOTO_BYTES = 4 * 1024 * 1024            # a phone photo after the browser shrinks it is far smaller
+# markers Gemini's transcription sometimes writes instead of words, e.g. "<no speech>{pause}": never shown
+TRANSCRIPT_MARKERS = re.compile(r"<\s*no speech\s*>|<\s*noise\s*>|\{\s*pause\s*\}", re.I)
 FOCUSED_MODES = ("learn", "test", "revise", "viva", "debate")   # modes that need a topic
 REVISE_QUESTIONS = 2
 DEBATE_STYLES = {
@@ -205,7 +208,7 @@ class LiveTutorSession:
 
     async def _final(self, role: str):
         buf = self.user_buf if role == "user" else self.tutor_buf
-        text = buf.strip()
+        text = TRANSCRIPT_MARKERS.sub("", buf).strip()
         if role == "user":
             self.user_buf = ""
         else:
@@ -225,12 +228,14 @@ class LiveTutorSession:
             it = getattr(sc, "input_transcription", None)
             if it is not None and getattr(it, "text", None):
                 self.user_buf += it.text
-                await self.emit({"type": "transcript", "role": "user", "text": it.text, "final": False})
+                if TRANSCRIPT_MARKERS.sub("", it.text).strip():
+                    await self.emit({"type": "transcript", "role": "user", "text": TRANSCRIPT_MARKERS.sub("", it.text), "final": False})
             ot = getattr(sc, "output_transcription", None)
             if ot is not None and getattr(ot, "text", None):
                 await self._final("user")
                 self.tutor_buf += ot.text
-                await self.emit({"type": "transcript", "role": "tutor", "text": ot.text, "final": False})
+                if TRANSCRIPT_MARKERS.sub("", ot.text).strip():
+                    await self.emit({"type": "transcript", "role": "tutor", "text": TRANSCRIPT_MARKERS.sub("", ot.text), "final": False})
             mt = getattr(sc, "model_turn", None)
             for part in (getattr(mt, "parts", None) or []):
                 inline = getattr(part, "inline_data", None)
@@ -288,7 +293,10 @@ class LiveTutorSession:
                     await self._send_photo(session, data)
 
     async def _send_photo(self, session, data: dict):
-        """A photo from the student's camera or files ("snap a doubt"): Gemini Live sees it as one video frame."""
+        """A photo from the student's camera or files ("snap a doubt"), sent as a normal user turn (image + instruction).
+
+        Not as a realtime video frame: Gemini Live ignores a single frame sent that way ("I cannot see the image"),
+        checked against the real API; a client-content turn with the image part is seen and read correctly."""
         mime = str(data.get("mime", ""))
         try:
             raw = base64.b64decode(str(data.get("data", "")), validate=True)
@@ -297,12 +305,13 @@ class LiveTutorSession:
         if mime not in PHOTO_TYPES or not raw or len(raw) > MAX_PHOTO_BYTES:
             await self.emit({"type": "error", "message": "That photo could not be sent. Use a JPG, PNG or WebP under 4 MB."})
             return
-        await session.send_realtime_input(video=types.Blob(data=raw, mime_type=mime))
         note = " ".join(str(data.get("note", "")).split())[:300]
-        await session.send_realtime_input(text=(
-            "[The student just showed you a photo (a textbook page, notes or a question). Look at it carefully. Say in one "
-            "line what you see, then help with it: if it is a question, guide them to solve it step by step; use show_board "
-            "for any formula or working." + (f' The student said: "{note}"' if note else "") + "]"))
+        instruction = ("[The student just showed you this photo (a textbook page, notes or a question). Look at it carefully. "
+                       "Say in one line what you see, then help with it: if it is a question, guide them to solve it step by "
+                       "step; use show_board for any formula or working." + (f' The student said: "{note}"' if note else "") + "]")
+        await session.send_client_content(
+            turns=types.Content(role="user", parts=[types.Part.from_bytes(data=raw, mime_type=mime), types.Part(text=instruction)]),
+            turn_complete=True)
 
     async def run(self):
         self.session_id = await asyncio.to_thread(

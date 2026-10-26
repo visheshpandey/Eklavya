@@ -1,6 +1,6 @@
 // The one pure function that decides how state changes. No DOM, no network, no timers: easy to test.
 import { ActionType as A } from './actions.js';
-import { VOICE_STATUS, SESSION_MODE } from '../lib/protocol.js';
+import { LANGUAGES, VOICE_STATUS, SESSION_MODE } from '../lib/protocol.js';
 
 const emptySession = () => ({
   mode: SESSION_MODE.FREE,
@@ -13,18 +13,25 @@ const emptySession = () => ({
   summary: null,      // end-of-test summary
   boards: [],         // whiteboard cards shown this session, oldest first (at most MAX_BOARDS)
   boardIndex: -1,     // which board is on screen; -1 = none
+  viva: null,         // viva: {question, marks: [{number, mark, out_of, feedback}], report}
+  debateScores: [],   // debate: one score per student argument
+  verdict: null,      // debate: the final verdict
 });
 
 export const MAX_BOARDS = 12;
 
-export const VIEWS = Object.freeze({ LIBRARY: 'library', STUDY: 'study', PROGRESS: 'progress' });
+export const VIEWS = Object.freeze({ TODAY: 'today', LIBRARY: 'library', STUDY: 'study', PROGRESS: 'progress' });
 export const THEMES = Object.freeze({ SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' });
 
 const initialUi = () => ({
-  view: VIEWS.STUDY,          // which section is showing (on wide screens the library is always visible)
+  view: VIEWS.TODAY,          // which section is showing (on wide screens the library is always visible)
   librarySearch: '',
   collapsedDocs: {},          // {documentId: true} for notes whose topic list is folded
   theme: THEMES.SYSTEM,
+  language: LANGUAGES.HINGLISH,   // tutor language; Hindi also switches the interface labels to Hindi
+  captions: false,           // big live captions of what Eklavya says
+  onboarding: false,         // the first-run guide is open
+  celebration: null,         // {id, text}: the latest win to celebrate
 });
 
 export const initialState = Object.freeze({
@@ -37,6 +44,11 @@ export const initialState = Object.freeze({
   selectedTopicId: null,
   topicDetail: null,
   session: emptySession(),
+  today: null,        // GET /api/today
+  history: null,      // GET /api/history
+  plan: null,         // GET /api/plan
+  conceptMap: null,   // GET /api/concept-map
+  flashcards: { topicId: null, cards: [] },
 });
 
 /** Dashboard and server events spell mission fields differently; the UI uses one shape. */
@@ -74,8 +86,9 @@ function showBoard(state, board) {
 }
 
 /** Live transcript: chunks (final=false) grow the open bubble; the final text replaces it. */
-function receiveTranscript(state, { role, text, final }) {
+function receiveTranscript(state, { role, text, final, image }) {
   const messages = state.session.messages;
+  if (image) return withSession(state, { messages: [...messages, { role, text, final: true, image }] });   // a shared photo
   const open = lastOpenIndex(messages, role);
   let next;
   if (open >= 0) {
@@ -112,7 +125,8 @@ export function reducer(state, action) {
       return payload.topic_id === state.selectedTopicId ? { ...state, topicDetail: payload } : state;
 
     case A.NOTES_RESET:
-      return withUi({ ...state, banner: null, mission: null, selectedTopicId: null, topicDetail: null, session: emptySession() }, { librarySearch: '', collapsedDocs: {} });
+      return withUi({ ...state, banner: null, mission: null, selectedTopicId: null, topicDetail: null, session: emptySession(),
+        conceptMap: null, flashcards: { topicId: null, cards: [] } }, { librarySearch: '', collapsedDocs: {} });
 
     case A.SESSION_STARTED:
       return withUi({ ...state, banner: null, session: { ...emptySession(), mode: payload.mode, topicId: payload.topicId } }, { view: VIEWS.STUDY });
@@ -140,6 +154,36 @@ export function reducer(state, action) {
     case A.BOARD_PICKED:
       return Number.isInteger(payload) && payload >= 0 && payload < state.session.boards.length && payload !== state.session.boardIndex
         ? withSession(state, { boardIndex: payload }) : state;
+    case A.VIVA_QUESTION_ASKED:
+      return withSession(state, { viva: { marks: [], report: null, ...state.session.viva, question: payload } });
+    case A.VIVA_MARKED: {
+      const viva = state.session.viva ?? { question: null, marks: [], report: null };
+      return withSession(state, { viva: { ...viva, marks: [...viva.marks.filter((m) => m.number !== payload.number), payload] } });
+    }
+    case A.VIVA_REPORTED:
+      return withSession(state, { viva: { marks: [], ...state.session.viva, question: null, report: payload } });
+    case A.DEBATE_SCORED:
+      return withSession(state, { debateScores: [...state.session.debateScores, payload] });
+    case A.DEBATE_JUDGED:
+      return withSession(state, { verdict: payload });
+    case A.TODAY_LOADED:
+      return { ...state, today: payload };
+    case A.HISTORY_LOADED:
+      return { ...state, history: payload };
+    case A.PLAN_LOADED:
+      return { ...state, plan: payload };
+    case A.CONCEPT_MAP_LOADED:
+      return { ...state, conceptMap: payload };
+    case A.FLASHCARDS_LOADED:
+      return { ...state, flashcards: { topicId: payload.topicId ?? null, cards: payload.cards ?? [] } };
+    case A.CAPTIONS_TOGGLED:
+      return withUi(state, { captions: !state.ui.captions });
+    case A.LANGUAGE_CHANGED:
+      return Object.values(LANGUAGES).includes(payload) && payload !== state.ui.language ? withUi(state, { language: payload }) : state;
+    case A.ONBOARDING_SET:
+      return Boolean(payload) === state.ui.onboarding ? state : withUi(state, { onboarding: Boolean(payload) });
+    case A.CELEBRATED:
+      return withUi(state, { celebration: payload });
     case A.MISSION_RECEIVED:
       return { ...state, mission: normalizeMission(payload) };
 

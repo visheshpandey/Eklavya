@@ -1,6 +1,6 @@
 /* Page structure: top bar, notes library, workspace, and the section tabs.
-   Wide screens (>= 64rem): the library is a permanent sidebar and the tabs (Study | Progress) sit in the top bar.
-   Narrow screens: one section at a time; the tabs (Notes | Study | Progress) become a bottom bar. */
+   Wide screens (>= 64rem): the library is a permanent sidebar and the tabs (Today | Study | Progress) sit in the top bar.
+   Narrow screens: one section at a time; the tabs (Today | Notes | Study | Progress) become a bottom bar. */
 .app { min-height: 100dvh; display: flex; flex-direction: column; padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
 
 .topbar {
@@ -24,13 +24,12 @@
 .workspace { padding: var(--s-4); min-width: 0; outline: none; }
 .panel { display: flex; flex-direction: column; gap: var(--s-5); max-width: 62rem; margin-inline: auto; }
 
-/* one section at a time on narrow screens */
+/* one section at a time on narrow screens (on wide screens the library stays as a sidebar, see below) */
 .app[data-view="library"] .workspace,
-.app[data-view="study"] .library,
-.app[data-view="progress"] .library { display: none; }
-.app[data-view="study"] #panel-progress,
-.app[data-view="library"] #panel-progress { display: none; }
-.app[data-view="progress"] #panel-study { display: none; }
+.app:not([data-view="library"]) .library { display: none; }
+.app:not([data-view="today"]) #panel-today,
+.app:not([data-view="study"]):not([data-view="library"]) #panel-study,
+.app:not([data-view="progress"]) #panel-progress { display: none; }
 
 /* section tabs: bottom bar on narrow screens */
 .tabs {
@@ -38,7 +37,7 @@
   background: var(--surface); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
 }
-.tablist { display: grid; grid-template-columns: repeat(3, 1fr); }
+.tablist { display: grid; grid-template-columns: repeat(4, 1fr); }
 .tab {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-height: 4rem; padding: var(--s-2) var(--s-1); border: 0; background: transparent;
@@ -60,8 +59,6 @@
     border-right: 1px solid var(--line); padding: var(--s-5) var(--s-4);
   }
   .workspace, .app[data-view] .workspace { display: block; padding: var(--s-6); }
-  .app[data-view="library"] #panel-study { display: flex; }
-  .app[data-view="library"] #panel-progress { display: none; }
 
   /* tabs move into the top bar */
   .tabs { position: static; border: 0; background: transparent; padding: 0; order: 2; }

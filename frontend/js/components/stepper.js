@@ -4,8 +4,9 @@ import { icon } from '../lib/icons.js';
 import { SESSION_MODE, VOICE_STATUS } from '../lib/protocol.js';
 import { selectPhase, selectVoiceStatus } from '../state/selectors.js';
 
-const STEPS = { teaching: 'Learn', test: 'Test', summary: 'Summary' };
-const ORDER = { [SESSION_MODE.LEARN]: ['teaching', 'test', 'summary'], [SESSION_MODE.TEST]: ['test', 'summary'] };
+const STEPS = { teaching: 'Learn', revise: 'Recap', test: 'Test', summary: 'Summary' };
+const ORDER = { [SESSION_MODE.LEARN]: ['teaching', 'test', 'summary'], [SESSION_MODE.TEST]: ['test', 'summary'],
+  [SESSION_MODE.REVISE]: ['revise', 'test', 'summary'] };
 
 export function mountStepper({ store, root }) {
   function draw() {
