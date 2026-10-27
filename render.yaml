@@ -1,0 +1,27 @@
+# Render blueprint for the backend (the frontend stays on Vercel). In Render: New > Blueprint > pick this repo.
+# The disk keeps the SQLite database (accounts, notes, progress) across deploys and restarts. Disks need a paid plan;
+# on the free plan the database is wiped on every deploy and whenever the service sleeps.
+services:
+  - type: web
+    name: eklavya-api
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GEMINI_API_KEY
+        sync: false            # paste your key in the Render dashboard; it never goes in the repo
+      - key: AUTH_SECRET
+        generateValue: true    # signs login tokens; Render creates a random value once
+      - key: CORS_ORIGINS
+        value: https://eklavya-lime.vercel.app
+      - key: DB_PATH
+        value: /var/data/eklavya.db
+    disk:
+      name: eklavya-data
+      mountPath: /var/data
+      sizeGB: 1
