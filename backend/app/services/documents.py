@@ -12,7 +12,7 @@ def delete_document(user_id: int, document_id: int) -> None:
     if not db.one("SELECT id FROM documents WHERE id = ? AND user_id = ?", (document_id, user_id)):
         raise NotFoundError("Unknown document")
     with db.get_conn() as conn:
-        topic_ids = [row[0] for row in conn.execute("SELECT id FROM topics WHERE document_id = ?", (document_id,))]
+        topic_ids = [row["id"] for row in conn.execute("SELECT id FROM topics WHERE document_id = ?", (document_id,))]
         if topic_ids:
             marks = ",".join("?" * len(topic_ids))
             # rows that belong to a viva or debate on these topics go first, while the parent rows still exist

@@ -1,10 +1,13 @@
-"""SQLite (stdlib sqlite3): connection helpers + schema for the PRD tables.
+"""Database: connection helpers + schema for the PRD tables.
 
-Every call opens its own short-lived connection, so it is safe to use from
-FastAPI threads and from the voice WebSocket tasks.
+Two engines behind one small API (get_conn / query / one / execute): SQLite (stdlib, a local file; the default for
+development and tests) and Postgres (psycopg, used when DATABASE_URL is set; needed on hosts with no persistent disk).
+The SQL in the rest of the app is written once, in SQLite style with ``?`` placeholders; the Postgres engine translates it.
+Every call takes its own connection, so it is safe to use from FastAPI threads and from the voice WebSocket tasks.
 """
 import json
 import logging
+import re
 import sqlite3
 from contextlib import contextmanager
 
@@ -115,9 +118,97 @@ MIGRATIONS = (
 )
 
 
+PG = bool(settings.database_url)
+
+# ---------------------------------------------------------------- Postgres engine
+_NOW = "to_char(timezone('utc', now()), 'YYYY-MM-DD HH24:MI:SS')"   # the same text format SQLite's CURRENT_TIMESTAMP gives
+_pool = None
+
+
+def _get_pool():
+    global _pool
+    if _pool is None:
+        from psycopg.rows import dict_row
+        from psycopg_pool import ConnectionPool
+        kwargs = {"row_factory": dict_row, "prepare_threshold": None}   # no prepared statements: the Neon pooler does not keep them
+        if settings.db_schema:
+            kwargs["options"] = f"-c search_path={settings.db_schema}"
+        _pool = ConnectionPool(settings.database_url, kwargs=kwargs, min_size=1, max_size=8, open=False,
+                               check=ConnectionPool.check_connection)   # Neon closes idle connections: test one before handing it out
+        _pool.open(wait=True, timeout=30)
+    return _pool
+
+
+def _pg_sql(sql, returning=True):
+    """SQLite-style statement -> Postgres: ? placeholders, OR IGNORE/REPLACE, timestamps, and RETURNING id for inserts."""
+    sql = sql.replace("%", "%%").replace("?", "%s").replace("CURRENT_TIMESTAMP", _NOW)
+    if re.match(r"\s*INSERT OR REPLACE INTO chunk_embeddings", sql):
+        return sql.replace("INSERT OR REPLACE INTO", "INSERT INTO", 1) + " ON CONFLICT (chunk_id) DO UPDATE SET vector = EXCLUDED.vector"
+    ignore = bool(re.match(r"\s*INSERT OR IGNORE", sql))
+    if ignore:
+        sql = sql.replace("INSERT OR IGNORE INTO", "INSERT INTO", 1) + " ON CONFLICT DO NOTHING"
+    if returning and re.match(r"\s*INSERT INTO (?!chunk_embeddings)", sql):
+        sql += " RETURNING id"
+    return sql
+
+
+def _pg_args(args):
+    return tuple(int(a) if isinstance(a, bool) else a for a in args)   # SQLite stores True as 1; Postgres would reject it for an integer column
+
+
+class _PgCursor:
+    def __init__(self, cursor, sql):
+        self._cursor = cursor
+        self.lastrowid = None
+        if cursor.description and sql.rstrip().endswith("RETURNING id"):
+            row = cursor.fetchone()
+            self.lastrowid = row["id"] if row else None
+
+    rowcount = property(lambda self: self._cursor.rowcount)
+
+    def fetchall(self):
+        return self._cursor.fetchall() if self._cursor.description else []
+
+    def __iter__(self):
+        return iter(self.fetchall())
+
+
+class _PgConn:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, sql, args=()):
+        sql = _pg_sql(sql)
+        return _PgCursor(self._conn.execute(sql, _pg_args(args)), sql)
+
+    def executemany(self, sql, rows):
+        with self._conn.cursor() as cursor:
+            cursor.executemany(_pg_sql(sql, returning=False), [_pg_args(r) for r in rows])
+
+    def executescript(self, script):
+        for statement in script.split(";"):
+            if statement.strip():
+                self._conn.execute(statement)
+
+
+def _pg_schema(script):
+    script = re.sub(r"\bid INTEGER PRIMARY KEY AUTOINCREMENT", "id SERIAL PRIMARY KEY", script)
+    script = re.sub(r"\bid INTEGER PRIMARY KEY,", "id SERIAL PRIMARY KEY,", script)     # users: SQLite numbers these by itself
+    return script.replace(" REAL", " DOUBLE PRECISION").replace("CURRENT_TIMESTAMP", _NOW.join(("(", ")")))
+
+
+# ---------------------------------------------------------------- shared helpers
 @contextmanager
 def get_conn():
-    """Open a connection, commit on success, roll back (and log) on any error, always close."""
+    """Open a connection, commit on success, roll back (and log) on any error, always close/return it."""
+    if PG:
+        try:
+            with _get_pool().connection() as conn:
+                yield _PgConn(conn)
+        except Exception:
+            log.exception("Database operation failed; rolled back")
+            raise
+        return
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(settings.db_path)
     conn.row_factory = sqlite3.Row
@@ -134,13 +225,23 @@ def get_conn():
 
 def init_db():
     with get_conn() as c:
-        c.executescript(SCHEMA)
-        for table, column, kind in MIGRATIONS:
-            existing = {row[1] for row in c.execute(f"PRAGMA table_info({table})")}
-            if column not in existing:
-                c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+        if PG:
+            if settings.db_schema:
+                c.executescript(f"CREATE SCHEMA IF NOT EXISTS {settings.db_schema}")
+            c.executescript(_pg_schema(SCHEMA))
+            for table, column, kind in MIGRATIONS:
+                c.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {kind}")
+        else:
+            c.executescript(SCHEMA)
+            for table, column, kind in MIGRATIONS:
+                existing = {row[1] for row in c.execute(f"PRAGMA table_info({table})")}
+                if column not in existing:
+                    c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
         c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email ON users(email)")   # NULL emails (the demo student) never collide
     ensure_user(settings.demo_user_id)   # reserve the demo id so a new account can never be given it
+    if PG:   # the demo row was inserted with an explicit id: move the sequence past it
+        with get_conn() as c:
+            c.execute("SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX(id) FROM users))")
 
 
 def query(sql, args=()):

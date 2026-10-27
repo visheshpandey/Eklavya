@@ -1,7 +1,7 @@
 """Phase 2-4 features: streak, spaced revision, exam planner, concept map, flashcards, meaning search,
 photo notes, Today screen, viva and debate scoring, quick revision, photos in a live session."""
 import base64
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace as NS
 
 import pytest
@@ -131,9 +131,9 @@ def test_today_shows_streak_due_revision_plan_and_last_session():
     assert data["has_notes"] and data["streak"] == 0 and data["due"] == []
     assert data["plan"][0]["kind"] == "learn" and data["plan"][0]["topic"] == "Precision"   # weakest new topic
 
-    old = "datetime('now', '-3 days')"
-    db.execute(f"INSERT INTO quiz_attempts (user_id, topic_id, question, is_correct, mastery_before, mastery_after, answered_at) "
-               f"VALUES (1, ?, 'q', 0, 38, 33, {old})", (prec,))
+    old = (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")   # plain text: works on SQLite and Postgres
+    db.execute("INSERT INTO quiz_attempts (user_id, topic_id, question, is_correct, mastery_before, mastery_after, answered_at) "
+               "VALUES (1, ?, 'q', 0, 38, 33, ?)", (prec, old))
     db.execute("INSERT INTO quiz_attempts (user_id, topic_id, question, is_correct, mastery_before, mastery_after) "
                "VALUES (1, ?, 'q', 1, 50, 57)", (topic_id("Recall"),))
     db.execute("INSERT INTO voice_sessions (user_id, mode, study_mode, topic_id, turns) VALUES (1, 'gemini-live', 'viva', ?, 6)", (prec,))

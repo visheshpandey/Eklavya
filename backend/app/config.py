@@ -70,6 +70,8 @@ class Settings:
     max_upload_mb: int
     # --- storage / data
     db_path: Path
+    database_url: str           # postgresql://... : use Postgres (Neon) instead of the SQLite file at db_path
+    db_schema: str              # optional Postgres schema to work in (used to keep test runs apart from real data)
     samples_dir: Path
     demo_user_id: int
     auth_secret: str            # signs login tokens; empty = a random one is kept next to the database
@@ -92,6 +94,8 @@ class Settings:
             cors_origins=_csv("CORS_ORIGINS", "*"),
             log_level=_str("LOG_LEVEL", "INFO").upper(),
             max_upload_mb=_int("MAX_UPLOAD_MB", 10, minimum=1),
+            database_url=_str("DATABASE_URL"),
+            db_schema=_str("DB_SCHEMA"),
             db_path=Path(_str("DB_PATH") or BACKEND_DIR / "data" / "eklavya.db"),
             samples_dir=Path(_str("SAMPLES_DIR") or REPO_DIR / "samples"),
             demo_user_id=_int("DEMO_USER_ID", 1, minimum=1),

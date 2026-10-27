@@ -4,5 +4,6 @@ import sys
 import tempfile
 
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "")   # tests use SQLite unless a Postgres test URL is given
 os.environ["GEMINI_API_KEY"] = ""   # set (not removed) so backend/.env cannot fill in the real key: tests never call Gemini
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
