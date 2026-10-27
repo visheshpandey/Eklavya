@@ -50,7 +50,7 @@ eklavya/
 │   ├── manifest.webmanifest, sw.js, icons/   installable app (offline start of the page shell)
 │   ├── css/                      tokens.css (colours, type, spacing, light/dark), base.css (reset, focus,
 │   │                             reduced motion), layout.css (sidebar + workspace, bottom tabs on phones),
-│   │                             components.css (buttons, library, quiz, chart, lists), print.css (study
+│   │                             components.css (buttons, library, quiz, chart, lists), skin.css (the Eklavya look from docs/design/Eklavya-design.html, loaded last), print.css (study
 │   │                             pack). See docs/DESIGN.md
 │   ├── js/
 │   │   ├── main.js               entry: wires store + services + controllers + components

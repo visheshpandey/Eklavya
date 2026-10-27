@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#fbfbfb" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c1413" media="(prefers-color-scheme: dark)">
   <title>Eklavya: voice study mentor</title>
   <meta name="description"
     content="Talk to a study mentor that teaches from your own notes, draws while it explains, tests you by voice, takes a viva, debates you, and plans your revision until the exam.">
@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/skin.css">
   <link rel="stylesheet" href="css/print.css" media="print">
 </head>
 
@@ -26,7 +27,7 @@
   <div id="app" class="app" data-view="today">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">E</span>
+        <span class="brand-mark" aria-hidden="true"><span data-icon="target" data-size="22"></span></span>
         <div class="brand-text">
           <h1 class="brand-name" translate="no">Eklavya</h1>
           <span class="brand-tag" data-i18n="brand.tag">Your voice study mentor</span>
@@ -47,6 +48,8 @@
       </nav>
 
       <div class="topbar-actions">
+        <button id="btnCommand" class="cmd-trigger" type="button" aria-keyshortcuts="Control+K Meta+K"><span data-icon="magnifying-glass" data-size="16"></span><span class="cmd-trigger-text" data-i18n="cmd.trigger">Search or jump to</span><span class="cmd-keys" aria-hidden="true"><kbd>Ctrl</kbd><kbd>K</kbd></span></button>
+        <span id="streakChip" class="streak-chip" hidden><span data-icon="fire" data-size="14"></span><span id="streakText"></span></span>
         <label class="visually-hidden" for="lang">Tutor language</label>
         <select id="lang" class="select">
           <option value="hinglish" selected>Hinglish</option>
@@ -87,6 +90,7 @@
         <section id="panel-study" class="panel" role="tabpanel" aria-labelledby="tab-study">
           <div id="studyHeader" class="study-header"></div>
 
+          <div class="study-main">
           <div class="stage">
             <button id="orb" class="orb" type="button" data-state="idle" aria-label="Start a voice conversation"></button>
             <div class="stage-text">
@@ -108,6 +112,10 @@
           <div id="summary" class="summary" hidden></div>
           <div id="studyMission" class="mission" hidden></div>
 
+          </div>
+          <div class="study-side">
+          <section class="convo" aria-labelledby="convo-title">
+            <header class="convo-head"><h3 id="convo-title" data-i18n="convo.title">Conversation</h3><span id="liveTag" class="live-tag" hidden><span class="live-dot" aria-hidden="true"></span>Live</span></header>
           <div id="chat" class="chat" role="log" aria-live="off" aria-label="Conversation" tabindex="0">
             <p class="chat-empty">Try saying: “Mujhe precision aur recall simple example se samjhao”</p>
           </div>
@@ -117,8 +125,10 @@
             <input id="textin" class="field" type="text" placeholder="Or type a message to Eklavya" data-i18n-placeholder="composer.placeholder" disabled>
             <button id="textsend" class="btn btn-primary" type="submit" disabled data-i18n="composer.send">Send</button>
           </form>
+          </section>
 
           <div id="emotion" class="emotion" hidden></div>
+          </div>
         </section>
 
         <section id="panel-progress" class="panel" role="tabpanel" aria-labelledby="tab-progress">
@@ -126,6 +136,7 @@
             <h2 class="panel-title" data-i18n="progress.title">Your progress</h2>
             <button id="btnPack" class="btn btn-secondary" type="button"></button>
           </div>
+          <div id="statTiles" class="stat-tiles"></div>
           <div id="mission" class="mission" hidden></div>
           <div class="progress-grid">
             <section class="block wide" aria-labelledby="h-chart">
@@ -162,6 +173,7 @@
     </div>
   </div>
 
+  <dialog id="command" class="command" aria-label="Command menu"></dialog>
   <dialog id="onboarding" class="onboarding" aria-labelledby="onb-title"></dialog>
   <div id="printPack" class="print-pack"></div>
   <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>

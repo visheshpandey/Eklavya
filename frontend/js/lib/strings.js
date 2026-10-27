@@ -6,7 +6,7 @@
 
 const EN = {
   'tab.today': 'Today', 'tab.notes': 'Notes', 'tab.study': 'Study', 'tab.progress': 'Progress',
-  'brand.tag': 'Your voice study mentor',
+  'brand.tag': 'Your voice study mentor', 'cmd.trigger': 'Search or jump to', 'convo.title': 'Conversation', 'stat.mastery': 'Average mastery', 'stat.masteryNote': 'across {n} topics', 'stat.answers': 'Answers', 'stat.answersNote': 'correct', 'stat.fixed': 'Misconceptions fixed', 'stat.fixedOpen': '{n} still open', 'stat.fixedNone': 'none open', 'stat.streak': 'Study streak', 'stat.days': '{n} days', 'stat.streakNote': 'keep it going tonight',
   'notes.title': 'Your notes', 'notes.upload': 'Upload notes', 'notes.demo': 'Try the demo notes', 'notes.search': 'Search topics',
   'notes.hint': 'PDF, text, or a photo of a page', 'notes.loading': 'Loading…',
   'lib.loading': 'Loading your notes...', 'lib.noneTitle': 'No notes yet',
@@ -75,7 +75,7 @@ const EN = {
 
 const HI = {
   'tab.today': 'आज', 'tab.notes': 'नोट्स', 'tab.study': 'पढ़ाई', 'tab.progress': 'प्रगति',
-  'brand.tag': 'आपका आवाज़ वाला स्टडी मेंटर',
+  'brand.tag': 'आपका आवाज़ वाला स्टडी मेंटर', 'cmd.trigger': 'खोजें या सीधे जाएँ', 'convo.title': 'बातचीत', 'stat.mastery': 'औसत महारत', 'stat.masteryNote': '{n} विषयों में', 'stat.answers': 'जवाब', 'stat.answersNote': 'सही', 'stat.fixed': 'सुधरी गलतफ़हमियाँ', 'stat.fixedOpen': '{n} अभी बाकी', 'stat.fixedNone': 'कोई बाकी नहीं', 'stat.streak': 'लगातार पढ़ाई', 'stat.days': '{n} दिन', 'stat.streakNote': 'आज रात भी जारी रखें',
   'notes.title': 'आपके नोट्स', 'notes.upload': 'नोट्स अपलोड करें', 'notes.demo': 'डेमो नोट्स आज़माएँ', 'notes.search': 'टॉपिक खोजें',
   'notes.hint': 'PDF, टेक्स्ट, या पेज की फ़ोटो', 'notes.loading': 'लोड हो रहा है…',
   'lib.loading': 'आपके नोट्स लोड हो रहे हैं...', 'lib.noneTitle': 'अभी कोई नोट्स नहीं',

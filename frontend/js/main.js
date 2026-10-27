@@ -1,6 +1,7 @@
 // Entry point: builds the store, services and controllers, then mounts each UI component on its element.
 import { USER_ID } from './lib/config.js';
 import { byId } from './lib/dom.js';
+import { t } from './lib/strings.js';
 import { hydrateIcons } from './lib/icons.js';
 import { SESSION_MODE } from './lib/protocol.js';
 import { loadLanguage, saveLanguage } from './lib/language.js';
@@ -11,7 +12,7 @@ import { VoiceClient } from './services/voice-client.js';
 import { createStore } from './state/store.js';
 import { initialState, reducer, VIEWS } from './state/reducer.js';
 import { actions } from './state/actions.js';
-import { selectDashboard, selectLanguage, selectSessionMission } from './state/selectors.js';
+import { selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday } from './state/selectors.js';
 import { createNotifier } from './controllers/notifier.js';
 import { createNotesController } from './controllers/notes-controller.js';
 import { createSessionController } from './controllers/session-controller.js';
@@ -50,6 +51,8 @@ import { mountAlertsList } from './components/alerts-list.js';
 import { mountHistoryList } from './components/history-list.js';
 import { mountDecisionLog } from './components/decision-log.js';
 import { mountHeaderControls } from './components/header-controls.js';
+import { mountStatTiles } from './components/stat-tiles.js';
+import { mountCommandMenu } from './components/command-menu.js';
 
 hydrateIcons();
 
@@ -86,6 +89,31 @@ mountOnboarding({
   onDemo: () => notes.loadDemo(),
   onHello: () => session.start(SESSION_MODE.FREE),
   onClose: () => store.dispatch(actions.onboardingSet(false)),
+});
+
+// --- command menu, shortcuts and the streak chip
+const showView = (view) => store.dispatch(actions.viewChanged(view));
+const topicRows = (state) => (selectDashboard(state)?.mastery ?? []).map((topic) => ({ ...topic, open: () => { notes.openTopic(topic.topic_id); showView(VIEWS.STUDY); } }));
+const withTopic = (mode) => () => { showView(VIEWS.STUDY); return session.start(mode, selectSelectedTopicId(store.getState())); };
+mountCommandMenu({
+  store, dialog: byId('command'), trigger: byId('btnCommand'), topics: topicRows,
+  actions: [
+    { key: 'T', label: 'Teach me this, then test me', needsTopic: true, run: withTopic(SESSION_MODE.LEARN) },
+    { key: 'Q', label: 'Just test me', needsTopic: true, run: withTopic(SESSION_MODE.TEST) },
+    { key: 'M', label: 'Start or stop talking', hint: 'Voice session', run: () => { showView(VIEWS.STUDY); session.toggle(); } },
+    { key: 'D', label: 'Debate Eklavya on this topic', needsTopic: true, run: () => { showView(VIEWS.STUDY); document.querySelector('.study-details .debate')?.setAttribute('open', ''); byId('studyHeader').scrollIntoView(); } },
+    { key: 'U', label: 'Upload notes', hint: 'PDF, text or a photo', run: () => { openNotes(); byId('file').click(); } },
+  ],
+  pages: [
+    { label: 'Today', hint: 'Plan and streak', badge: '→', run: () => showView(VIEWS.TODAY) },
+    { label: 'Study', hint: 'Voice study', badge: '→', run: () => showView(VIEWS.STUDY) },
+    { label: 'Progress', hint: 'Mastery, mistakes, flashcards', badge: '→', run: () => showView(VIEWS.PROGRESS) },
+  ],
+});
+store.select(selectToday, (today) => {
+  const streak = today?.streak ?? 0;
+  byId('streakChip').hidden = !streak;
+  byId('streakText').textContent = t('today.streak', selectLanguage(store.getState()), { n: streak });
 });
 
 // --- today
@@ -138,6 +166,7 @@ mountTextInput({ store, form: byId('textform'), input: byId('textin'), button: b
 mountEmotionCard({ store, root: byId('emotion') });
 
 // --- progress section
+mountStatTiles({ store, root: byId('statTiles') });
 mountMissionCard({ store, root: byId('mission') });
 mountMasteryChart({ store, root: byId('chart') });
 mountConceptMap({ store, root: byId('conceptMap'), onOpenTopic: notes.openTopic });

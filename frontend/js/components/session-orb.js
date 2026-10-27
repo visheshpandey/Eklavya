@@ -1,5 +1,6 @@
 // The voice button and its status line. Tapping starts or ends a free conversation.
 // While a call runs, a soft halo grows and shrinks with whoever is talking (setLevel, fed by the voice client).
+import { el } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { VOICE_STATUS } from '../lib/protocol.js';
 import { t } from '../lib/strings.js';
@@ -19,7 +20,9 @@ export function mountSessionOrb({ store, orb, status, onToggle }) {
   function draw() {
     const voiceStatus = selectVoiceStatus(store.getState());
     orb.dataset.state = voiceStatus;
-    orb.replaceChildren(icon(voiceStatus === VOICE_STATUS.IDLE || voiceStatus === VOICE_STATUS.CONNECTING ? 'microphone' : 'stop', { size: 30 }));
+    if (voiceStatus === VOICE_STATUS.SPEAKING) orb.replaceChildren(el('span', { class: 'orb-bars', 'aria-hidden': 'true' }, ...[0, 1, 2, 3, 4].map(() => el('span'))));
+    else orb.replaceChildren(icon(voiceStatus === VOICE_STATUS.IDLE || voiceStatus === VOICE_STATUS.CONNECTING ? 'microphone' : 'stop', { size: 36 }));
+    document.getElementById('liveTag')?.toggleAttribute('hidden', voiceStatus === VOICE_STATUS.IDLE);
     orb.setAttribute('aria-label', voiceStatus === VOICE_STATUS.IDLE ? 'Start a voice conversation' : 'End the voice conversation');
     status.textContent = t(STATUS_KEY[voiceStatus], selectLanguage(store.getState()));
     if (voiceStatus === VOICE_STATUS.IDLE) orb.style.setProperty('--level', '0');

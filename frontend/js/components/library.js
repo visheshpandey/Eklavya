@@ -1,11 +1,18 @@
 // "Your notes": topics grouped by the notes they came from. Search, fold a group, open a topic, remove a document.
 // Row elements are reused between renders so the mastery bars animate instead of jumping.
-import { el, render as replaceContent, syncChildren } from '../lib/dom.js';
+import { el, render as replaceContent, svgEl, syncChildren } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { t } from '../lib/strings.js';
 import { selectCollapsedDocs, selectDashboard, selectLanguage, selectLibrarySearch, selectSelectedTopicId } from '../state/selectors.js';
 
 const CONFIRM_TIMEOUT_MS = 8000;
+const RING_R = 11;
+const RING_C = 2 * Math.PI * RING_R;
+
+function setRing(circle, percent) {
+  circle.setAttribute('stroke-dasharray', `${(RING_C * percent) / 100} ${RING_C}`);
+  circle.setAttribute('class', percent >= 60 ? 'ring-ok' : percent >= 45 ? 'ring-warn' : 'ring-low');
+}
 
 export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDocument, onSearch, onRemoveDocument }) {
   const rows = new Map();     // topicId -> row parts
@@ -18,9 +25,11 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
     const tag = el('span', { class: 'tag-weak', hidden: true });
     const name = el('span', { class: 'topic-name' }, label, tag);
     const pct = el('span', { class: 'topic-pct' });
-    const fill = el('span', { style: 'width:0%' });
-    const bar = el('span', { class: 'topic-bar', 'aria-hidden': 'true' }, fill);
-    const node = el('button', { class: 'topic-row', type: 'button', onclick: () => onOpenTopic(topicId) }, name, pct, bar);
+    const fill = svgEl('circle', { cx: 15, cy: 15, r: RING_R, fill: 'none', 'stroke-width': 3.5, 'stroke-linecap': 'round',
+      'stroke-dasharray': `0 ${RING_C}`, transform: 'rotate(-90 15 15)' });
+    const ring = svgEl('svg', { class: 'topic-ring', width: 30, height: 30, viewBox: '0 0 30 30', 'aria-hidden': 'true' },
+      svgEl('circle', { class: 'topic-ring-track', cx: 15, cy: 15, r: RING_R, fill: 'none', 'stroke-width': 3.5 }), fill);
+    const node = el('button', { class: 'topic-row', type: 'button', onclick: () => onOpenTopic(topicId) }, ring, name, pct);
     return { node, label, tag, pct, fill, fresh: true };
   }
 
@@ -102,8 +111,8 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
         row.tag.textContent = t('lib.weakest', language);
         row.pct.textContent = `${percent}%`;
         row.node.setAttribute('aria-current', topic.topic_id === selectedTopicId ? 'true' : 'false');
-        if (row.fresh) { row.fresh = false; requestAnimationFrame(() => { row.fill.style.width = `${percent}%`; }); }
-        else row.fill.style.width = `${percent}%`;
+        if (row.fresh) { row.fresh = false; requestAnimationFrame(() => setRing(row.fill, percent)); }
+        else setRing(row.fill, percent);
         return row.node;
       }));
       nodes.push(group.node);
