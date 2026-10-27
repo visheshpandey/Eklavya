@@ -4,6 +4,6 @@
 // For a one-off test you can also open the page with ?api=http://localhost:5099
 const local = ['localhost', '127.0.0.1', ''].includes(location.hostname);
 window.APP_CONFIG = {
-  apiBase: local ? 'http://localhost:5002' : 'https://eklavya-api.onrender.com',
+  apiBase: local ? 'http://localhost:5002' : 'https://eklavya-api-1bhf.onrender.com',
   userId: 1,
 };
