@@ -120,7 +120,7 @@ Seven agents run as backend-controlled LLM calls, each returning structured JSON
 | POST | `/api/quiz/submit` | user_id, question_id, student_answer, confidence | is_correct, misconception, mastery_before, mastery_after, recommended_action |
 | POST | `/api/missions/generate` | user_id | mission_title, duration_minutes, priority, reason, tasks[] |
 | GET | `/api/dashboard` | user_id | mastery[], weak_topics[], alerts[], mission, quiz_history[], agent_log[] |
-| WS | `/ws/voice` | PCM audio + control JSON | see TEAM_PLAN.md (added in s15) |
+| WS | `/ws/voice` | PCM audio + control JSON | see CODEBASE.md, section 4 |
 
 All LLM-backed endpoints use JSON mode and validate required keys before responding.
 
@@ -140,7 +140,7 @@ All LLM-backed endpoints use JSON mode and validate required keys before respond
 **Mastery update rule (demo):** correct answer +15 × (1 − mastery/100), wrong answer −10 × confidence, clamped to 0–100.
 
 ## 10. Build Phases
-See `TEAM_PLAN.md` (3 people, 1 chunk each) and `CHECKLIST.md`. Original phases: 0 Fix, 1 Voice, 2 Tutor + retrieval, 3 Diagnose + plan, 4 Dashboard, 5 Demo polish.
+See `CHECKLIST.md`. Original phases: 0 Fix, 1 Voice, 2 Tutor + retrieval, 3 Diagnose + plan, 4 Dashboard, 5 Demo polish.
 
 ## 11. Success Metrics and Demo Acceptance
 

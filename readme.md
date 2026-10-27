@@ -24,7 +24,6 @@ if Gemini fails, the app shows the error.
 | [docs/CODEBASE.md](docs/CODEBASE.md) | **Start here:** layout, layering rules, config, errors, how to extend |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Voice session design and key decisions |
 | [docs/PRD.md](docs/PRD.md) | Product requirements |
-| [docs/TEAM_PLAN.md](docs/TEAM_PLAN.md) | Work split and frozen contracts |
 | [docs/CHECKLIST.md](docs/CHECKLIST.md) / [docs/LOG.md](docs/LOG.md) | Progress and decisions |
 
 ## Project structure

@@ -1,6 +1,6 @@
 """Gemini Live (native audio) tutor session: browser <-> backend <-> Gemini.
 
-Wire format with the browser (see docs/TEAM_PLAN.md):
+Wire format with the browser (see docs/CODEBASE.md, section 4):
   binary frames   mic audio in (PCM16 mono 16 kHz) / tutor audio out (PCM16 mono 24 kHz)
   JSON frames     transcript, emotion, interrupted, mastery, mission, quiz_question, turn_complete, error
   client JSON     {"type":"user_text","text":...} | {"type":"audio_stream_end"} | {"type":"end"}

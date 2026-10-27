@@ -219,7 +219,28 @@ HTTP endpoints added with the study features: `GET /api/today`, `GET /api/histor
 `GET /api/concept-map`, `GET /api/flashcards`, `POST /api/flashcards/generate`; `POST /api/upload-document` also
 accepts a photo of notes (png, jpg, webp, heic), read by Gemini.
 
-Field-level details: [TEAM_PLAN.md](TEAM_PLAN.md) ("Frozen contracts").
+Event fields (server to browser). Optional fields are marked `?`; unknown events must be ignored, so a newer server
+never breaks an older page.
+
+| `type` | Fields |
+|---|---|
+| `transcript` | `role` (`user` or `tutor`), `text`, `final`, `replace?`. A non-final event carries the whole turn so far when `replace` is true (the text shown is already cleaned), otherwise a chunk to append. A final event carries the full turn; a final with empty `text` means the turn was only a marker such as `<no speech>`, so drop the bubble it started. |
+| `phase` | `phase` (`teaching`, `test`, `summary`, `revise`, `viva`, `debate`), `topic`; a debate also has `side`, `motion`, `style` |
+| `quiz_question` | `question_id`, `topic`, `question`, `options` (`["A. ..", ..]`, never the answer), `number?`, `total?` (focused tests) |
+| `mastery` | `topic`, `before`, `after`, `is_correct`, `misconception` (`{label, text, severity}` or null), `misconceptions_resolved`, `chosen`, `correct_answer`, `question_id`, `retry` (the student answered the same question again: it replaces the first try) |
+| `test_summary` | `topic`, `correct`, `total`, `mastery_before`, `mastery_after`, `misconceptions` (texts), `resolved`. Re-sent when a retry on the last question changes the result. |
+| `mission` | `title`, `duration_minutes`, `priority`, `reason`, `tasks` |
+| `emotion` | `topic`, `confusion`, `confidence`, `frustration` (each 0 to 1), `note` |
+| `board` | see above |
+| `viva_question` | `number`, `total`, `question`, `seconds` (the answer timer), `topic` |
+| `viva_mark` | `number`, `mark`, `out_of`, `feedback`, `mastery_before`, `mastery_after` |
+| `viva_report` | `topic`, `marks`, `out_of`, `percent`, `strengths`, `improve`, `answers` (`[{question, mark, feedback}]`) |
+| `debate_score` | `round`, `evidence`, `logic`, `rebuttal`, `strength` (each 0 to 10), `note`, `average` |
+| `debate_verdict` | `winner` (`student`, `eklavya`, `draw`), `student_score`, `eklavya_score`, `strength`, `improve`, `rounds` |
+| `interrupted`, `turn_complete` | no fields |
+| `error` | `message` (Gemini unavailable, quota, a bad photo, the session time limit). The client shows it and ends the call. |
+
+Audio chunks are about 20 to 40 ms. There is one demo student, `user_id = 1`, and no login.
 
 ## 5. Running and testing
 
