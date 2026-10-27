@@ -1,4 +1,4 @@
-# Eklavya (StudyPilot Voice): build checklist
+# Eklavya: build checklist
 
 Stack: FastAPI + SQLite + Gemini (text, Live voice, embeddings) backend; plain HTML/CSS/ES-module frontend.
 Legend: [x] done and verified · [ ] to do. Details of each step are in [LOG.md](LOG.md).

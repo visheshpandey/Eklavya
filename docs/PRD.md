@@ -1,4 +1,4 @@
-# StudyPilot Voice — PRD
+# Eklavya — PRD
 
 Oct 25, 2026
 
@@ -6,11 +6,11 @@ Sections 1–13 are the base PRD. Sections 14–15 are the v2 addition (conversa
 
 ## 1. Summary
 
-StudyPilot Voice is a voice-first, multilingual (English, Hindi, Hinglish) adaptive learning platform. A student uploads notes, asks doubts by voice, gets spoken explanations grounded in their own material, takes voice quizzes, and receives a personalized study mission based on the exact misconception detected.
+Eklavya is a voice-first, multilingual (English, Hindi, Hinglish) adaptive learning platform. A student uploads notes, asks doubts by voice, gets spoken explanations grounded in their own material, takes voice quizzes, and receives a personalized study mission based on the exact misconception detected.
 
 **Hackathon goal:** a working demo of one uninterrupted journey — upload notes → voice doubt → spoken explanation → voice quiz → misconception detected → study mission → mastery rises (e.g. 38% → 67%).
 
-**Build strategy:** extend the existing StudyAI repo (FastAPI + LLM), which already handles PDF upload, text extraction and quiz generation, instead of starting from scratch.
+**Build strategy:** extend the original repo (FastAPI + LLM), which already handles PDF upload, text extraction and quiz generation, instead of starting from scratch.
 
 ## 2. Problem, Goals and Non-Goals
 

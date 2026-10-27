@@ -1,4 +1,4 @@
-# Architecture — StudyPilot Voice (v2)
+# Architecture — Eklavya (v2)
 
 Stack: FastAPI + SQLite + Gemini (text and Live audio), vanilla JS frontend. See `PRD.md` section 14 for requirements.
 

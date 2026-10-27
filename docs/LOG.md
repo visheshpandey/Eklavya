@@ -3,12 +3,12 @@
 ## 2026-10-25
 - Read the project: FastAPI + Groq backend, single-file vanilla JS frontend. Servers start; `/` and the static page respond.
 - Found blocker: `llama-3.3-70b-versatile` returns 404 for the current Groq key.
-- Compared repo with the StudyPilot Voice PRD: only F1 (upload/extract) and F19 (PDF export) done, about 15% of P0. The PRD's duplicate `exportBtn` bug does not exist in this repo (it targets a different Node/Express codebase).
+- Compared repo with the Eklavya PRD: only F1 (upload/extract) and F19 (PDF export) done, about 15% of P0. The PRD's duplicate `exportBtn` bug does not exist in this repo (it targets a different Node/Express codebase).
 - Decisions: keep FastAPI (no rewrite to Express); use Gemini Flash instead of Groq; single seeded student, no login.
 - Rewrote `backend/gemini.py` for Gemini (JSON mode, retry, 10-min cache). Updated `requirements.txt`. Not yet tested: no Gemini key available.
 - Deleted untracked `backend/h.txt` and `frontend/python`.
 - Scaffolded full structure: `backend/{config,db,schemas,retrieval,mastery,seed}.py`, `agents/` (8 modules), `routers/` (6), `frontend/{css,js}`, `docs/`, `samples/ml_notes.txt`.
-- Committed `fbb12f3` and pushed `main` to github.com/visheshpandey/Eklavya (remote `eklavya`; `origin` still points at the upstream studyai repo).
+- Committed `fbb12f3` and pushed `main` to github.com/visheshpandey/Eklavya (remote `eklavya`; the old upstream remote was removed when the project moved to its own folder).
 - Reviewed hackathon-refs: OCR.Space (F16), Chart.js (progress graph), Free Dictionary (terms), IBM TTS / ResponsiveVoice (TTS fallbacks).
 
 ### Next
@@ -170,3 +170,8 @@ UI
 
 Other bugs found while testing: a flaky session-end write in tests (the end time is now written directly, not via a thread, so a cancelled handler cannot lose it) (`ai/live.py`); `localStorage` is shared between pages in one browser profile, which mattered for the smoke tests.
 Tests: backend 108, frontend 96. Smoke: `qa.mjs` 27 checks, all pass on the last runs; the quiz scenario varies with how Gemini conducts the follow-up.
+
+## Moved to its own folder (Eklavya)
+- Project copied to `Desktop\eklavya` with its full git history and local files (`backend/.env`, database). Work happens only there.
+- Renamed everything that used the old project names: docs and readme use Eklavya, the default database is `backend/data/eklavya.db` (the existing file was renamed, nothing lost), commands in the docs use the `eklavya` folder.
+- Removed the `origin` remote (the old upstream repo). `eklavya` (github.com/visheshpandey/Eklavya) is the only remote.

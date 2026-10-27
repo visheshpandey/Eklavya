@@ -91,7 +91,7 @@ class Settings:
             cors_origins=_csv("CORS_ORIGINS", "*"),
             log_level=_str("LOG_LEVEL", "INFO").upper(),
             max_upload_mb=_int("MAX_UPLOAD_MB", 10, minimum=1),
-            db_path=Path(_str("DB_PATH") or BACKEND_DIR / "data" / "studypilot.db"),
+            db_path=Path(_str("DB_PATH") or BACKEND_DIR / "data" / "eklavya.db"),
             samples_dir=Path(_str("SAMPLES_DIR") or REPO_DIR / "samples"),
             demo_user_id=_int("DEMO_USER_ID", 1, minimum=1),
         )

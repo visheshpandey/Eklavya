@@ -6,7 +6,7 @@ How the code is organised, the rules it follows, and how to extend it. For *what
 ## 1. Layout
 
 ```
-studyai/
+eklavya/
 ├── backend/                      Python 3.11, FastAPI, SQLite
 │   ├── main.py                   entry shim: `uvicorn main:app` / `python main.py`
 │   ├── app/
@@ -106,7 +106,7 @@ raise `ConfigError` at startup. Settings are listed in `backend/.env.example`:
 | `HOST`, `PORT`, `RELOAD` | `0.0.0.0`, `5000`, `false` | used by `python main.py` |
 | `CORS_ORIGINS` | `*` | comma-separated allowed origins |
 | `LOG_LEVEL`, `MAX_UPLOAD_MB` | `INFO`, `10` | |
-| `DB_PATH`, `SAMPLES_DIR`, `DEMO_USER_ID` | `data/studypilot.db`, `../samples`, `1` | |
+| `DB_PATH`, `SAMPLES_DIR`, `DEMO_USER_ID` | `data/eklavya.db`, `../samples`, `1` | |
 
 **Errors:** raise from `app/errors.py`: `BadRequestError` (400), `NotFoundError` (404),
 `PayloadTooLargeError` (413), `LLMError` (502). One handler turns every failure, including validation
@@ -227,18 +227,18 @@ All commands from Windows `cmd`; replace ports to taste (the two ports must matc
 
 ```cmd
 :: backend (terminal 1)
-cd studyai\backend
+cd eklavya\backend
 pip install -r requirements.txt
 copy .env.example .env          &:: then put GEMINI_API_KEY in .env
 python main.py                  &:: or: python -m uvicorn main:app --port 5000
 
 :: frontend (terminal 2)
-cd studyai\frontend
+cd eklavya\frontend
 python serve.py                 &:: open http://localhost:3000 in Chrome
 
 :: tests
-cd studyai\backend  && pip install -r requirements-dev.txt && python -m pytest tests -q
-cd studyai\frontend && npm test
+cd eklavya\backend  && pip install -r requirements-dev.txt && python -m pytest tests -q
+cd eklavya\frontend && npm test
 ```
 
 * Do not use `uvicorn --reload` on Windows: it can leave an old server bound to the port.

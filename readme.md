@@ -1,4 +1,4 @@
-# Eklavya (StudyPilot Voice)
+# Eklavya
 
 A voice-first, multilingual (English / Hindi / Hinglish) study mentor. Pick a topic from your notes and
 Eklavya teaches it out loud while drawing on a whiteboard, then tests you by voice, names the exact
