@@ -96,6 +96,10 @@ CREATE TABLE IF NOT EXISTS debate_rounds (
     id INTEGER PRIMARY KEY AUTOINCREMENT, debate_id INTEGER, evidence REAL, logic REAL,
     rebuttal REAL, strength REAL, note TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS boards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER, title TEXT, kind TEXT, data TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS flashcards (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER, front TEXT, back TEXT,
     source TEXT DEFAULT 'notes', created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -106,6 +110,7 @@ CREATE TABLE IF NOT EXISTS flashcards (
 MIGRATIONS = (
     ("voice_sessions", "study_mode", "TEXT"),
     ("voice_sessions", "topic_id", "INTEGER"),
+    ("misconceptions", "question_id", "INTEGER"),   # the question the mistake was made on (flashcards from mistakes)
 )
 
 

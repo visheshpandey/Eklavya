@@ -16,6 +16,7 @@ const emptySession = () => ({
   viva: null,         // viva: {question, marks: [{number, mark, out_of, feedback}], report}
   debateScores: [],   // debate: one score per student argument
   verdict: null,      // debate: the final verdict
+  mission: null,      // the mission Eklavya gave at the end of this session (shown in Study)
 });
 
 export const MAX_BOARDS = 12;
@@ -86,15 +87,26 @@ function showBoard(state, board) {
 }
 
 /** Live transcript: chunks (final=false) grow the open bubble; the final text replaces it. */
-function receiveTranscript(state, { role, text, final, image }) {
+function receiveTranscript(state, { role, text, final, image, replace }) {
+  // a new bubble from one speaker ends the other speaker's open bubble, so later chunks of that speaker start a new
+  // one below instead of growing the old one above (the order of the conversation is the order things happened)
+  const other = role === 'user' ? 'tutor' : 'user';
+  const closeOther = (list) => {
+    const i = lastOpenIndex(list, other);
+    return i < 0 ? list : list.map((m, k) => (k === i ? { ...m, final: true } : m));
+  };
   const messages = state.session.messages;
-  if (image) return withSession(state, { messages: [...messages, { role, text, final: true, image }] });   // a shared photo
+  if (image) return withSession(state, { messages: [...closeOther(messages), { role, text, final: true, image }] });   // a shared photo
   const open = lastOpenIndex(messages, role);
+  if (final && !text) {   // a turn that turned out empty (e.g. only "<no speech>"): remove the bubble it started
+    return open < 0 ? state : withSession(state, { messages: messages.filter((_, i) => i !== open) });
+  }
+  if (!text) return state;
   let next;
   if (open >= 0) {
-    next = messages.map((m, i) => (i !== open ? m : { ...m, text: final ? text : m.text + text, final: Boolean(final) }));
+    next = messages.map((m, i) => (i !== open ? m : { ...m, text: final || replace ? text : m.text + text, final: Boolean(final) }));
   } else {
-    next = [...messages, { role, text, final: Boolean(final) }];
+    next = [...closeOther(messages), { role, text, final: Boolean(final) }];
   }
   return withSession(state, { messages: next });
 }
@@ -119,8 +131,12 @@ export function reducer(state, action) {
     case A.DASHBOARD_LOADED:
       return { ...state, dashboard: payload, mission: payload.mission ? normalizeMission(payload.mission) : state.mission };
 
-    case A.TOPIC_SELECTED:   // picking a topic takes the student to the Study section
-      return withUi({ ...state, selectedTopicId: payload, topicDetail: state.selectedTopicId === payload ? state.topicDetail : null }, { view: VIEWS.STUDY });
+    case A.TOPIC_SELECTED: {   // picking a topic takes the student to the Study section
+      const changed = state.selectedTopicId !== payload;
+      // a different topic while no call is running: the old topic's conversation, boards and cards are not shown under it
+      const clean = changed && state.voiceStatus === VOICE_STATUS.IDLE ? { session: emptySession() } : {};
+      return withUi({ ...state, ...clean, selectedTopicId: payload, topicDetail: changed ? null : state.topicDetail }, { view: VIEWS.STUDY });
+    }
     case A.TOPIC_LOADED:
       return payload.topic_id === state.selectedTopicId ? { ...state, topicDetail: payload } : state;
 
@@ -184,8 +200,10 @@ export function reducer(state, action) {
       return Boolean(payload) === state.ui.onboarding ? state : withUi(state, { onboarding: Boolean(payload) });
     case A.CELEBRATED:
       return withUi(state, { celebration: payload });
-    case A.MISSION_RECEIVED:
-      return { ...state, mission: normalizeMission(payload) };
+    case A.MISSION_RECEIVED: {
+      const mission = normalizeMission(payload);
+      return { ...withSession(state, { mission }), mission };
+    }
 
     case A.VIEW_CHANGED:
       return Object.values(VIEWS).includes(payload) && payload !== state.ui.view ? withUi(state, { view: payload }) : state;

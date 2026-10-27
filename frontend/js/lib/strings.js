@@ -8,7 +8,12 @@ const EN = {
   'tab.today': 'Today', 'tab.notes': 'Notes', 'tab.study': 'Study', 'tab.progress': 'Progress',
   'brand.tag': 'Your voice study mentor',
   'notes.title': 'Your notes', 'notes.upload': 'Upload notes', 'notes.demo': 'Try the demo notes', 'notes.search': 'Search topics',
-  'notes.hint': 'PDF, text, or a photo of a page',
+  'notes.hint': 'PDF, text, or a photo of a page', 'notes.loading': 'Loading…',
+  'lib.loading': 'Loading your notes...', 'lib.noneTitle': 'No notes yet',
+  'lib.noneBody': 'Upload a PDF or text file, or try the demo notes, and your topics will appear here.',
+  'lib.weakest': 'Weakest', 'lib.remove': 'Remove', 'lib.removeNamed': 'Remove {name}', 'lib.yes': 'Yes, remove', 'lib.cancel': 'Cancel',
+  'lib.confirm': 'Remove "{name}" and your progress on its topics?', 'lib.topics': '{n} topics', 'lib.matches': '{n} of {total}',
+  'lib.noMatch': 'No topics match "{query}".',
   'progress.title': 'Your progress', 'progress.chart': 'Mastery over time', 'progress.mistakes': 'Misconceptions',
   'progress.recent': 'Recent answers', 'progress.why': 'Why the tutor did that', 'progress.map': 'How your topics connect',
   'progress.cards': 'Flashcards', 'progress.results': 'Viva and debate results', 'progress.pack': 'Download study pack',
@@ -57,6 +62,7 @@ const EN = {
   'cards.prev': 'Previous card', 'cards.next': 'Next card', 'cards.count': 'Card {n} of {total}',
   'cards.mistake': 'From your mistakes', 'cards.pick': 'Pick a topic first.',
 
+  'map.open': 'Open {topic}',
   'map.empty': 'Add notes to see how your topics connect.', 'map.links': 'Connected to {list}', 'map.alone': 'No links found in your notes',
   'map.legend': 'Darker = stronger mastery',
 
@@ -71,7 +77,12 @@ const HI = {
   'tab.today': 'आज', 'tab.notes': 'नोट्स', 'tab.study': 'पढ़ाई', 'tab.progress': 'प्रगति',
   'brand.tag': 'आपका आवाज़ वाला स्टडी मेंटर',
   'notes.title': 'आपके नोट्स', 'notes.upload': 'नोट्स अपलोड करें', 'notes.demo': 'डेमो नोट्स आज़माएँ', 'notes.search': 'टॉपिक खोजें',
-  'notes.hint': 'PDF, टेक्स्ट, या पेज की फ़ोटो',
+  'notes.hint': 'PDF, टेक्स्ट, या पेज की फ़ोटो', 'notes.loading': 'लोड हो रहा है…',
+  'lib.loading': 'आपके नोट्स लोड हो रहे हैं...', 'lib.noneTitle': 'अभी कोई नोट्स नहीं',
+  'lib.noneBody': 'PDF या टेक्स्ट फ़ाइल अपलोड करें, या डेमो नोट्स आज़माएँ; आपके टॉपिक यहाँ दिखेंगे।',
+  'lib.weakest': 'सबसे कमज़ोर', 'lib.remove': 'हटाएँ', 'lib.removeNamed': '{name} हटाएँ', 'lib.yes': 'हाँ, हटाएँ', 'lib.cancel': 'रद्द करें',
+  'lib.confirm': '"{name}" और उसके टॉपिक की आपकी प्रगति हटानी है?', 'lib.topics': '{n} टॉपिक', 'lib.matches': '{total} में से {n}',
+  'lib.noMatch': '"{query}" से कोई टॉपिक नहीं मिला।',
   'progress.title': 'आपकी प्रगति', 'progress.chart': 'समय के साथ महारत', 'progress.mistakes': 'गलतफ़हमियाँ',
   'progress.recent': 'हाल के जवाब', 'progress.why': 'ट्यूटर ने ऐसा क्यों किया', 'progress.map': 'आपके टॉपिक कैसे जुड़े हैं',
   'progress.cards': 'फ़्लैशकार्ड', 'progress.results': 'वाइवा और बहस के नतीजे', 'progress.pack': 'स्टडी पैक डाउनलोड करें',
@@ -120,6 +131,7 @@ const HI = {
   'cards.prev': 'पिछला कार्ड', 'cards.next': 'अगला कार्ड', 'cards.count': 'कार्ड {n} / {total}',
   'cards.mistake': 'आपकी गलतियों से', 'cards.pick': 'पहले टॉपिक चुनें।',
 
+  'map.open': '{topic} खोलें',
   'map.empty': 'टॉपिक कैसे जुड़े हैं, देखने के लिए नोट्स जोड़ें।', 'map.links': 'जुड़ा है: {list}', 'map.alone': 'नोट्स में कोई जुड़ाव नहीं मिला',
   'map.legend': 'गहरा रंग = ज़्यादा महारत',
 

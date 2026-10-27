@@ -6,6 +6,8 @@ talk to the real backend and to real Gemini, so they need a key and they cost a 
 | Script | Checks |
 |---|---|
 | `ui.mjs` | First-time guide, Today plan, exam planner, Hindi labels, concept map, flashcards (Gemini), photo of notes (Gemini), phone layout, axe-core accessibility on every screen |
+| `qa.mjs [nav\|lang\|notes\|quiz\|ui]` | Acceptance checks from the manual QA pass: list buttons open topics (no call), Quick revision uses the open topic, language survives reload, Hindi empty state, demo button single-flight, friendly photo error, the 3-question test with a wrong answer and a typed follow-up (needs `DB_PATH` set to the backend's database to read the right answers), feedback timing, step done state, mission in Study, study pack, mistake flashcards, topic switch, debate form, 16-topic map, phone width, Tab focus rings. Prints PASS/FAIL per check |
+| `prompts.py [viva\|gender\|language\|debate]` | Python: the tutor prompts against the real Gemini Live API through the WebSocket (typed turns): an off-topic viva answer scores 0, no gendered Hindi forms, the session language holds, the debate opener is grounded. Prints what the tutor said; a check with no tutor speech counts as a problem, never a pass |
 | `voice.mjs [viva\|debate\|revise\|photo]` | Live voice modes with a fake microphone: viva marks and timer, debate scoreboard, quick revision with the whiteboard, a photo shown during a call. With no argument it runs all four |
 
 ## Run

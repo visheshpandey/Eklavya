@@ -2,7 +2,8 @@
 // Row elements are reused between renders so the mastery bars animate instead of jumping.
 import { el, render as replaceContent, syncChildren } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
-import { selectCollapsedDocs, selectDashboard, selectLibrarySearch, selectSelectedTopicId } from '../state/selectors.js';
+import { t } from '../lib/strings.js';
+import { selectCollapsedDocs, selectDashboard, selectLanguage, selectLibrarySearch, selectSelectedTopicId } from '../state/selectors.js';
 
 const CONFIRM_TIMEOUT_MS = 8000;
 
@@ -14,7 +15,7 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
 
   function createRow(topicId) {
     const label = el('span', { class: 'topic-label' });
-    const tag = el('span', { class: 'tag-weak', text: 'Weakest', hidden: true });
+    const tag = el('span', { class: 'tag-weak', hidden: true });
     const name = el('span', { class: 'topic-name' }, label, tag);
     const pct = el('span', { class: 'topic-pct' });
     const fill = el('span', { style: 'width:0%' });
@@ -49,19 +50,20 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
     yes.addEventListener('click', () => { yes.disabled = no.disabled = true; onRemoveDocument(documentId); });
 
     const node = el('div', { class: 'doc' }, el('div', { class: 'doc-head' }, toggle, remove), confirmBox, list);
-    return { node, title, count, toggle, list, remove, confirmText };
+    return { node, title, count, toggle, list, remove, confirmText, yes, no };
   }
 
   function draw() {
     const { dashboard, selectedTopicId, ui } = store.getState();
+    const language = selectLanguage(store.getState());
     const query = ui.librarySearch.trim().toLowerCase();
     if (searchInput.value !== ui.librarySearch) searchInput.value = ui.librarySearch;
 
-    if (!dashboard) { replaceContent(root, el('p', { class: 'empty', text: 'Loading your notes...' })); return; }
+    if (!dashboard) { replaceContent(root, el('p', { class: 'empty', text: t('lib.loading', language) })); return; }
     if (!dashboard.mastery.length) {
       rows.clear(); groups.clear();
-      replaceContent(root, el('div', { class: 'empty-state' }, el('strong', { text: 'No notes yet' }),
-        el('p', { text: 'Upload a PDF or text file, or try the demo notes, and your topics will appear here.' })));
+      replaceContent(root, el('div', { class: 'empty-state' }, el('strong', { text: t('lib.noneTitle', language) }),
+        el('p', { text: t('lib.noneBody', language) })));
       return;
     }
 
@@ -82,11 +84,14 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
       groups.set(doc.id, group);
       const collapsed = !query && Boolean(ui.collapsedDocs[doc.id]);       // a search opens every group that has a match
       group.title.textContent = doc.name;
-      group.count.textContent = query ? `${matches.length} of ${doc.topics.length}` : `${doc.topics.length} topics`;
+      group.count.textContent = query ? t('lib.matches', language, { n: matches.length, total: doc.topics.length }) : t('lib.topics', language, { n: doc.topics.length });
       group.toggle.setAttribute('aria-expanded', String(!collapsed));
       group.list.hidden = collapsed;
-      group.remove.setAttribute('aria-label', `Remove ${doc.name}`);
-      group.confirmText.textContent = `Remove "${doc.name}" and your progress on its topics?`;
+      group.remove.textContent = t('lib.remove', language);
+      group.remove.setAttribute('aria-label', t('lib.removeNamed', language, { name: doc.name }));
+      group.yes.textContent = t('lib.yes', language);
+      group.no.textContent = t('lib.cancel', language);
+      group.confirmText.textContent = t('lib.confirm', language, { name: doc.name });
 
       syncChildren(group.list, matches.map((topic) => {
         const row = rows.get(topic.topic_id) ?? createRow(topic.topic_id);
@@ -94,6 +99,7 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
         const percent = Math.round(topic.mastery_score);
         row.label.textContent = topic.topic_name;
         row.tag.hidden = topic.topic_id !== weakestId;
+        row.tag.textContent = t('lib.weakest', language);
         row.pct.textContent = `${percent}%`;
         row.node.setAttribute('aria-current', topic.topic_id === selectedTopicId ? 'true' : 'false');
         if (row.fresh) { row.fresh = false; requestAnimationFrame(() => { row.fill.style.width = `${percent}%`; }); }
@@ -102,7 +108,7 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
       }));
       nodes.push(group.node);
     }
-    if (!nodes.length) nodes.push(el('p', { class: 'empty', text: `No topics match "${ui.librarySearch.trim()}".` }));
+    if (!nodes.length) nodes.push(el('p', { class: 'empty', text: t('lib.noMatch', language, { query: ui.librarySearch.trim() }) }));
     syncChildren(root, nodes);
   }
 
@@ -110,4 +116,5 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
   store.select(selectSelectedTopicId, draw);
   store.select(selectLibrarySearch, draw);
   store.select(selectCollapsedDocs, draw);
+  store.select(selectLanguage, draw);
 }

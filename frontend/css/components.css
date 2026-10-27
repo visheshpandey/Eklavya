@@ -483,3 +483,11 @@
 /* ---------- printing: only the study pack (css/print.css hides the app) */
 .print-pack { display: none; }
 .upload-hint { margin-top: calc(-1 * var(--s-1)); }
+
+/* ---------- QA fixes */
+.opt.is-right { background: var(--ok-soft); border-color: var(--ok-text); }
+.opt.is-wrong { background: var(--bad-soft); border-color: var(--bad-text); }
+.opt.is-right::after { content: " \2713"; color: var(--ok-text); font-weight: 700; }
+.opt.is-wrong::after { content: " \2717"; color: var(--bad-text); font-weight: 700; }
+.debate .notes-body { max-height: none; overflow: visible; max-width: none; }   /* the debate form shows in full, not in a scroll box */
+.pack-resolved { color: #444; }

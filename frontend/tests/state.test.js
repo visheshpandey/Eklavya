@@ -18,9 +18,27 @@ test('transcript chunks grow one open bubble and the final text replaces it', ()
   assert.equal(s.session.messages.length, 2);
 });
 
-test('user and tutor bubbles are tracked independently', () => {
+test('bubbles are in the order things happened: a new speaker closes the other speaker open bubble', () => {
   const s = run(transcript('user', 'mujhe '), transcript('tutor', 'Haan'), transcript('user', 'samjhao'));
-  assert.deepEqual(s.session.messages.map((m) => [m.role, m.text]), [['user', 'mujhe samjhao'], ['tutor', 'Haan']]);
+  assert.deepEqual(s.session.messages.map((m) => [m.role, m.text, m.final]),
+    [['user', 'mujhe ', true], ['tutor', 'Haan', true], ['user', 'samjhao', false]]);
+});
+
+test('a typed answer while the tutor bubble is still open lands after it, and the reply starts a new bubble below', () => {
+  const s = run(transcript('tutor', 'What is precision?'), actions.transcriptReceived({ role: 'user', text: 'B', final: true }),
+    transcript('tutor', 'Correct. '), transcript('tutor', 'Next question.'));
+  assert.deepEqual(s.session.messages.map((m) => [m.role, m.text]),
+    [['tutor', 'What is precision?'], ['user', 'B'], ['tutor', 'Correct. Next question.']]);
+});
+
+test('a streamed turn is replaced by its cleaned text, and a turn that was only a marker leaves no bubble', () => {
+  let s = run(actions.transcriptReceived({ role: 'tutor', text: 'Hello', final: false, replace: true }),
+    actions.transcriptReceived({ role: 'tutor', text: 'Hello there', final: false, replace: true }));
+  assert.deepEqual(s.session.messages.map((m) => m.text), ['Hello there']);       // replaced, not "HelloHello there"
+  s = reducer(s, actions.transcriptReceived({ role: 'tutor', text: '', final: true }));
+  assert.deepEqual(s.session.messages, []);                                       // the empty final drops the open bubble
+  s = reducer(s, actions.transcriptReceived({ role: 'tutor', text: '', final: true }));
+  assert.deepEqual(s.session.messages, []);                                       // and an empty final with nothing open is ignored
 });
 
 test('interrupting marks the open tutor bubble as cut and finished', () => {
@@ -36,7 +54,7 @@ test('a new session clears the old one and any banner, but keeps the mission', (
   );
   s = reducer(s, actions.sessionStarted({ mode: 'learn', topicId: 7 }));
   assert.equal(s.banner, null);
-  assert.deepEqual(s.session, { mode: 'learn', topicId: 7, phase: null, messages: [], emotion: null, question: null, result: null, summary: null, boards: [], boardIndex: -1, viva: null, debateScores: [], verdict: null });
+  assert.deepEqual(s.session, { mode: 'learn', topicId: 7, phase: null, messages: [], emotion: null, question: null, result: null, summary: null, boards: [], boardIndex: -1, viva: null, debateScores: [], verdict: null, mission: null });
   assert.equal(s.mission.title, 'Fix it');
 });
 

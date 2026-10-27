@@ -1,5 +1,6 @@
-"""GET /api/history: finished viva practices and debates, newest first."""
+"""GET /api/history: finished viva practices and debates, newest first. GET /api/boards: today's whiteboards."""
 from app import db
+from app.services.progress_data import local_date, local_today
 
 LIMIT = 10
 
@@ -14,3 +15,10 @@ def history(user_id: int):
         "b.strength, b.improve, b.finished_at FROM debates b LEFT JOIN topics t ON t.id = b.topic_id "
         "WHERE b.user_id = ? AND b.finished_at IS NOT NULL ORDER BY b.id DESC LIMIT ?", (user_id, LIMIT))
     return {"vivas": vivas, "debates": debates}
+
+
+def boards_today(user_id: int):
+    """Every whiteboard drawn today, in order, across all sessions (the study pack prints them)."""
+    today = local_today()
+    rows = db.query("SELECT data, created_at FROM boards WHERE user_id = ? ORDER BY id DESC LIMIT 200", (user_id,))
+    return [db.loads(r["data"], {}) for r in reversed(rows) if local_date(r["created_at"]) == today]

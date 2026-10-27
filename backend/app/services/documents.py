@@ -4,7 +4,7 @@ from app.errors import NotFoundError
 
 # tables that hold per-student progress keyed by topic
 _PROGRESS_TABLES = ("quiz_attempts", "misconceptions", "study_missions", "learner_mastery", "learner_state",
-                    "flashcards", "vivas", "debates")
+                    "flashcards", "vivas", "debates", "boards")
 
 
 def delete_document(user_id: int, document_id: int) -> None:

@@ -14,7 +14,7 @@ function dayLabel(iso, language) {
   return new Intl.DateTimeFormat(language === 'hindi' ? 'hi-IN' : 'en-IN', { weekday: 'short', day: 'numeric', month: 'short' }).format(date);
 }
 
-export function mountExamPlanner({ store, root, onSave, onClear, onStartItem }) {
+export function mountExamPlanner({ store, root, onSave, onClear, onOpenItem }) {
   let showAll = false;
   let draft = null;   // {date, minutes} typed but not saved: kept across redraws
 
@@ -24,7 +24,7 @@ export function mountExamPlanner({ store, root, onSave, onClear, onStartItem }) 
       day.items.length
         ? el('span', { class: 'plan-day-items' }, day.items.map((item) => el('button', {
           class: `chip kind-${item.kind}`, type: 'button', title: `${t(`kind.${item.kind}`, language)} · ${item.minutes} min`,
-          onclick: () => onStartItem(item) }, `${item.topic} · ${t(`kind.${item.kind}`, language)}`)))
+          onclick: () => onOpenItem(item) }, `${item.topic} · ${t(`kind.${item.kind}`, language)}`)))
         : el('span', { class: 'hint', text: t('planner.rest', language) }));
   }
 

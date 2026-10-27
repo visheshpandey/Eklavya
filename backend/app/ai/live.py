@@ -72,7 +72,8 @@ def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
                 f'2. Then a {total}-question check: call ask_quiz_question, read the question and options, wait, call grade_answer, '
                 'react in one line, next question.\n'
                 '3. When a tool result says test_complete, say in one or two sentences how it went and that Eklavya will bring '
-                'this topic back at the right time. Do not start anything new.')
+                'this topic back at the right time. Do not start anything new.\n'
+                'Keep speaking the session language in every turn, the recap and the questions included.')
     return ""
 
 
@@ -138,7 +139,7 @@ def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> st
                 'then start the test.]')
     if focus_topic and mode == "revise":
         return (f'[Quick revision of "{focus_topic["topic_name"]}". Say one short line in {lang}, then call search_notes and '
-                'show_board right away and give the recap.]')
+                f'show_board right away and give the recap, all in {lang}.]')
     if focus_topic and mode == "viva":
         return (f'[The student is ready for a viva on "{focus_topic["topic_name"]}". Greet them as the examiner in one line in '
                 f'{lang} and begin.]')
@@ -183,6 +184,7 @@ class LiveTutorSession:
                                focus_topic_id=focus_topic["id"] if focus_topic else None, mode=mode, debate=debate,
                                test_total=REVISE_QUESTIONS if mode == "revise" else 3)
         self.user_buf, self.tutor_buf = "", ""
+        self.shown = {"user": False, "tutor": False}   # a partial bubble for this role is on screen and needs a final
         self.turns = 0
         self.session_id = None
         self.closed = False
@@ -217,6 +219,20 @@ class LiveTutorSession:
             await asyncio.to_thread(db.execute, "INSERT INTO transcripts (session_id, role, text) VALUES (?, ?, ?)",
                                     (self.session_id, role, text))
             await self.emit({"type": "transcript", "role": role, "text": text, "final": True})
+        elif self.shown[role]:
+            # the turn was only a marker such as "<no speech>": tell the browser to drop the bubble it started
+            await self.emit({"type": "transcript", "role": role, "text": "", "final": True})
+        self.shown[role] = False
+
+    async def _partial(self, role: str, chunk: str):
+        """Stream one transcript chunk. Markers can arrive split over chunks ("<no" + " speech>"), so the text shown is
+        the cleaned whole turn so far, sent as a replacement, never the raw chunk."""
+        buf = self.user_buf if role == "user" else self.tutor_buf
+        text = TRANSCRIPT_MARKERS.sub("", buf)
+        text = re.sub(r"<[^>]*$", "", text)     # an unfinished "<no sp..." at the end waits for the next chunk
+        if text.strip():
+            await self.emit({"type": "transcript", "role": role, "text": text.strip(), "final": False, "replace": True})
+            self.shown[role] = True
 
     # ---- Gemini -> browser
     async def _handle(self, session, msg):
@@ -228,14 +244,12 @@ class LiveTutorSession:
             it = getattr(sc, "input_transcription", None)
             if it is not None and getattr(it, "text", None):
                 self.user_buf += it.text
-                if TRANSCRIPT_MARKERS.sub("", it.text).strip():
-                    await self.emit({"type": "transcript", "role": "user", "text": TRANSCRIPT_MARKERS.sub("", it.text), "final": False})
+                await self._partial("user", it.text)
             ot = getattr(sc, "output_transcription", None)
             if ot is not None and getattr(ot, "text", None):
                 await self._final("user")
                 self.tutor_buf += ot.text
-                if TRANSCRIPT_MARKERS.sub("", ot.text).strip():
-                    await self.emit({"type": "transcript", "role": "tutor", "text": TRANSCRIPT_MARKERS.sub("", ot.text), "final": False})
+                await self._partial("tutor", ot.text)
             mt = getattr(sc, "model_turn", None)
             for part in (getattr(mt, "parts", None) or []):
                 inline = getattr(part, "inline_data", None)
@@ -286,6 +300,7 @@ class LiveTutorSession:
                     await session.send_realtime_input(audio_stream_end=True)
                 elif kind == "user_text" and str(data.get("text", "")).strip():
                     text = str(data["text"]).strip()
+                    await self._final("tutor")       # close Eklavya's open bubble first, so the typed turn lands after it
                     self.user_buf = text
                     await self._final("user")
                     await session.send_realtime_input(text=text)
@@ -312,6 +327,14 @@ class LiveTutorSession:
         await session.send_client_content(
             turns=types.Content(role="user", parts=[types.Part.from_bytes(data=raw, mime_type=mime), types.Part(text=instruction)]),
             turn_complete=True)
+
+    async def _save_ending(self):
+        await self._final("user")
+        await self._final("tutor")
+        self.closed = True       # nothing more goes to the browser; what is left is saving what happened
+        # a direct write, not a thread: it is one tiny UPDATE, and it must not depend on the event loop's executor
+        # still being alive while the connection is being torn down
+        db.execute("UPDATE voice_sessions SET ended_at = CURRENT_TIMESTAMP, turns = ? WHERE id = ?", (self.turns, self.session_id))
 
     async def run(self):
         self.session_id = await asyncio.to_thread(
@@ -350,12 +373,9 @@ class LiveTutorSession:
             log.exception("Live session failed")
             await self.emit({"type": "error", "message": f"Gemini Live failed: {e}"})
         finally:
-            await self._final("user")
-            await self._final("tutor")
-            await asyncio.to_thread(
-                db.execute, "UPDATE voice_sessions SET ended_at = CURRENT_TIMESTAMP, turns = ? WHERE id = ?",
-                (self.turns, self.session_id))
-            self.closed = True
+            # shielded: if this handler is cancelled (server shutdown, a dropped connection) the end time and the turn
+            # count are still written, so the session is never left looking unfinished
+            await asyncio.shield(self._save_ending())
 
 
 class _SessionEnded(Exception):

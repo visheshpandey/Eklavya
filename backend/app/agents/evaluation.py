@@ -44,7 +44,10 @@ def parse_choice(answer: str, options):
     return best if best_score >= 0.6 else None
 
 
-def grade(user_id: int, question_id: int, student_answer: str, confidence: float = None):
+def grade(user_id: int, question_id: int, student_answer: str, confidence: float = None, retry_of: dict = None):
+    """Grade one answer. ``retry_of`` = {attempt_id, mastery_before} when the student answers the same question again
+    in the same session (after a hint or a follow-up): only the final answer counts, so mastery is computed from the
+    value before the first try and the earlier attempt row is replaced instead of a new one being added."""
     q = db.one("SELECT * FROM quiz_questions WHERE id = ?", (question_id,))
     if not q:
         raise NotFoundError("Unknown question_id")
@@ -65,7 +68,7 @@ def grade(user_id: int, question_id: int, student_answer: str, confidence: float
         found = misconception.classify(q, letter, student_answer)
         found["severity"] = severity_for(confidence)
     row = db.one("SELECT mastery_score FROM learner_mastery WHERE user_id = ? AND topic_id = ?", (user_id, topic_id))
-    before = row["mastery_score"] if row else 50.0
+    before = retry_of["mastery_before"] if retry_of else (row["mastery_score"] if row else 50.0)
     after = update_mastery(before, is_correct, confidence)
     db.execute(
         "INSERT INTO learner_mastery (user_id, topic_id, mastery_score, confidence_score) VALUES (?, ?, ?, ?) "
@@ -78,13 +81,18 @@ def grade(user_id: int, question_id: int, student_answer: str, confidence: float
         resolved = _resolve(user_id, topic_id)
     else:
         db.execute(
-            "INSERT INTO misconceptions (user_id, topic_id, misconception_text, label, severity) VALUES (?, ?, ?, ?, ?)",
-            (user_id, topic_id, found["text"], found["label"], found["severity"]))
+            "INSERT INTO misconceptions (user_id, topic_id, misconception_text, label, severity, question_id) VALUES (?, ?, ?, ?, ?, ?)",
+            (user_id, topic_id, found["text"], found["label"], found["severity"], question_id))
 
-    db.execute(
-        "INSERT INTO quiz_attempts (user_id, topic_id, question_id, question, student_answer, is_correct,"
-        " confidence, mastery_before, mastery_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (user_id, topic_id, question_id, q["question"], student_answer, int(is_correct), confidence, before, after))
+    if retry_of:
+        attempt_id = retry_of["attempt_id"]
+        db.execute("UPDATE quiz_attempts SET student_answer = ?, is_correct = ?, confidence = ?, mastery_after = ?, "
+                   "answered_at = CURRENT_TIMESTAMP WHERE id = ?", (student_answer, int(is_correct), confidence, after, attempt_id))
+    else:
+        attempt_id = db.execute(
+            "INSERT INTO quiz_attempts (user_id, topic_id, question_id, question, student_answer, is_correct,"
+            " confidence, mastery_before, mastery_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (user_id, topic_id, question_id, q["question"], student_answer, int(is_correct), confidence, before, after))
 
     topic = db.one("SELECT topic_name FROM topics WHERE id = ?", (topic_id,))["topic_name"]
     if is_correct:
@@ -102,7 +110,7 @@ def grade(user_id: int, question_id: int, student_answer: str, confidence: float
         "explanation": q["explanation"], "topic": topic, "topic_id": topic_id,
         "misconception": found, "misconceptions_resolved": resolved,
         "confidence_used": confidence, "mastery_before": before, "mastery_after": after,
-        "recommended_action": action,
+        "recommended_action": action, "attempt_id": attempt_id, "retry": bool(retry_of),
     }
 
 

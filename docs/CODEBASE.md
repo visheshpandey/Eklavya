@@ -31,7 +31,8 @@ studyai/
 │   │   │                         (viva marks, debate scores)
 │   │   ├── ai/                   everything that talks to Gemini
 │   │   │   ├── gemini.py         text client (JSON mode, cache, retry) + read_image (photo of notes)
-│   │   │   ├── embeddings.py     gemini-embedding-001 vectors for note search
+│   │   │   ├── embeddings.py     gemini-embedding-001 vectors for note search (overload: friendly messages,
+│   │   │                         see BUSY_MESSAGE / PHOTO_BUSY_MESSAGE in gemini.py)
 │   │   │   ├── live.py           Gemini Live voice session (browser <-> Gemini)
 │   │   │   ├── tools.py          tools the live tutor can call (a different set per mode)
 │   │   │   └── prompts.py        loads app/prompts/*.md
@@ -56,7 +57,8 @@ studyai/
 │   │   ├── lib/                  config.js, protocol.js (shared names), dom.js (el, svgEl, render),
 │   │   │                         format.js, icons.js, theme.js, chart-data.js (pure series maths),
 │   │   │                         formula.js (pure: formula text -> stacked fractions), strings.js
-│   │   │                         (interface text in English and Hindi, t())
+│   │   │                         (interface text in English and Hindi, t()), language.js (remembered
+│   │   │                         language), feedback-hold.js (keeps a quiz result readable)
 │   │   ├── services/             api-client.js (HTTP), voice-client.js (mic/WebSocket/audio, voice level),
 │   │   │                         audio-worklet.js (mic capture processor), photo.js (shrink a photo)
 │   │   ├── state/                store.js, actions.js, reducer.js, selectors.js

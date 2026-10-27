@@ -1,11 +1,16 @@
 // The question on screen (read aloud by the tutor) with tappable options, and its grade once answered.
+// The card shows its own snapshot ({question, result}) so a result can stay readable for a moment after the next
+// question has arrived (see lib/feedback-hold.js).
 import { el, render as replaceContent } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { round1, signed } from '../lib/format.js';
-import { selectQuestion, selectResult } from '../state/selectors.js';
+import { createFeedbackHold } from '../lib/feedback-hold.js';
+import { selectMessages, selectQuestion, selectResult } from '../state/selectors.js';
 
-export function mountQuizCard({ store, root, onAnswer }) {
-  let picked = null;
+export function mountQuizCard({ store, root, onAnswer, hold = createFeedbackHold() }) {
+  let shown = { question: null, result: null };   // what the card displays right now
+  let picked = null;                              // the option the student tapped (replaced by the graded choice)
+  let lastTutorText = null;
 
   function resultBlock(result) {
     const delta = round1(result.after - result.before);
@@ -16,9 +21,16 @@ export function mountQuizCard({ store, root, onAnswer }) {
       result.misconceptions_resolved ? el('p', { class: 'resolved', text: 'Misconception resolved' }) : null);
   }
 
+  /** The state of one option once the question has been graded: the right one, and the wrong one that was chosen. */
+  function optionState(letter, result) {
+    if (!result) return picked === letter ? ' picked' : '';
+    if (result.correct_answer === letter) return ' is-right';
+    if (result.chosen === letter && !result.is_correct) return ' is-wrong';
+    return '';
+  }
+
   function draw() {
-    const question = selectQuestion(store.getState());
-    const result = selectResult(store.getState());
+    const { question, result } = shown;
     root.hidden = !question;
     if (!question) { replaceContent(root); return; }
     replaceContent(root,
@@ -29,7 +41,7 @@ export function mountQuizCard({ store, root, onAnswer }) {
       el('div', { class: 'opts', role: 'group', 'aria-label': 'Answer options' }, (question.options ?? []).map((option) => {
         const letter = option.trim().charAt(0);
         return el('button', {
-          class: `opt${picked === letter ? ' picked' : ''}`, type: 'button', disabled: Boolean(result),
+          class: `opt${optionState(letter, result)}`, type: 'button', disabled: Boolean(result),
           onclick: () => { picked = letter; onAnswer(letter); draw(); },
         }, option);
       })),
@@ -37,6 +49,26 @@ export function mountQuizCard({ store, root, onAnswer }) {
       result ? resultBlock(result) : null);
   }
 
-  store.select(selectQuestion, () => { picked = null; draw(); });
-  store.select(selectResult, draw);
+  store.select(selectQuestion, (question) => {
+    if (question === shown.question) return;
+    if (!question) { hold.release(); shown = { question: null, result: null }; picked = null; draw(); return; }   // session reset
+    // a new question: swap it in when the previous result has been on screen long enough
+    hold.swap(() => { shown = { question, result: selectResult(store.getState()) }; picked = null; draw(); });
+  });
+
+  store.select(selectResult, (result) => {
+    // the state clears the result the moment the next question arrives; the card keeps showing it until the swap
+    if (!shown.question || !result) return;
+    if (result && result.question_id != null && shown.question.question_id !== result.question_id) return;   // belongs to a newer question: shown after the swap
+    shown = { ...shown, result };
+    if (result) { picked = result.chosen ?? picked; hold.resultShown(); }
+    draw();
+  });
+
+  // the tutor started a new message: if it is reading out the next question, that ends the hold
+  store.select(selectMessages, (messages) => {
+    const lastTutor = [...messages].reverse().find((m) => m.role === 'tutor');
+    const text = lastTutor ? lastTutor.text : null;
+    if (text !== lastTutorText) { lastTutorText = text; hold.tutorSpoke(); }
+  });
 }

@@ -42,6 +42,7 @@ export const backend = {
   deleteDocument: (documentId, userId) => request(`/api/documents/${documentId}?user_id=${userId}`, { method: 'DELETE' }),
   seedDemo: (userId) => request(`/api/demo/seed?user_id=${userId}`, { method: 'POST' }),
   today: (userId) => request(`/api/today?user_id=${userId}`),
+  boardsToday: (userId) => request(`/api/boards?user_id=${userId}`),
   history: (userId) => request(`/api/history?user_id=${userId}`),
   plan: (userId) => request(`/api/plan?user_id=${userId}`),
   savePlan: (examDate, minutesPerDay, userId) => request('/api/plan', { method: 'PUT', json: { user_id: userId, exam_date: examDate, minutes_per_day: minutesPerDay } }),

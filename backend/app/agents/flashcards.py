@@ -34,18 +34,35 @@ def generate(user_id: int, topic_id: int):
     if not cards:
         raise LLMError("Gemini did not return usable flashcards.")
 
-    mistakes = db.query("SELECT DISTINCT misconception_text FROM misconceptions WHERE user_id = ? AND topic_id = ?",
-                        (user_id, topic_id))
+    mistakes = mistake_cards(user_id, topic_id)
     with db.get_conn() as conn:
         conn.execute("DELETE FROM flashcards WHERE user_id = ? AND topic_id = ?", (user_id, topic_id))
         conn.executemany("INSERT INTO flashcards (user_id, topic_id, front, back, source) VALUES (?, ?, ?, ?, 'notes')",
                          [(user_id, topic_id, f, b) for f, b in cards])
         conn.executemany("INSERT INTO flashcards (user_id, topic_id, front, back, source) VALUES (?, ?, ?, ?, 'mistake')",
-                         [(user_id, topic_id, f"A mistake you made on {topic['topic_name']}", _clean(m["misconception_text"]))
-                          for m in mistakes if m["misconception_text"]])
+                         [(user_id, topic_id, front, back) for front, back in mistakes])
     log_agent(user_id, "flashcards", f"Cards requested for {topic['topic_name']}",
               f"{len(cards)} cards from notes, {len(mistakes)} from mistakes", "Saved the deck", 0.8)
     return cards_for(user_id, topic_id)
+
+
+def mistake_cards(user_id: int, topic_id: int):
+    """One card per question the student made a mistake on, even if a follow-up later corrected it (they still made it):
+    the question in front; behind it the right answer, why, and the wrong belief that was detected."""
+    rows = db.query(
+        "SELECT q.id, q.question, q.options, q.correct, q.explanation, x.misconception_text "
+        "FROM misconceptions x JOIN quiz_questions q ON q.id = x.question_id "
+        "WHERE x.user_id = ? AND x.topic_id = ? ORDER BY x.id DESC", (user_id, topic_id))
+    cards, seen = [], set()
+    for r in rows:
+        if r["id"] in seen:
+            continue
+        seen.add(r["id"])
+        options = db.loads(r["options"], [])
+        right = next((o for o in options if o.strip().upper().startswith(r["correct"])), r["correct"])
+        back = f"Answer: {right}. {r['explanation'] or ''}" + (f" Watch out: {r['misconception_text']}" if r["misconception_text"] else "")
+        cards.append((_clean(r["question"]), _clean(back)))
+    return cards
 
 
 def cards_for(user_id: int, topic_id: int = None):

@@ -167,8 +167,14 @@ def test_concept_map_endpoint_returns_topics_with_mastery_and_links():
 
 def test_flashcards_from_notes_and_from_mistakes(monkeypatch):
     prec = topic_id("Precision")
-    db.execute("INSERT INTO misconceptions (user_id, topic_id, misconception_text, label, severity) VALUES (1, ?, ?, 'x', 'high')",
-               (prec, "Uses the recall formula for precision"))
+    qid = db.execute("INSERT INTO quiz_questions (topic_id, question, options, correct, explanation, misconceptions) VALUES (?, ?, ?, 'B', ?, ?)",
+                     (prec, "Which formula gives precision?", db.dumps(["A. TP / (TP + FN)", "B. TP / (TP + FP)", "C. TP / all", "D. none"]),
+                      "Precision divides by everything flagged positive.", db.dumps({"A": {"label": "formula_inversion", "text": "Uses the recall formula for precision"}})))
+    # the student chose A (a recorded mistake), then answered correctly after a follow-up: the mistake still gets a card
+    db.execute("INSERT INTO misconceptions (user_id, topic_id, misconception_text, label, severity, resolved, question_id) VALUES (1, ?, ?, 'x', 'high', 1, ?)",
+               (prec, "Uses the recall formula for precision", qid))
+    db.execute("INSERT INTO misconceptions (user_id, topic_id, misconception_text, label, severity, resolved, question_id) VALUES (1, ?, ?, 'x', 'high', 1, ?)",
+               (prec, "Uses the recall formula for precision", qid))   # the same question twice: still one card
 
     def fake(system, prompt, required_keys=(), temperature=0.7, **_):
         assert "flashcards" in system and "Precision" in prompt
@@ -176,8 +182,9 @@ def test_flashcards_from_notes_and_from_mistakes(monkeypatch):
 
     monkeypatch.setattr(gemini, "call_llm_json", fake)
     cards = client.post("/api/flashcards/generate", json={"topic_id": prec}).json()["cards"]
-    assert [(c["front"], c["source"]) for c in cards] == [("Precision?", "notes"),
-                                                          ("A mistake you made on Precision", "mistake")]
+    assert [(c["front"], c["source"]) for c in cards] == [("Precision?", "notes"), ("Which formula gives precision?", "mistake")]
+    back = cards[1]["back"]                                                         # the right answer, why, and the wrong belief
+    assert "B. TP / (TP + FP)" in back and "everything flagged" in back and "Uses the recall formula for precision" in back
     again = client.post("/api/flashcards/generate", json={"topic_id": prec}).json()["cards"]
     assert len(again) == 2                                                          # replaced, not duplicated
     assert len(client.get(f"/api/flashcards?topic_id={prec}").json()["cards"]) == 2
@@ -307,3 +314,200 @@ def test_transcription_markers_never_reach_the_student(monkeypatch):
     assert all("<no speech>" not in t and "{pause}" not in t for t in texts)
     finals = [e["text"] for e in events if e["type"] == "transcript" and e["final"]]
     assert finals == ["Haan, theek hai."]                      # the marker-only turn left no empty bubble
+
+
+# ------------------------------------------------------------------ QA fixes
+
+def graded(ctx, answer, question_id):
+    import asyncio
+    from app.ai import tools
+    ctx.current_question_id = question_id
+    return asyncio.run(tools.grade_answer(ctx, answer, 0.5))
+
+
+def make_ctx(topic, emitted):
+    from app.ai import tools
+
+    async def emit(event):
+        emitted.append(event)
+
+    return tools.ToolContext(user_id=1, document_id=None, emit=emit, focus_topic_id=topic, mode="test",
+                             topics=[{"id": topic, "topic_name": "Precision"}])
+
+
+def test_a_follow_up_answer_replaces_the_first_try_instead_of_using_up_a_question(monkeypatch):
+    from app.agents import quiz
+    prec = topic_id("Precision")
+    emitted = []
+    ctx = make_ctx(prec, emitted)
+    first = quiz.next_question(1, prec, [])
+    wrong = next(letter for letter in "ABCD" if letter != db.one("SELECT correct FROM quiz_questions WHERE id = ?", (first["question_id"],))["correct"])
+    right = db.one("SELECT correct FROM quiz_questions WHERE id = ?", (first["question_id"],))["correct"]
+    attempts_before = db.one("SELECT COUNT(*) AS n FROM quiz_attempts")["n"]
+    mastery_before = db.one("SELECT mastery_score FROM learner_mastery WHERE topic_id = ?", (prec,))["mastery_score"]
+
+    graded(ctx, wrong, first["question_id"])
+    assert len(ctx.results) == 1 and not ctx.results[0]["is_correct"]
+    graded(ctx, right, first["question_id"])                          # the follow-up retry of the SAME question
+    assert len(ctx.results) == 1 and ctx.results[0]["is_correct"]     # replaced, not appended: still one question answered
+    assert db.one("SELECT COUNT(*) AS n FROM quiz_attempts")["n"] == attempts_before + 1   # one attempt row for the question
+    final = db.one("SELECT mastery_before, mastery_after, is_correct FROM quiz_attempts ORDER BY id DESC LIMIT 1")
+    assert final["mastery_before"] == mastery_before and final["is_correct"] == 1   # mastery moves from the value before try 1
+    mastery_events = [e for e in emitted if e["type"] == "mastery"]
+    assert [e["retry"] for e in mastery_events] == [False, True]
+    from app.agents import flashcards
+    assert db.one("SELECT question_id FROM misconceptions ORDER BY id DESC LIMIT 1")["question_id"] == first["question_id"]
+    cards = flashcards.mistake_cards(1, prec)                         # corrected after the follow-up, still a mistake worth a card
+    assert cards and cards[0][0].startswith(first["question"][:20]) and "Answer:" in cards[0][1]
+    assert mastery_events[1]["chosen"] == right and mastery_events[1]["correct_answer"] == right
+    assert not any(e["type"] == "test_summary" for e in emitted)      # 1 of 3 questions: the test is not over
+
+
+def test_the_test_needs_three_distinct_questions_and_the_summary_comes_once(monkeypatch):
+    from app.ai import tools
+    import asyncio
+    from app.agents import quiz
+    prec = topic_id("Precision")
+    emitted = []
+    ctx = make_ctx(prec, emitted)
+    ids = []
+    for _ in range(3):
+        q = asyncio.run(tools.ask_quiz_question(ctx))
+        assert q["available"], q
+        ids.append(q["question"])
+        qid = ctx.current_question_id
+        wrong = next(l for l in "ABCD" if l != db.one("SELECT correct FROM quiz_questions WHERE id = ?", (qid,))["correct"])
+        graded(ctx, wrong, qid)
+        graded(ctx, db.one("SELECT correct FROM quiz_questions WHERE id = ?", (qid,))["correct"], qid)   # a follow-up each time
+    assert len(set(ids)) == 3 and len(ctx.results) == 3
+    summaries = [e for e in emitted if e["type"] == "test_summary"]
+    # the card is re-sent when the follow-up retry of the last question changes the result; the final one is right
+    assert [(s["correct"], s["total"]) for s in summaries] == [(2, 3), (3, 3)]
+
+
+def test_asking_for_the_next_question_before_the_current_one_is_graded_is_refused():
+    import asyncio
+    from app.ai import tools
+    prec = topic_id("Precision")
+    ctx = make_ctx(prec, [])
+    assert asyncio.run(tools.ask_quiz_question(ctx))["available"]
+    again = asyncio.run(tools.ask_quiz_question(ctx))
+    assert again["available"] is False and "no graded answer" in again["message"]
+
+
+def test_the_mission_after_a_test_is_rewritten_from_live_mastery_once(monkeypatch):
+    import asyncio
+    from app.ai import tools
+    from app.agents import study_mission
+    seen = []
+    monkeypatch.setattr(study_mission, "generate", lambda uid: seen.append("generate") or {
+        "mission_title": "t", "duration_minutes": 15, "priority": "High", "reason": "r", "tasks": ["a"]})
+    monkeypatch.setattr(study_mission, "current", lambda uid: seen.append("current") or {
+        "mission_title": "t", "duration_minutes": 15, "priority": "High", "reason": "r", "tasks": ["a"]})
+    ctx = make_ctx(topic_id("Precision"), [])
+    asyncio.run(tools.get_mission(ctx))
+    assert seen == ["current"]                                   # no answers yet: the existing mission
+    ctx.results.append({"question_id": 1})
+    asyncio.run(tools.get_mission(ctx))
+    asyncio.run(tools.get_mission(ctx))
+    assert seen == ["current", "generate", "current"]            # rewritten once after answers, then reused
+
+
+def test_a_viva_answer_to_a_different_question_gets_zero(monkeypatch):
+    prec = topic_id("Precision")
+    script = [[call("ask_viva_question", {"question": "What does FP mean?"}, "q"), sc(turn_complete=True)],
+              [call("mark_viva_answer", {"mark": 2, "feedback": "Correct and clear.", "answers_the_question": False}, "m"), sc(turn_complete=True)]]
+    fake, events = run_session(monkeypatch, f"/ws/voice?mode=viva&topic_id={prec}", script)
+    mark = next(e for e in events if e["type"] == "viva_mark")
+    assert mark["mark"] == 0 and "did not address the question" in mark["feedback"]
+    declared = {d.name: d for d in fake.tools[0].function_declarations}["mark_viva_answer"]
+    assert "answers_the_question" in declared.parameters.required
+
+
+def test_whiteboards_of_the_day_are_kept_across_sessions_and_the_dashboard_lists_every_mistake():
+    import asyncio
+    from app.ai import tools
+    prec = topic_id("Precision")
+    db.execute("DELETE FROM boards")
+    for title in ("Precision", "Recall"):
+        asyncio.run(tools.show_board(make_ctx(prec, []), kind="steps", title=title, items=["a", "b"]))
+    assert [b["title"] for b in client.get("/api/boards").json()["boards"]] == ["Precision", "Recall"]
+    db.execute("INSERT INTO misconceptions (user_id, topic_id, misconception_text, label, severity, resolved) VALUES (1, ?, 'old slip', 'x', 'low', 1)", (prec,))
+    db.execute("INSERT INTO misconceptions (user_id, topic_id, misconception_text, label, severity, resolved) VALUES (1, ?, 'new slip', 'x', 'high', 0)", (prec,))
+    mistakes = client.get("/api/dashboard").json()["mistakes"]
+    assert [(m["text"], m["resolved"]) for m in mistakes][:2] == [("new slip", 0), ("old slip", 1)]   # open first, resolved marked
+
+
+def test_today_uses_the_exam_plan_when_there_is_one():
+    plan_day = (date.today() + timedelta(days=10)).isoformat()
+    client.put("/api/plan", json={"exam_date": plan_day, "minutes_per_day": 45})
+    today = client.get("/api/today").json()
+    planner_today = client.get("/api/plan").json()["plan"]["days"][0]["items"]
+    assert [(i["topic_id"], i["kind"], i["minutes"]) for i in today["plan"]] == [(i["topic_id"], i["kind"], i["minutes"]) for i in planner_today]
+    assert len(today["plan"]) == 3 and today["plan_minutes"] == 45     # 45 minutes a day = 3 sessions, the same as the planner
+    assert client.get("/api/plan").json()["plan"]["unscheduled"] >= 0
+    client.delete("/api/plan")
+    assert len(client.get("/api/today").json()["plan"]) <= 3
+
+
+def test_overloaded_gemini_gives_a_friendly_message_not_the_raw_error(monkeypatch):
+    from app.ai.gemini import BUSY_MESSAGE, PHOTO_BUSY_MESSAGE, llm_json, read_image
+    from app.errors import LLMError
+    monkeypatch.setattr(gemini, "RETRY_PAUSE_SECONDS", 0)
+    monkeypatch.setattr(gemini, "call_llm_json", lambda *a, **k: {"success": False, "error": "503 UNAVAILABLE. {'error': {'code': 503}}"})
+    with pytest.raises(LLMError) as err:
+        llm_json("s", "p")
+    assert str(err.value) == BUSY_MESSAGE and "503" not in str(err.value)
+
+    attempts = []
+
+    class Busy:
+        class models:
+            @staticmethod
+            def generate_content(**kw):
+                attempts.append(1)
+                raise RuntimeError("503 UNAVAILABLE. {'error': {'message': 'high demand'}}")
+
+    monkeypatch.setattr(gemini, "_get_client", lambda: Busy)
+    with pytest.raises(LLMError) as err:
+        read_image(b"x", "image/jpeg")
+    assert str(err.value) == PHOTO_BUSY_MESSAGE and len(attempts) == gemini.ATTEMPTS   # retried, then a plain message
+
+
+def test_typed_answers_land_after_the_open_tutor_bubble_and_marker_only_turns_are_dropped(monkeypatch):
+    # Eklavya is mid-sentence when the student types: the tutor bubble is closed first, then the typed turn is shown,
+    # then the reply: log order = tutor, you, tutor. A marker-only turn closes with an empty final (the browser drops it).
+    script = [[sc(output_transcription=NS(text="What is precision?")), sc(turn_complete=False)],
+              [sc(output_transcription=NS(text="<no ")), sc(output_transcription=NS(text="speech>")), sc(turn_complete=True)]]
+    fake = FakeSession(script)
+    monkeypatch.setattr(live, "default_connect", fake_connect(fake))
+    with client.websocket_connect("/ws/voice") as ws:
+        ev, _ = collect(ws, until="turn_complete")
+    shown = [(e["role"], e["text"], e["final"]) for e in ev if e["type"] == "transcript"]
+    assert all("<no" not in text and "speech>" not in text for _, text, _ in shown)
+    assert ("tutor", "What is precision?", False) in shown
+
+
+def test_a_crowded_exam_plan_never_exceeds_the_daily_minutes():
+    topics = [{"topic_id": i, "topic_name": f"T{i}", "mastery": 20 + i} for i in range(12)]   # far more work than fits
+    plan = build_plan(topics, TODAY, TODAY + timedelta(days=5), minutes_per_day=30)
+    assert all(sum(i["minutes"] for i in d["items"]) <= 30 for d in plan["days"])   # the minutes, not just the count
+    assert plan["unscheduled"] > 0 and all(i["topic_id"] < 12 for d in plan["days"] for i in d["items"])
+
+
+def test_every_persona_keeps_one_language_and_never_assumes_gender():
+    from app.ai.live import build_system_prompt
+    topics = [{"id": 1, "topic_name": "Precision", "document_id": 1}]
+    focus = topics[0]
+    prompts = {
+        "tutor": build_system_prompt("hinglish", topics, "learn", focus),
+        "examiner": build_system_prompt("hinglish", topics, "viva", focus),
+        "debater": build_system_prompt("hinglish", topics, "debate", focus, {"side": "for", "motion": "", "style": "tough"}),
+    }
+    for name, text in prompts.items():
+        assert "WHOLE session" in text and "Never assume the student's gender" in text, name
+        assert "karoge/karogi" in text and "{{" not in text, name
+    assert "answers_the_question" in prompts["examiner"] and "EXACT question" in prompts["examiner"]
+    assert "false negative is a real positive that was missed" in prompts["debater"] and "Never swap them" in prompts["debater"]
+    revise = build_system_prompt("hinglish", topics, "revise", focus)
+    assert "session language in every turn" in revise

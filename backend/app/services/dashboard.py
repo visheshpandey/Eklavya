@@ -38,4 +38,7 @@ def build_dashboard(user_id: int) -> dict:
             "SELECT topic_id, confusion, confidence, frustration, note, created_at FROM learner_state "
             "WHERE user_id = ? ORDER BY id DESC LIMIT ?", (user_id, LEARNER_STATE_LIMIT)),
         "agent_log": logger.recent(user_id, 30),
+        "mistakes": db.query(
+            "SELECT t.topic_name AS topic, x.misconception_text AS text, x.resolved, x.detected_at FROM misconceptions x "
+            "JOIN topics t ON t.id = x.topic_id WHERE x.user_id = ? ORDER BY x.resolved, x.id DESC LIMIT 50", (user_id,)),
     }

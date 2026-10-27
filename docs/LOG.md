@@ -138,3 +138,35 @@
   - viva timer restarted at full time when a mark arrived; the upload button lost its icon after use.
 - Smoke tests now live in `tools/smoke/` (UI flow with axe on every screen; voice modes against real Gemini).
 - Tests: backend 97, frontend 82. axe-core: 0 violations on the guide, Today, Progress, phone Today and Progress.
+
+## QA pass 1: 21 reported issues
+Fixed with a root cause each; files in brackets. Browser checks are `tools/smoke/qa.mjs` and `tools/smoke/prompts.py` (real Chrome and real Gemini).
+
+P0
+1. List buttons that started a call: **not reproducible** for the concept-map list (opens the topic only, orb stays idle, 0 sockets). The reported names and kinds ("F1 Score", Learn; "Confusion Matrix", Test) match the exam-planner day chips on Today, which did start sessions. Those chips now open the topic too (`exam-planner.js`, `main.js`); Start buttons on Today's plan still start a session.
+2. Quick revision revising another topic: **not reproducible** (Precision open -> `mode=revise&topic_id=<Precision>`, Precision board and question, real Gemini). Kept as a permanent smoke check; Due-for-revision -> Quick revision still passes the due topic's id.
+3. Follow-up counted as a new question: grading again on the same question now replaces that question's attempt (mastery is computed from the value before the first try), the next question is refused until the current one is graded, and the summary is re-sent if a retry changes the last result (`agents/evaluation.py`, `ai/tools.py`). The quiz card follows the graded choice and marks the right and wrong options instead of the first tap (`quiz-card.js`, `components.css`).
+4. "Correct" skipped: the result is held at least 2.5 s and until the tutor starts reading the next question, at most 6 s, for correct and wrong alike (`lib/feedback-hold.js`, `quiz-card.js`).
+5. `<no speech>` bubble and order: partial transcripts are the cleaned whole turn (markers split over chunks are handled), a marker-only turn removes its bubble, a typed turn closes the tutor's open bubble first, and a new speaker closes the other's open bubble (`ai/live.py`, `state/reducer.js`).
+6. Photo errors: Gemini overload (503/504/429) is retried 3 times with a growing pause, then shown as "The photo reader is busy right now. Please try again in a minute." (text calls: "Gemini is busy right now..."); the raw error goes to the log only. Every notes action clears the old banner first (`ai/gemini.py`, `controllers/notes-controller.js`).
+
+P1
+7. Language remembered in `localStorage` (`eklavya.lang`) and applied to the selector at start (`lib/language.js`, `main.js`).
+8. Notes library text translated (empty state, Weakest, Remove, confirm, counts, search) (`components/library.js`, `lib/strings.js`).
+9. Demo button: one load at a time in the controller (a second click joins the first), and the guide's button is disabled and says Loading (`controllers/notes-controller.js`, `components/onboarding.js`).
+10. Today uses the exam plan's list for today when an exam date is set. The planner also no longer exceeds the daily minutes (extra sessions are left out and counted as `unscheduled`; the last-day revision fits the budget too) (`services/today.py`, `domain/planner.py`).
+11. Summary step is done once the summary card shows (`components/stepper.js`).
+12. Mission after a test: rewritten once from live mastery after the first answer, shown in Study under the summary (`ai/tools.py`, `state/reducer.js`, `components/mission-card.js`, `index.html`).
+13. Study pack: a Mistakes section (resolved ones marked) and every whiteboard of the day from the backend. Boards are saved before they are shown, so ending the call right after one appears loses nothing (`services/dashboard.py`, `services/history.py`, `ai/tools.py`, `components/study-pack.js`, new `boards` table).
+14. Opening another topic with no call running clears the old conversation and boards (`state/reducer.js`).
+
+Prompts (checked with `tools/smoke/prompts.py` on the real model)
+15. Viva marking is against the exact question: `mark_viva_answer` has a required `answers_the_question`; false forces 0 (`ai/tools.py`, `prompts/persona_examiner.md`). Real runs: an answer about recall to a question about precision scored 0 with the reason.
+16. Debate claims must come from the notes; false-positive / false-negative terms kept straight (`prompts/persona_debater.md`).
+17. No assumed gender in Hindi and Hinglish: "aap" with neutral verbs (all three personas). 18. One session language throughout, including quick revision (all personas, `ai/live.py`).
+
+UI
+19. Debate form shows in full (no inner scroll box) (`components.css`). 20. Mistake flashcards: the question in front; the answer, the explanation and the wrong belief behind; a mistake corrected after a follow-up still gets a card (`agents/flashcards.py`; misconceptions now record `question_id`). 21. Concept map: up to 12 topics labelled, more topics unlabelled with tooltips and the list (`components/concept-map.js`).
+
+Other bugs found while testing: a flaky session-end write in tests (the end time is now written directly, not via a thread, so a cancelled handler cannot lose it) (`ai/live.py`); `localStorage` is shared between pages in one browser profile, which mattered for the smoke tests.
+Tests: backend 108, frontend 96. Smoke: `qa.mjs` 27 checks, all pass on the last runs; the quiz scenario varies with how Gemini conducts the follow-up.

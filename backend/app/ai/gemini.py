@@ -88,12 +88,28 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
     return {"success": False, "error": last_error}
 
 
+BUSY_MESSAGE = "Gemini is busy right now. Please try again in a minute."
+PHOTO_BUSY_MESSAGE = "The photo reader is busy right now. Please try again in a minute."
+
+
+def is_transient(error: str) -> bool:
+    return any(marker.lower() in error.lower() for marker in TRANSIENT)
+
+
+def _failure(error: str, busy_message: str) -> str:
+    """What the student sees. Overload (503/504/429) gets a plain message; the raw error goes to the log only."""
+    if is_transient(error):
+        log.warning("Gemini overloaded after %d attempts: %s", ATTEMPTS, error)
+        return busy_message
+    return f"Gemini request failed: {error[:200]}"
+
+
 def llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7, timeout_ms: int | None = None) -> dict | list:
     """Like ``call_llm_json`` but returns the data or raises ``LLMError``. ``timeout_ms`` lengthens the limit for one call."""
     extra = {} if timeout_ms is None else {"timeout_ms": timeout_ms}   # keeps simple test doubles working
     result = call_llm_json(system, prompt, required_keys, temperature, **extra)
     if not result["success"]:
-        raise LLMError(f"Gemini request failed: {result['error']}")
+        raise LLMError(_failure(result["error"], BUSY_MESSAGE))
     return result["data"]
 
 
@@ -139,4 +155,5 @@ def read_image(data: bytes, mime_type: str) -> str:
         log.warning("Gemini image read failed (attempt %d/%d): %s", attempt, ATTEMPTS, last_error)
         if attempt < ATTEMPTS and any(marker.lower() in last_error.lower() for marker in TRANSIENT):
             time.sleep(RETRY_PAUSE_SECONDS * attempt)
-    raise LLMError(f"Gemini could not read the photo: {last_error}")
+    raise LLMError(_failure(last_error, PHOTO_BUSY_MESSAGE) if is_transient(last_error)
+                   else f"Gemini could not read the photo: {last_error[:200]}")

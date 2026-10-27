@@ -5,6 +5,7 @@ logs to agent_logs, and pushes a UI event through ctx.emit so the frontend can r
 (emotion chip, quiz card, mastery animation, mission card, whiteboard).
 """
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Awaitable, Callable, Optional
@@ -17,6 +18,8 @@ from app.agents.logger import log_agent
 from app.domain import board as boards, scoring
 from app.domain.mastery import update_mastery
 from app.services import search
+
+log = logging.getLogger(__name__)
 
 S = types.Schema
 T = types.Type
@@ -88,7 +91,10 @@ VIVA_DECLARATIONS = [
             "mark": S(type=T.NUMBER, description="0, 0.5, 1, 1.5 or 2. 2 = complete and correct; 1 = partly right; 0 = wrong or no answer."),
             "feedback": S(type=T.STRING, description="One sentence for the student: what was good or missing."),
             "answer_summary": S(type=T.STRING, description="What the student said, in a few words."),
-        }, required=["mark", "feedback"])),
+            "answers_the_question": S(type=T.BOOLEAN, description=(
+                "Does the answer address the exact question you asked (not a different concept, however correct)? "
+                "false = the mark is 0.")),
+        }, required=["mark", "feedback", "answers_the_question"])),
     types.FunctionDeclaration(
         name="finish_viva",
         description="Finish the viva after the last mark: saves the report card and shows it on screen.",
@@ -153,7 +159,8 @@ class ToolContext:
     mode: str = "free"                           # free | learn | test | revise | viva | debate
     test_total: int = 3                          # questions in a focused test
     asked_ids: list = field(default_factory=list)
-    results: list = field(default_factory=list)  # one dict per graded answer this session
+    results: list = field(default_factory=list)  # one dict per QUESTION this session (a re-grade replaces it)
+    mission_refreshed: bool = False              # the mission was rewritten from this session's answers
     viva_id: Optional[int] = None                # viva: the row in `vivas`, created with the first question
     viva_question: Optional[str] = None          # viva: the question waiting for a mark
     viva_answers: list = field(default_factory=list)   # viva: [{question, mark, feedback}]
@@ -206,6 +213,9 @@ async def report_learner_state(ctx: ToolContext, topic: str = "", confusion=0.5,
 
 async def ask_quiz_question(ctx: ToolContext, topic: str = None, **_):
     focused = ctx.focus_topic_id is not None
+    if focused and ctx.current_question_id and not any(r["question_id"] == ctx.current_question_id for r in ctx.results):
+        return {"available": False, "message": "The current question has no graded answer yet. Ask the student to answer it "
+                                               "(or repeat it), then call grade_answer before moving on."}
     if focused and len(ctx.results) >= ctx.test_total:
         return {"available": False, "test_complete": True,
                 "message": "The test is finished. Give the spoken summary now, then call get_mission."}
@@ -230,22 +240,31 @@ async def grade_answer(ctx: ToolContext, student_answer: str = "", confidence=No
     if not ctx.current_question_id:
         return {"error": "No quiz question is active. Call ask_quiz_question first."}
     conf = None if confidence is None else _num(confidence)
-    res = await asyncio.to_thread(evaluation.grade, ctx.user_id, ctx.current_question_id, student_answer, conf)
+    question_id = ctx.current_question_id
+    earlier = next((r for r in ctx.results if r["question_id"] == question_id), None)   # a follow-up answer to the same question
+    retry_of = {"attempt_id": earlier["attempt_id"], "mastery_before": earlier["before"]} if earlier else None
+    res = await asyncio.to_thread(evaluation.grade, ctx.user_id, question_id, student_answer, conf, retry_of)
     if res.get("unclear"):
         return {"unclear": True, "message": res["message"]}
-    ctx.results.append({"is_correct": res["is_correct"], "before": res["mastery_before"], "after": res["mastery_after"],
-                        "misconception": (res["misconception"] or {}).get("text"),
-                        "resolved": res["misconceptions_resolved"], "topic": res["topic"]})
+    result = {"question_id": question_id, "attempt_id": res["attempt_id"], "is_correct": res["is_correct"],
+              "before": res["mastery_before"], "after": res["mastery_after"],
+              "misconception": (res["misconception"] or {}).get("text") or (earlier or {}).get("misconception"),
+              "resolved": res["misconceptions_resolved"], "topic": res["topic"]}
+    if earlier:
+        ctx.results[ctx.results.index(earlier)] = result      # only the final answer to each question counts
+    else:
+        ctx.results.append(result)
     await ctx.emit({"type": "mastery", "topic": res["topic"], "before": res["mastery_before"], "after": res["mastery_after"],
                     "is_correct": res["is_correct"], "misconception": res["misconception"],
-                    "misconceptions_resolved": res["misconceptions_resolved"]})
+                    "misconceptions_resolved": res["misconceptions_resolved"], "chosen": res["chosen"],
+                    "correct_answer": res["correct_answer"], "question_id": question_id, "retry": bool(earlier)})
     out = {"is_correct": res["is_correct"], "correct_answer": res["correct_answer"], "explanation": res["explanation"],
            "topic": res["topic"], "mastery_before": res["mastery_before"], "mastery_after": res["mastery_after"],
            "misconceptions_resolved": res["misconceptions_resolved"]}
     if res["misconception"]:
         out["misconception"] = res["misconception"]["text"]
     if ctx.focus_topic_id is not None and len(ctx.results) >= ctx.test_total:
-        r = ctx.results
+        r = ctx.results   # sent again if a follow-up retry on the last question changes the result: the card shows final answers
         summary = {"type": "test_summary", "topic": res["topic"], "correct": sum(1 for x in r if x["is_correct"]),
                    "total": len(r), "mastery_before": r[0]["before"], "mastery_after": r[-1]["after"],
                    "misconceptions": [x["misconception"] for x in r if x["misconception"]],
@@ -259,7 +278,11 @@ async def grade_answer(ctx: ToolContext, student_answer: str = "", confidence=No
 
 
 async def get_mission(ctx: ToolContext, **_):
-    m = await asyncio.to_thread(study_mission.current, ctx.user_id)
+    # after answers in this session the old mission is out of date ("with 42% mastery"): write a new one from live
+    # mastery, once per session; otherwise reuse the active mission
+    refresh = bool(ctx.results) and not ctx.mission_refreshed
+    m = await asyncio.to_thread(study_mission.generate if refresh else study_mission.current, ctx.user_id)
+    ctx.mission_refreshed = ctx.mission_refreshed or refresh
     await ctx.emit({"type": "mission", "title": m["mission_title"], "duration_minutes": m["duration_minutes"],
                     "priority": m["priority"], "reason": m["reason"], "tasks": m["tasks"]})
     return {"title": m["mission_title"], "minutes": m["duration_minutes"], "priority": m["priority"],
@@ -271,6 +294,12 @@ async def show_board(ctx: ToolContext, **args):
         card = boards.clean_board(args)
     except ValueError as e:
         return {"shown": False, "error": str(e)}
+    # saved BEFORE it is shown: if the call ends the moment a board appears, the study pack still has it
+    try:
+        db.execute("INSERT INTO boards (user_id, topic_id, title, kind, data) VALUES (?, ?, ?, ?, ?)",
+                   (ctx.user_id, ctx.focus_topic_id, card["title"], card["kind"], db.dumps(card)))
+    except Exception:  # noqa: BLE001 - a failed save must not stop the board from showing
+        log.exception("Could not save the whiteboard")
     await ctx.emit({"type": "board", **card})
     return {"shown": True}
 
@@ -321,13 +350,17 @@ def _record_viva_answer(ctx: ToolContext, question: str, mark: float, feedback: 
     return before, after
 
 
-async def mark_viva_answer(ctx: ToolContext, mark=0, feedback: str = "", answer_summary: str = "", **_):
+async def mark_viva_answer(ctx: ToolContext, mark=0, feedback: str = "", answer_summary: str = "",
+                           answers_the_question=True, **_):
     if not ctx.viva_question or ctx.viva_id is None:
         return {"error": "No viva question is waiting for a mark. Call ask_viva_question first."}
     if ctx.focus_topic_id is None:
         return {"error": "A viva needs a topic."}
-    value = scoring.viva_mark(mark)
+    off_topic = answers_the_question is False or str(answers_the_question).lower() == "false"
+    value = 0.0 if off_topic else scoring.viva_mark(mark)       # a true statement about something else earns nothing
     feedback, summary = _line(feedback, 300), _line(answer_summary, 300)
+    if off_topic and "question" not in feedback.lower():
+        feedback = (feedback + ' ' if feedback else '') + 'The answer did not address the question asked.'
     question, ctx.viva_question = ctx.viva_question, None
     before, after = await asyncio.to_thread(_record_viva_answer, ctx, question, value, feedback, summary)
     ctx.viva_answers.append({"question": question, "mark": value, "feedback": feedback})

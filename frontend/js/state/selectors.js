@@ -17,6 +17,7 @@ export const selectQuestion = (s) => s.session.question;
 export const selectResult = (s) => s.session.result;
 export const selectSummary = (s) => s.session.summary;
 export const selectBoards = (s) => s.session.boards;
+export const selectSessionMission = (s) => s.session.mission;
 export const selectViva = (s) => s.session.viva;
 export const selectDebateScores = (s) => s.session.debateScores;
 export const selectVerdict = (s) => s.session.verdict;

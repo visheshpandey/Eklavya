@@ -8,6 +8,7 @@ import { selectConceptMap, selectLanguage } from '../state/selectors.js';
 const SIZE = 420;
 const NODE_R = 20;
 const STEPS = 5;   // colour steps: --map-1 (weak) to --map-5 (strong)
+export const MAX_LABELLED = 12;   // above this many topics the circles go unlabelled (the list under the picture names them)
 
 export const masteryStep = (mastery) => Math.min(STEPS, Math.max(1, Math.ceil((mastery / 100) * STEPS)));
 
@@ -36,18 +37,19 @@ export function mountConceptMap({ store, root, onOpenTopic }) {
       const a = at.get(link.source), b = at.get(link.target);
       if (a && b) svg.append(svgEl('line', { class: 'map-link', x1: a.x, y1: a.y, x2: b.x, y2: b.y, 'stroke-width': 1 + (2 * link.weight) / maxWeight }));
     }
-    const small = nodes.length > 12;
+    const labelled = nodes.length <= MAX_LABELLED;   // 13+ labels collide on the ring: hover or the list gives the name
+    const radius = labelled ? NODE_R : Math.max(9, NODE_R - Math.floor((nodes.length - MAX_LABELLED) / 2));
     nodes.forEach((node) => {
       const p = at.get(node.id);
       const outward = Math.cos(p.angle) >= 0 ? 'start' : 'end';
-      const lx = p.x + Math.cos(p.angle) * (NODE_R + 6);
-      const ly = p.y + Math.sin(p.angle) * (NODE_R + 6) + 4;
+      const lx = p.x + Math.cos(p.angle) * (radius + 6);
+      const ly = p.y + Math.sin(p.angle) * (radius + 6) + 4;
       const label = node.topic.length > 22 ? `${node.topic.slice(0, 21)}…` : node.topic;
-      svg.append(svgEl('g', { class: 'map-node', onclick: null },
-        svgEl('circle', { cx: p.x, cy: p.y, r: NODE_R, class: `map-dot step-${masteryStep(node.mastery)}` }),
-        svgEl('text', { x: p.x, y: p.y + 4, 'text-anchor': 'middle', class: 'map-pct' }, `${Math.round(node.mastery)}`),
-        svgEl('text', { x: lx, y: ly, 'text-anchor': Math.abs(Math.cos(p.angle)) < 0.2 ? 'middle' : outward,
-          class: `map-label${small ? ' is-small' : ''}` }, label)));
+      svg.append(svgEl('g', { class: 'map-node' },
+        svgEl('title', {}, `${node.topic}, ${Math.round(node.mastery)}%`),
+        svgEl('circle', { cx: p.x, cy: p.y, r: radius, class: `map-dot step-${masteryStep(node.mastery)}` }),
+        labelled ? svgEl('text', { x: p.x, y: p.y + 4, 'text-anchor': 'middle', class: 'map-pct' }, `${Math.round(node.mastery)}`) : null,
+        labelled ? svgEl('text', { x: lx, y: ly, 'text-anchor': Math.abs(Math.cos(p.angle)) < 0.2 ? 'middle' : outward, class: 'map-label' }, label) : null));
     });
     // circles are also clickable with a pointer; the list below is the keyboard and screen-reader way in
     svg.querySelectorAll('.map-node').forEach((g, i) => g.addEventListener('click', () => onOpenTopic(nodes[i].id)));

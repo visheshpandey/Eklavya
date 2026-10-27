@@ -11,6 +11,7 @@ import { actions } from '../state/actions.js';
  * @param {() => void} deps.endSession stops any running voice session before notes change
  */
 export function createNotesController({ store, backend, notifier, userId, endSession }) {
+  let demoLoad = null;   // the demo load in progress, if any
   async function loadDashboard() {
     const dashboard = await backend.dashboard(userId);
     store.dispatch(actions.dashboardLoaded(dashboard));
@@ -30,6 +31,7 @@ export function createNotesController({ store, backend, notifier, userId, endSes
   }
 
   async function guarded(task) {
+    store.dispatch(actions.bannerSet(null));   // a new action starts clean: the last error is not shown any more
     try {
       await task();
       return true;
@@ -42,13 +44,14 @@ export function createNotesController({ store, backend, notifier, userId, endSes
   return {
     refresh: () => guarded(loadDashboard),
 
-    loadDemo: () => guarded(async () => {
+    /** One demo load at a time: a second click while it is running joins the first instead of loading twice. */
+    loadDemo: () => (demoLoad ??= guarded(async () => {
       endSession();
       await backend.seedDemo(userId);
       store.dispatch(actions.notesReset());
       await loadDashboard();
       notifier.success('Demo notes loaded. Tap a topic to start learning.');
-    }),
+    }).finally(() => { demoLoad = null; })),
 
     uploadFile: (file) => guarded(async () => {
       endSession();

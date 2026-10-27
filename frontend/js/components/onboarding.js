@@ -17,6 +17,7 @@ export function onboardingDone() {
 
 export function mountOnboarding({ store, dialog, onLanguage, onUpload, onDemo, onHello, onClose }) {
   let step = 1;
+  let demoBusy = false;   // the demo notes are loading: the button says so and cannot be clicked again
 
   function finish(next) {
     try { localStorage.setItem(DONE_KEY, '1'); } catch { /* private window: show it again next time */ }
@@ -40,7 +41,9 @@ export function mountOnboarding({ store, dialog, onLanguage, onUpload, onDemo, o
       el('p', { class: 'hint', text: hasNotes ? t('onb.haveNotes', language) : t('onb.notesBody', language) }),
       hasNotes ? null : el('div', { class: 'onb-actions-row' },
         el('button', { class: 'btn btn-primary', type: 'button', onclick: onUpload }, icon('upload-simple', { size: 18 }), t('notes.upload', language)),
-        el('button', { class: 'btn btn-secondary', type: 'button', onclick: onDemo }, t('notes.demo', language))),
+        el('button', { class: 'btn btn-secondary', type: 'button', disabled: demoBusy ? '' : null, 'aria-busy': String(demoBusy),
+          onclick: async () => { demoBusy = true; draw(); try { await onDemo(); } finally { demoBusy = false; draw(); } } },
+        demoBusy ? t('notes.loading', language) : t('notes.demo', language))),
     ];
   }
 
