@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS flashcards (
 MIGRATIONS = (
     ("voice_sessions", "study_mode", "TEXT"),
     ("voice_sessions", "topic_id", "INTEGER"),
+    ("users", "password_hash", "TEXT"),
     ("misconceptions", "question_id", "INTEGER"),   # the question the mistake was made on (flashcards from mistakes)
 )
 
@@ -138,6 +139,8 @@ def init_db():
             existing = {row[1] for row in c.execute(f"PRAGMA table_info({table})")}
             if column not in existing:
                 c.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email ON users(email)")   # NULL emails (the demo student) never collide
+    ensure_user(settings.demo_user_id)   # reserve the demo id so a new account can never be given it
 
 
 def query(sql, args=()):

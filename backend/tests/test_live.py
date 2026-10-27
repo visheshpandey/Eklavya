@@ -178,9 +178,8 @@ def test_gemini_connection_failure_is_an_error_event_not_a_crash(monkeypatch):
 
 
 def test_no_notes_uploaded_is_told_to_upload_first():
-    with db.get_conn() as c:
-        c.execute("DELETE FROM documents WHERE user_id = 77")
-    with client.websocket_connect("/ws/voice?user_id=77") as ws:
+    token = client.post("/api/auth/signup", json={"email": "nonotes@example.com", "password": "longenough1"}).json()["token"]
+    with client.websocket_connect(f"/ws/voice?token={token}") as ws:
         ev = ws.receive_json()
     assert ev["type"] == "error" and "Upload your notes" in ev["message"]
 

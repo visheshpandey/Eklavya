@@ -1,4 +1,4 @@
-"""WS /ws/voice?user_id=1&lang=hinglish[&mode=...&topic_id=N&side=for|against&motion=...&style=tough|friendly]:
+"""WS /ws/voice?lang=hinglish[&token=<login token>&mode=...&topic_id=N&side=for|against&motion=...&style=tough|friendly]:
 live voice tutor over Gemini Live.
 
 mode=learn   teach the chosen topic step by step (from its own notes), then run a short voice test
@@ -14,17 +14,16 @@ import asyncio
 
 from fastapi import APIRouter, WebSocket
 
-from app import db
+from app import auth, db
 from app.agents import quiz
 from app.ai import live
-from app.config import settings
 
 router = APIRouter()
 MAX_MOTION_CHARS = 200
 
 
 @router.websocket("/ws/voice")
-async def voice(ws: WebSocket, user_id: int = settings.demo_user_id, lang: str = "hinglish", mode: str = "free", topic_id: int = None,
+async def voice(ws: WebSocket, user_id: int = auth.CurrentUser, lang: str = "hinglish", mode: str = "free", topic_id: int = None,
                 side: str = "for", motion: str = "", style: str = "tough"):
     await ws.accept()
     topics = db.query(

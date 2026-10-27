@@ -1,5 +1,6 @@
 // HTTP access to the backend. Gemini is called by the backend only; the browser never sees a key.
 import { API_BASE } from '../lib/config.js';
+import { getToken, signOut } from '../lib/session.js';
 
 /** Any failed request. `code` is the backend's machine code ("not_found", "llm_unavailable", ...) or "network". */
 export class ApiError extends Error {
@@ -14,6 +15,8 @@ export class ApiError extends Error {
 
 async function request(path, { method = 'GET', json, form } = {}) {
   const options = { method, headers: {} };
+  const token = getToken();
+  if (token) options.headers.authorization = `Bearer ${token}`;
   if (json) { options.headers['content-type'] = 'application/json'; options.body = JSON.stringify(json); }
   if (form) options.body = form;
 
@@ -27,6 +30,10 @@ async function request(path, { method = 'GET', json, form } = {}) {
   let data = null;
   try { data = await response.json(); } catch { /* body was not JSON */ }
 
+  if (response.status === 401 && token && !path.startsWith('/api/auth/')) {   // an expired or invalid login: back to the login screen
+    signOut();
+    globalThis.location?.reload();
+  }
   if (!response.ok) {
     throw new ApiError(data?.error || `Request failed (${response.status})`,
       { status: response.status, code: data?.code || 'http_error', fields: data?.fields ?? null });
@@ -37,6 +44,9 @@ async function request(path, { method = 'GET', json, form } = {}) {
 
 /** One method per backend endpoint. */
 export const backend = {
+  signup: (body) => request('/api/auth/signup', { method: 'POST', json: body }),
+  login: (body) => request('/api/auth/login', { method: 'POST', json: body }),
+  me: () => request('/api/auth/me'),
   dashboard: (userId) => request(`/api/dashboard?user_id=${userId}`),
   topic: (topicId, userId) => request(`/api/topics/${topicId}?user_id=${userId}`),
   deleteDocument: (documentId, userId) => request(`/api/documents/${documentId}?user_id=${userId}`, { method: 'DELETE' }),

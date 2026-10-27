@@ -245,3 +245,24 @@ kbd {
 .stat-note { font-size: var(--text-xs); color: var(--ink-3); }
 .block { background: var(--surface); border: 1px solid var(--line); padding: var(--s-5); }
 .block.planner, .block.wide { background: var(--surface); }
+
+/* ---------- account button and login screen */
+.account-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: var(--tap); max-width: 11rem; padding: 0 12px; border: 1px solid var(--line);
+  border-radius: var(--r-control); background: var(--surface); font-size: var(--text-sm); font-weight: 600;
+}
+.account-btn:hover { background: var(--surface-2); }
+.account-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 40rem) { .account-text { display: none; } .account-btn { padding: 0; width: var(--tap); justify-content: center; } }
+.auth { padding: 0; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--surface); color: var(--ink); width: min(26rem, calc(100vw - 2rem)); box-shadow: 0 30px 80px -20px rgb(0 0 0 / .45); }
+.auth::backdrop { background: var(--scrim); backdrop-filter: blur(4px); }
+.auth-card { display: grid; gap: var(--s-4); padding: var(--s-6) var(--s-5); }
+.auth-brand { display: flex; align-items: center; gap: var(--s-3); }
+.auth-brand h2 { font-size: var(--text-xl); letter-spacing: -0.01em; }
+.auth-form { display: grid; gap: var(--s-3); }
+.auth-field { display: grid; gap: 6px; font-size: var(--text-sm); font-weight: 600; }
+.auth-field .field { min-height: var(--tap); font-weight: 400; }
+.auth-error { padding: var(--s-2) var(--s-3); border-radius: var(--r-control); background: var(--bad-soft); color: var(--bad-text); font-size: var(--text-sm); }
+.auth-switch { justify-self: center; }
+.auth-or { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--s-3); color: var(--ink-3); font-size: var(--text-xs); }
+.auth-or::before, .auth-or::after { content: ""; height: 1px; background: var(--line); }

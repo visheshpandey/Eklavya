@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 from app.config import settings
 
-DEMO_USER = settings.demo_user_id
+DEMO_USER = settings.demo_user_id   # bodies still accept user_id for older clients, but the server ignores it: see app.auth
 
 
 class TutorAskRequest(BaseModel):
@@ -41,3 +41,14 @@ class PlanRequest(BaseModel):
 class FlashcardsRequest(BaseModel):
     user_id: int = DEMO_USER
     topic_id: int
+
+
+class SignupRequest(BaseModel):
+    name: str = Field(default="", max_length=80)
+    email: str = Field(max_length=200)
+    password: str = Field(max_length=200)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(max_length=200)
+    password: str = Field(max_length=200)

@@ -4,6 +4,7 @@
 // Sessions are numbered. Everything that happens later (a socket closing, a permission prompt being answered,
 // a worklet loading) checks that its session is still the current one, so a slow leftover from an old session can
 // never tear down a new one that is starting.
+import { getToken } from '../lib/session.js';
 import { WS_BASE } from '../lib/config.js';
 import { VOICE_STATUS } from '../lib/protocol.js';
 
@@ -99,7 +100,8 @@ export class VoiceClient {
     if (topicId && mode === 'debate') {
       extra += `&side=${side === 'against' ? 'against' : 'for'}&motion=${encodeURIComponent(motion)}&style=${style === 'friendly' ? 'friendly' : 'tough'}`;
     }
-    ws = new WebSocket(`${WS_BASE}/ws/voice?user_id=${userId}&lang=${encodeURIComponent(lang)}${extra}`);
+    const token = getToken();   // the server reads who you are from the token; a guest sends none
+    ws = new WebSocket(`${WS_BASE}/ws/voice?${token ? `token=${encodeURIComponent(token)}&` : ''}lang=${encodeURIComponent(lang)}${extra}`);
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
     ws.onmessage = (message) => { if (this.ws === ws) this._onMessage(message); };

@@ -2,6 +2,7 @@
 from fastapi import APIRouter, File, Form, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
+from app import auth
 from app.agents.document_intelligence import ingest_document
 from app.ai.gemini import IMAGE_TYPES, read_image
 from app.config import settings
@@ -14,7 +15,7 @@ MIN_TEXT_CHARS = 50
 
 
 @router.post("/api/upload-document")
-async def upload_document(user_id: int = Form(settings.demo_user_id), file: UploadFile = File(None), text: str = Form(None)):
+async def upload_document(file: UploadFile = File(None), text: str = Form(None), user_id: int = auth.CurrentUser):
     if file is not None:
         raw = await file.read()
         if len(raw) > settings.max_upload_mb * 1024 * 1024:
@@ -38,6 +39,6 @@ async def upload_document(user_id: int = Form(settings.demo_user_id), file: Uplo
 
 
 @router.delete("/api/documents/{document_id}")
-def remove_document(document_id: int, user_id: int = settings.demo_user_id):
+def remove_document(document_id: int, user_id: int = auth.CurrentUser):
     delete_document(user_id, document_id)
     return {"deleted": document_id}

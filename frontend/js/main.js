@@ -52,6 +52,8 @@ import { mountHistoryList } from './components/history-list.js';
 import { mountDecisionLog } from './components/decision-log.js';
 import { mountHeaderControls } from './components/header-controls.js';
 import { mountStatTiles } from './components/stat-tiles.js';
+import { mountAuthDialog } from './components/auth-dialog.js';
+import { chooseGuest, getUser, isSignedIn, needsLogin, saveLogin, signOut } from './lib/session.js';
 import { mountCommandMenu } from './components/command-menu.js';
 
 hydrateIcons();
@@ -186,7 +188,22 @@ mountDecisionLog({ store, root: byId('log') });
 // every dashboard refresh (new notes, a graded answer) also refreshes Today, the plan, the map and results
 store.select(selectDashboard, (dashboard) => { if (dashboard) home.refresh(); });
 
-notes.refresh().then(() => { if (!onboardingDone()) store.dispatch(actions.onboardingSet(true)); });
+// --- accounts: the login screen shows until the visitor signs in or picks the demo
+const signedIn = isSignedIn();
+const authDialog = mountAuthDialog({
+  dialog: byId('auth'), mustChoose: needsLogin,
+  onSignIn: async (credentials) => { saveLogin(await backend.login(credentials)); location.reload(); },
+  onSignUp: async (details) => { saveLogin(await backend.signup(details)); location.reload(); },
+  onGuest: () => { if (signedIn || needsLogin()) { chooseGuest(); location.reload(); } else authDialog.close(); },
+});
+byId('accountText').textContent = signedIn ? (getUser()?.name || 'Account') : 'Sign in';
+byId('btnAccount').setAttribute('aria-label', signedIn ? `Signed in as ${getUser()?.email ?? 'you'}. Sign out` : 'Sign in or create an account');
+byId('btnAccount').title = signedIn ? 'Sign out' : 'Sign in';
+byId('btnAccount').addEventListener('click', () => {
+  if (signedIn) { signOut(); location.reload(); } else authDialog.open();
+});
+if (needsLogin()) authDialog.open();
+else notes.refresh().then(() => { if (!onboardingDone()) store.dispatch(actions.onboardingSet(true)); });
 
 // installable app: cache the page shell for offline start (only where service workers are allowed)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

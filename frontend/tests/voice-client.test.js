@@ -67,6 +67,21 @@ function setup() {
   return { client, events, statuses, allowMic, settle };
 }
 
+test('a signed-in user is identified by the login token, never by a user id in the URL', async () => {
+  const saved = globalThis.localStorage;
+  globalThis.localStorage = { getItem: (key) => (key === 'eklavya.token' ? 'abc.def' : null), setItem() {}, removeItem() {} };
+  try {
+    const { client, allowMic, settle } = setup();
+    const started = client.start({ lang: 'english' });
+    allowMic();
+    await settle();
+    sockets[0].open();
+    await started;
+    assert.match(sockets[0].url, /\/ws\/voice\?token=abc\.def&lang=english$/);
+    assert.doesNotMatch(sockets[0].url, /user_id/);
+  } finally { globalThis.localStorage = saved; }
+});
+
 test('a normal start reaches "listening" and delivers server events', async () => {
   const { client, events, statuses, allowMic, settle } = setup();
   const started = client.start({ userId: 1, lang: 'hinglish', mode: 'learn', topicId: 7 });
@@ -75,7 +90,7 @@ test('a normal start reaches "listening" and delivers server events', async () =
   sockets[0].open();
   await started;
   assert.deepEqual(statuses, ['connecting', 'listening']);
-  assert.match(sockets[0].url, /\/ws\/voice\?user_id=1&lang=hinglish&mode=learn&topic_id=7$/);
+  assert.match(sockets[0].url, /\/ws\/voice\?lang=hinglish&mode=learn&topic_id=7$/);
   sockets[0].onmessage({ data: JSON.stringify({ type: 'transcript', role: 'tutor', text: 'Hi', final: false }) });
   assert.equal(events[0].text, 'Hi');
   client.sendText('hello');

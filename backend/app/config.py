@@ -72,6 +72,7 @@ class Settings:
     db_path: Path
     samples_dir: Path
     demo_user_id: int
+    auth_secret: str            # signs login tokens; empty = a random one is kept next to the database
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -94,6 +95,7 @@ class Settings:
             db_path=Path(_str("DB_PATH") or BACKEND_DIR / "data" / "eklavya.db"),
             samples_dir=Path(_str("SAMPLES_DIR") or REPO_DIR / "samples"),
             demo_user_id=_int("DEMO_USER_ID", 1, minimum=1),
+            auth_secret=_str("AUTH_SECRET"),
         )
 
 
