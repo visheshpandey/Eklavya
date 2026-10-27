@@ -63,6 +63,17 @@ export function createHomeController({ store, backend, notifier, userId }) {
     makeFlashcards: (topicId) => guarded(async () => {
       const { cards } = await backend.makeFlashcards(topicId, userId);
       store.dispatch(actions.flashcardsLoaded({ topicId, cards }));
+      await loadToday();   // new cards are due now: Today's "cards to review" count follows
+    }),
+    /** The cards due today across all topics (review mode). An empty list on failure, with the error shown. */
+    dueCards: async () => {
+      try { return (await backend.dueCards()).cards; } catch (err) { notifier.error(err); return []; }
+    },
+    /** Save one review answer; Today's "cards to review" count follows. */
+    reviewCard: (cardId, knew) => quietly(async () => {
+      const result = await backend.reviewCard(cardId, knew);
+      const today = store.getState().today;
+      if (today) store.dispatch(actions.todayLoaded({ ...today, cards_due: result.due_count }));
     }),
   };
 }

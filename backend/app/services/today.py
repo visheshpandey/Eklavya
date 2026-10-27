@@ -85,4 +85,6 @@ def _payload(user_id, user, day, topics, due, plan):
         "last_session": _last_session(user_id),
         "exam_date": exam,
         "exam_days_left": (exam_day - day).days if exam_day else None,
+        "cards_due": db.one("SELECT COUNT(*) AS n FROM flashcards WHERE user_id = ? AND (due_on IS NULL OR due_on <= ?)",
+                            (user_id, day.isoformat()))["n"],
     }

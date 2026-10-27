@@ -53,6 +53,15 @@ export function createNotesController({ store, backend, notifier, userId, endSes
       notifier.success('Demo notes loaded. Tap a topic to start learning.');
     }).finally(() => { demoLoad = null; })),
 
+    /** Notes from a YouTube video or a web article. Resolves true when the notes were added. */
+    importLink: (url) => guarded(async () => {
+      endSession();
+      const result = await backend.importLink(url);
+      store.dispatch(actions.notesReset());
+      await loadDashboard();
+      notifier.success(`Found ${result.topics_found.length} topics in that link. Tap one to start.`);
+    }),
+
     uploadFile: (file) => guarded(async () => {
       endSession();
       const result = await backend.uploadDocument(file, userId);

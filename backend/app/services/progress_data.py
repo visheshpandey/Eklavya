@@ -38,4 +38,5 @@ def active_days(user_id: int) -> set:
     """Local days on which the student answered a question or talked to the tutor."""
     stamps = [r["t"] for r in db.query("SELECT answered_at AS t FROM quiz_attempts WHERE user_id = ?", (user_id,))]
     stamps += [r["t"] for r in db.query("SELECT started_at AS t FROM voice_sessions WHERE user_id = ? AND turns > 0", (user_id,))]
+    stamps += [r["t"] for r in db.query("SELECT reviewed_at AS t FROM flashcards WHERE user_id = ? AND reviewed_at IS NOT NULL", (user_id,))]
     return {d for d in (local_date(s) for s in stamps) if d}

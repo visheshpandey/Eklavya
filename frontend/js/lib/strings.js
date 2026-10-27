@@ -8,7 +8,7 @@ const EN = {
   'tab.today': 'Today', 'tab.notes': 'Notes', 'tab.study': 'Study', 'tab.progress': 'Progress',
   'brand.tag': 'Your voice study mentor', 'cmd.trigger': 'Search or jump to', 'convo.title': 'Conversation', 'stat.mastery': 'Average mastery', 'stat.masteryNote': 'across {n} topics', 'stat.answers': 'Answers', 'stat.answersNote': 'correct', 'stat.fixed': 'Misconceptions fixed', 'stat.fixedOpen': '{n} still open', 'stat.fixedNone': 'none open', 'stat.streak': 'Study streak', 'stat.days': '{n} days', 'stat.streakNote': 'keep it going tonight',
   'notes.title': 'Your notes', 'notes.upload': 'Upload notes', 'notes.demo': 'Try the demo notes', 'notes.search': 'Search topics',
-  'notes.hint': 'PDF, text, or a photo of a page', 'notes.loading': 'Loading…',
+  'notes.hint': 'PDF (even scanned), text, or a photo of a page', 'notes.loading': 'Loading…',
   'lib.loading': 'Loading your notes...', 'lib.noneTitle': 'No notes yet',
   'lib.noneBody': 'Upload a PDF or text file, or try the demo notes, and your topics will appear here.',
   'lib.weakest': 'Weakest', 'lib.remove': 'Remove', 'lib.removeNamed': 'Remove {name}', 'lib.yes': 'Yes, remove', 'lib.cancel': 'Cancel',

@@ -1,4 +1,7 @@
-"""Flashcards agent: cards written by Gemini from a topic's notes, plus cards from the student's own mistakes."""
+"""Flashcards agent: cards written by Gemini from a topic's notes, plus cards from the student's own mistakes,
+and their review schedule (spaced repetition)."""
+from datetime import date, timedelta
+
 from app import db
 from app.agents.logger import log_agent
 from app.ai.gemini import extract_list, llm_json
@@ -66,10 +69,37 @@ def mistake_cards(user_id: int, topic_id: int):
 
 
 def cards_for(user_id: int, topic_id: int = None):
-    sql = ("SELECT f.id, f.topic_id, t.topic_name AS topic, f.front, f.back, f.source FROM flashcards f "
+    sql = ("SELECT f.id, f.topic_id, t.topic_name AS topic, f.front, f.back, f.source, f.box, f.due_on FROM flashcards f "
            "JOIN topics t ON t.id = f.topic_id WHERE f.user_id = ?")
     args = [user_id]
     if topic_id:
         sql += " AND f.topic_id = ?"
         args.append(topic_id)
     return db.query(sql + " ORDER BY f.topic_id, f.source DESC, f.id", tuple(args))
+
+
+# ---------------------------------------------------------------- review (spaced repetition, Leitner boxes)
+# box -> days until the card comes back. A card you knew moves up a box; one you did not goes back to box 0 (today).
+BOX_DAYS = (0, 1, 3, 7, 14, 30)
+
+
+def next_box(box: int | None, knew: bool) -> int:
+    return min((box or 0) + 1, len(BOX_DAYS) - 1) if knew else 0
+
+
+def due_cards(user_id: int, today: date):
+    return db.query(
+        "SELECT f.id, f.topic_id, t.topic_name AS topic, f.front, f.back, f.source, f.box FROM flashcards f "
+        "JOIN topics t ON t.id = f.topic_id WHERE f.user_id = ? AND (f.due_on IS NULL OR f.due_on <= ?) "
+        "ORDER BY COALESCE(f.box, 0), f.id", (user_id, today.isoformat()))
+
+
+def review(user_id: int, card_id: int, knew: bool, today: date):
+    card = db.one("SELECT id, box FROM flashcards WHERE id = ? AND user_id = ?", (card_id, user_id))
+    if not card:
+        raise NotFoundError("Unknown flashcard")
+    box = next_box(card["box"], knew)
+    due = today + timedelta(days=BOX_DAYS[box])
+    db.execute("UPDATE flashcards SET box = ?, due_on = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?",
+               (box, due.isoformat(), card_id))
+    return {"id": card_id, "box": box, "due_on": due.isoformat(), "due_count": len(due_cards(user_id, today))}

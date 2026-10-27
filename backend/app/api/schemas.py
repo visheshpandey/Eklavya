@@ -52,3 +52,44 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str = Field(max_length=200)
     password: str = Field(max_length=200)
+
+
+class GoogleRequest(BaseModel):
+    credential: str = Field(min_length=10, max_length=5000)   # the ID token from Google's sign-in button
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(default="", max_length=200)
+    new_password: str = Field(max_length=200)
+
+
+class ForgotRequest(BaseModel):
+    email: str = Field(max_length=200)
+
+
+class ResetRequest(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+    password: str = Field(max_length=200)
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str = Field(default="", max_length=200)
+    confirm: str = Field(default="", max_length=200)   # Google-only accounts type their email instead
+
+
+class FlashcardReviewRequest(BaseModel):
+    knew: bool
+
+
+class LinkRequest(BaseModel):
+    url: str = Field(min_length=8, max_length=2000)
+
+
+class PushSubscription(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=2000)
+    keys: dict
+
+
+class ReminderSettings(BaseModel):
+    push: bool | None = None
+    email: bool | None = None

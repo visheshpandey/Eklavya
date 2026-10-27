@@ -53,6 +53,9 @@ import { mountDecisionLog } from './components/decision-log.js';
 import { mountHeaderControls } from './components/header-controls.js';
 import { mountStatTiles } from './components/stat-tiles.js';
 import { mountAuthDialog } from './components/auth-dialog.js';
+import { mountAccountDialog } from './components/account-dialog.js';
+import { mountLinkImport } from './components/link-import.js';
+import { unsubscribeDevice } from './lib/push.js';
 import { chooseGuest, getUser, isSignedIn, needsLogin, saveLogin, signOut } from './lib/session.js';
 import { mountCommandMenu } from './components/command-menu.js';
 
@@ -119,7 +122,12 @@ store.select(selectToday, (today) => {
 });
 
 // --- today
-mountTodayView({ store, root: byId('today'), onStart: startMode, onOpenTopic: notes.openTopic, onAddNotes: openNotes });
+const reviewCards = () => {
+  store.dispatch(actions.viewChanged(VIEWS.PROGRESS));
+  byId('flashcards').scrollIntoView({ block: 'center' });
+  globalThis.dispatchEvent(new Event('eklavya:review-cards'));
+};
+mountTodayView({ store, root: byId('today'), onStart: startMode, onOpenTopic: notes.openTopic, onAddNotes: openNotes, onReviewCards: reviewCards });
 mountExamPlanner({
   store, root: byId('planner'), onSave: home.savePlan, onClear: home.clearPlan,
   onOpenItem: (item) => notes.openTopic(item.topic_id),   // a day chip opens the topic; the Start buttons on Today's plan start a session
@@ -133,6 +141,7 @@ mountLibrary({
   onSearch: (text) => store.dispatch(actions.librarySearched(text)),
   onRemoveDocument: notes.removeDocument,
 });
+mountLinkImport({ root: byId('linkImport'), onImport: notes.importLink });
 mountHeaderControls({
   demoButton: byId('btnDemo'), uploadButton: byId('btnUpload'), fileInput: byId('file'),
   onLoadDemo: notes.loadDemo, onUpload: notes.uploadFile,
@@ -172,7 +181,7 @@ mountStatTiles({ store, root: byId('statTiles') });
 mountMissionCard({ store, root: byId('mission') });
 mountMasteryChart({ store, root: byId('chart') });
 mountConceptMap({ store, root: byId('conceptMap'), onOpenTopic: notes.openTopic });
-mountFlashcards({ store, root: byId('flashcards'), onLoad: home.loadFlashcards, onMake: home.makeFlashcards });
+mountFlashcards({ store, root: byId('flashcards'), onLoad: home.loadFlashcards, onMake: home.makeFlashcards, onLoadDue: home.dueCards, onReview: home.reviewCard });
 mountResultsList({ store, root: byId('results') });
 mountStudyPack({
   store, button: byId('btnPack'), packRoot: byId('printPack'),
@@ -190,19 +199,42 @@ store.select(selectDashboard, (dashboard) => { if (dashboard) home.refresh(); })
 
 // --- accounts: the login screen shows until the visitor signs in or picks the demo
 const signedIn = isSignedIn();
+const params = new URLSearchParams(location.search);
+let serverFeatures = null;   // what the server has switched on (Google, email); the login screen adapts
+const cleanAddress = () => {   // reload without one-time parameters (a used reset link, a notification's view); keep the rest
+  const url = new URL(location.href);
+  ['reset', 'view'].forEach((key) => url.searchParams.delete(key));
+  return url.href;
+};
+const finishLogin = (result) => { saveLogin(result); location.replace(cleanAddress()); };
+const leave = async () => {   // sign out: this device stops getting the old account's reminders
+  try { const old = await unsubscribeDevice(); if (old) await backend.pushUnsubscribe(old); } catch { /* signing out still works */ }
+  signOut();
+  location.replace(cleanAddress());
+};
 const authDialog = mountAuthDialog({
-  dialog: byId('auth'), mustChoose: needsLogin,
-  onSignIn: async (credentials) => { saveLogin(await backend.login(credentials)); location.reload(); },
-  onSignUp: async (details) => { saveLogin(await backend.signup(details)); location.reload(); },
-  onGuest: () => { if (signedIn || needsLogin()) { chooseGuest(); location.reload(); } else authDialog.close(); },
+  dialog: byId('auth'), mustChoose: needsLogin, features: () => serverFeatures,
+  onSignIn: async (credentials) => finishLogin(await backend.login(credentials)),
+  onSignUp: async (details) => finishLogin(await backend.signup(details)),
+  onGoogle: async (credential) => finishLogin(await backend.google(credential)),
+  onForgot: (email) => backend.forgotPassword(email),
+  onReset: async (token, password) => finishLogin(await backend.resetPassword(token, password)),
+  onGuest: () => { if (signedIn || needsLogin()) { chooseGuest(); location.replace(cleanAddress()); } else authDialog.close(); },
+});
+backend.authConfig().then((features) => { serverFeatures = features; authDialog.refresh(); }).catch(() => { /* no extras: email and password still work */ });
+const accountDialog = mountAccountDialog({
+  dialog: byId('account'), backend, onSignOut: leave,
+  onDeleted: () => { signOut(); location.replace(cleanAddress()); },
 });
 byId('accountText').textContent = signedIn ? (getUser()?.name || 'Account') : 'Sign in';
-byId('btnAccount').setAttribute('aria-label', signedIn ? `Signed in as ${getUser()?.email ?? 'you'}. Sign out` : 'Sign in or create an account');
-byId('btnAccount').title = signedIn ? 'Sign out' : 'Sign in';
-byId('btnAccount').addEventListener('click', () => {
-  if (signedIn) { signOut(); location.reload(); } else authDialog.open();
-});
-if (needsLogin()) authDialog.open();
+byId('btnAccount').setAttribute('aria-label', signedIn ? `Your account (${getUser()?.email ?? 'signed in'})` : 'Sign in or create an account');
+byId('btnAccount').title = signedIn ? 'Account, reminders, sign out' : 'Sign in';
+byId('btnAccount').addEventListener('click', () => { if (signedIn) accountDialog.open(); else authDialog.open(); });
+
+const opened = params.get('view');   // a reminder notification opens ?view=today
+if (Object.values(VIEWS).includes(opened)) store.dispatch(actions.viewChanged(opened));
+if (params.get('reset')) authDialog.open('reset', params.get('reset'));
+else if (needsLogin()) authDialog.open();
 else notes.refresh().then(() => { if (!onboardingDone()) store.dispatch(actions.onboardingSet(true)); });
 
 // installable app: cache the page shell for offline start (only where service workers are allowed)

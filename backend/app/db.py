@@ -107,6 +107,14 @@ CREATE TABLE IF NOT EXISTS flashcards (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER, front TEXT, back TEXT,
     source TEXT DEFAULT 'notes', created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS password_resets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, token_hash TEXT, expires_at TEXT, used INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, endpoint TEXT UNIQUE, p256dh TEXT, auth TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Columns added after the first release: (table, column, type). init_db adds any that an older database lacks.
@@ -114,6 +122,13 @@ MIGRATIONS = (
     ("voice_sessions", "study_mode", "TEXT"),
     ("voice_sessions", "topic_id", "INTEGER"),
     ("users", "password_hash", "TEXT"),
+    ("users", "google_sub", "TEXT"),                  # Google account id, for "Sign in with Google"
+    ("users", "remind_push", "INTEGER"),              # daily reminder channels (NULL/0 = off)
+    ("users", "remind_email", "INTEGER"),
+    ("users", "last_reminded_on", "TEXT"),            # YYYY-MM-DD, so a reminder goes out at most once a day
+    ("flashcards", "box", "INTEGER"),                 # review step: 0 = new or forgotten, higher = known for longer
+    ("flashcards", "due_on", "TEXT"),                 # YYYY-MM-DD the card comes back; NULL = due now
+    ("flashcards", "reviewed_at", "TEXT"),
     ("misconceptions", "question_id", "INTEGER"),   # the question the mistake was made on (flashcards from mistakes)
 )
 

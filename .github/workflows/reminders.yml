@@ -1,0 +1,21 @@
+# Sends the daily study reminders: wakes the backend and asks it to remind everyone who switched reminders on.
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   API_URL      the backend address, e.g. https://eklavya-api-1bhf.onrender.com
+#   CRON_SECRET  the same value as CRON_SECRET in the backend environment
+name: Daily reminders
+
+on:
+  schedule:
+    - cron: "30 13 * * *"   # 13:30 UTC = 7 pm in India
+  workflow_dispatch: {}     # "Run workflow" button, for a test
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the backend (free hosting sleeps when idle)
+        run: curl --silent --show-error --retry 5 --retry-delay 15 --retry-all-errors --max-time 90 "${{ secrets.API_URL }}/" > /dev/null
+      - name: Send reminders
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 300 -X POST \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" "${{ secrets.API_URL }}/api/reminders/run"

@@ -75,6 +75,18 @@ class Settings:
     samples_dir: Path
     demo_user_id: int
     auth_secret: str            # signs login tokens; empty = a random one is kept next to the database
+    # --- accounts, email, reminders (each feature stays off until its settings are filled in)
+    app_url: str                # the frontend address, used in links inside emails
+    google_client_id: str       # Google sign-in (OAuth client id); empty = no Google button
+    smtp_host: str
+    smtp_port: int
+    smtp_user: str              # e.g. a Gmail address
+    smtp_password: str          # e.g. a Gmail app password; empty = no emails (no password reset, no email reminders)
+    smtp_from: str
+    vapid_public_key: str       # web push (browser and Play Store app notifications); empty = no push
+    vapid_private_key: str
+    vapid_subject: str
+    cron_secret: str            # protects POST /api/reminders/run (called once a day by a scheduler)
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -100,6 +112,17 @@ class Settings:
             samples_dir=Path(_str("SAMPLES_DIR") or REPO_DIR / "samples"),
             demo_user_id=_int("DEMO_USER_ID", 1, minimum=1),
             auth_secret=_str("AUTH_SECRET"),
+            app_url=_str("APP_URL", "http://localhost:3000").rstrip("/"),
+            google_client_id=_str("GOOGLE_CLIENT_ID"),
+            smtp_host=_str("SMTP_HOST", "smtp.gmail.com"),
+            smtp_port=_int("SMTP_PORT", 465, minimum=1),
+            smtp_user=_str("SMTP_USER"),
+            smtp_password=_str("SMTP_PASSWORD").replace(" ", ""),   # Gmail shows app passwords in groups of 4
+            smtp_from=_str("SMTP_FROM"),
+            vapid_public_key=_str("VAPID_PUBLIC_KEY"),
+            vapid_private_key=_str("VAPID_PRIVATE_KEY"),
+            vapid_subject=_str("VAPID_SUBJECT"),
+            cron_secret=_str("CRON_SECRET"),
         )
 
 

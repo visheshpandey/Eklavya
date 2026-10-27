@@ -13,7 +13,7 @@ function greetingKey(hour) {
   return hour < 17 ? 'today.afternoon' : 'today.evening';
 }
 
-export function mountTodayView({ store, root, onStart, onOpenTopic, onAddNotes, now = () => new Date() }) {
+export function mountTodayView({ store, root, onStart, onOpenTopic, onAddNotes, onReviewCards, now = () => new Date() }) {
   function planItem(item, language) {
     return el('li', { class: 'plan-item' },
       el('span', { class: `plan-kind kind-${item.kind}`, text: t(`kind.${item.kind}`, language) }),
@@ -41,6 +41,10 @@ export function mountTodayView({ store, root, onStart, onOpenTopic, onAddNotes, 
         today.exam_days_left != null && today.exam_days_left >= 0
           ? el('span', { class: 'chip-static' }, icon('calendar-blank', { size: 18 }),
             today.exam_days_left === 0 ? t('today.examToday', language) : t('today.exam', language, { n: today.exam_days_left }))
+          : null,
+        today.cards_due
+          ? el('button', { class: 'chip-static chip-action', type: 'button', onclick: onReviewCards }, icon('cards', { size: 18 }),
+            `${today.cards_due} card${today.cards_due > 1 ? 's' : ''} to review`)
           : null));
 
     if (!today.has_notes) {

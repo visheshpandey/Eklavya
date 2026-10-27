@@ -138,22 +138,54 @@ IMAGE_PROMPT = ("This is a photo of a student's study material (a textbook page,
                 "readable study content, answer exactly: NO_TEXT")
 
 
-def read_image(data: bytes, mime_type: str) -> str:
-    """Text of a photographed page (Gemini multimodal). Raises ``LLMError`` if Gemini fails."""
+PDF_PROMPT = ("This PDF is a student's study material, probably scanned pages. Write out all of its study content as clean "
+              "plain text, page by page: keep headings on their own lines, keep formulas (in plain text, e.g. TP / (TP + FP)), "
+              "and describe any diagram in one sentence in square brackets. Do not add anything that is not in the pages. "
+              "If there is no readable study content, answer exactly: NO_TEXT")
+VIDEO_PROMPT = ("Turn this video into study notes a student can revise from. Use short headings for each main idea (one per "
+                "line), then the explanation in plain sentences, with every definition, formula (plain text) and worked example "
+                "the video gives. Only use what the video says. If it has no study content, answer exactly: NO_TEXT")
+ARTICLE_PROMPT = ("Below is the text of a web page. Turn its study content into clean notes a student can revise from: short "
+                  "headings for each main idea (one per line), then the explanation in plain sentences, keeping definitions, "
+                  "formulas (plain text) and examples. Leave out menus, adverts, comments and anything that is not about the "
+                  "subject. Only use what the page says. If it has no study content, answer exactly: NO_TEXT\n\n")
+
+
+def _read(contents, what: str, busy_message: str) -> str:
+    """One multimodal call that returns plain text, with the same retries as the JSON calls. Raises ``LLMError``."""
     last_error = "unknown error"
     for attempt in range(1, ATTEMPTS + 1):
         try:
             response = _get_client().models.generate_content(
-                model=settings.gemini_model,
-                contents=[types.Part.from_bytes(data=data, mime_type=mime_type), IMAGE_PROMPT],
+                model=settings.gemini_model, contents=contents,
                 config=types.GenerateContentConfig(temperature=0.1, http_options=types.HttpOptions(timeout=settings.gemini_long_timeout_ms)),
             )
             text = (response.text or "").strip()
             return "" if text == "NO_TEXT" else text
         except Exception as exc:  # noqa: BLE001
             last_error = str(exc)
-        log.warning("Gemini image read failed (attempt %d/%d): %s", attempt, ATTEMPTS, last_error)
+        log.warning("Gemini %s read failed (attempt %d/%d): %s", what, attempt, ATTEMPTS, last_error)
         if attempt < ATTEMPTS and any(marker.lower() in last_error.lower() for marker in TRANSIENT):
             time.sleep(RETRY_PAUSE_SECONDS * attempt)
-    raise LLMError(_failure(last_error, PHOTO_BUSY_MESSAGE) if is_transient(last_error)
-                   else f"Gemini could not read the photo: {last_error[:200]}")
+    raise LLMError(_failure(last_error, busy_message) if is_transient(last_error)
+                   else f"Gemini could not read the {what}: {last_error[:200]}")
+
+
+def read_image(data: bytes, mime_type: str) -> str:
+    """Text of a photographed page (Gemini multimodal). Raises ``LLMError`` if Gemini fails."""
+    return _read([types.Part.from_bytes(data=data, mime_type=mime_type), IMAGE_PROMPT], "photo", PHOTO_BUSY_MESSAGE)
+
+
+def read_pdf(data: bytes) -> str:
+    """Text of a PDF that has no text layer (scanned pages): Gemini reads the page images."""
+    return _read([types.Part.from_bytes(data=data, mime_type="application/pdf"), PDF_PROMPT], "PDF", BUSY_MESSAGE)
+
+
+def read_video(url: str) -> str:
+    """Study notes from a public YouTube video (Gemini watches it from the link)."""
+    return _read([types.Part(file_data=types.FileData(file_uri=url)), VIDEO_PROMPT], "video", BUSY_MESSAGE)
+
+
+def notes_from_article(page_text: str) -> str:
+    """Study notes from the text of a web page (menus and adverts left out)."""
+    return _read([ARTICLE_PROMPT + page_text], "web page", BUSY_MESSAGE)
