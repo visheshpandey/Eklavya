@@ -122,8 +122,17 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
     }));
   }
 
+  /** Placeholders the size of the real thing while the first data loads, so nothing below them moves when it arrives. */
+  function drawSkeleton() {
+    drawHead();
+    render(hero, el('div', { class: 'skeleton sk-hero', role: 'status', 'aria-label': 'Loading your day' }));
+    render(route, el('span', { class: 'skeleton sk-line' }), [1, 2, 3].map(() => el('span', { class: 'skeleton sk-step' })));
+    render(subjects, [1, 2, 3, 4, 5, 6].map(() => el('span', { class: 'skeleton sk-sub' })));
+  }
+
   function draw() {
     const data = dataNow();
+    if (!data.today || !data.dashboard) { drawSkeleton(); return; }
     drawHead();
     drawHero(data);
     drawRoute(data);

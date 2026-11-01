@@ -26,7 +26,7 @@ export function mountTodayView({ store, root, onStart, onOpenTopic, onAddNotes, 
     const state = store.getState();
     const today = selectToday(state);
     const language = selectLanguage(state);
-    if (!today) { replaceContent(root, el('p', { class: 'empty', text: 'Loading your day…' })); return; }
+    if (!today) { replaceContent(root, el('div', { class: 'skeleton sk-today', role: 'status', 'aria-label': 'Loading your day' })); return; }
 
     const first = today.plan[0];
     const head = el('div', { class: 'today-head' },

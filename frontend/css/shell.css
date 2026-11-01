@@ -35,7 +35,7 @@ mark { background: var(--mark); color: inherit; padding: 0 2px; border-radius: 2
 .streakcard { margin-top: auto; padding: 14px; background: var(--sage); border-radius: var(--r-panel); }
 .streakcard strong { display: block; font: 400 34px/1 var(--font-serif); margin: 6px 0 4px; }
 .streakcard strong small { font: 12px var(--font); }
-.streakcard p { font-size: 12px; color: var(--ink-3); }
+.streakcard p { font-size: 12px; color: var(--ink-3); min-height: 2.9em; }   /* two lines reserved so the card does not grow when the note changes */
 .week { display: flex; gap: 4px; margin-top: 10px; }
 .week i { flex: 1; height: 4px; border-radius: 4px; background: var(--line-strong); }
 .week i.on { background: var(--ok-fill); }
@@ -79,7 +79,7 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .bar i { display: block; height: 100%; background: var(--terracotta); border-radius: 4px; transition: width .6s cubic-bezier(.2, .7, .2, 1); }
 
 /* ---------- Today: hero with the 3D desk */
-.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: center; background: var(--hero); color: var(--hero-ink);
+.hero { min-height: 368px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: center; background: var(--hero); color: var(--hero-ink);
   border-radius: var(--r-panel); padding: 30px; margin-top: 8px; overflow: hidden; }
 .hero .mono { color: var(--hero-mute); }
 .hero h2 { margin: 12px 0; font: 400 clamp(30px, 3.4vw, 40px)/1.02 var(--font-serif); letter-spacing: -.01em; text-wrap: balance; }
@@ -243,6 +243,10 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .sk-pill { width: 110px; height: 28px; }
 .sk-card { width: min(460px, 100%); height: 260px; }
 .sk-line { height: 14px; width: min(460px, 100%); }
+.sk-hero { height: 368px; width: 100%; }
+.sk-step { display: block; height: 62px; margin-top: 12px; }
+.sk-sub { display: block; height: 170px; }
+.sk-today { height: 330px; }
 @media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; display: none; } }
 
 /* ---------- Flashcards */
@@ -404,3 +408,9 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 
 /* the speaking orb's glow reaches about 30px: keep it off the avatar's shoulders */
 .stage { gap: var(--s-6); }
+
+/* space held for the Today header and hero before the script fills them, so the sections below do not jump when it does */
+#todayHead { min-height: 115px; }
+#todayHero { min-height: 368px; }
+#route { min-height: 285px; }
+@media (max-width: 700px) { #todayHead, #todayHero, #route { min-height: 0; } }
