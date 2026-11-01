@@ -1,8 +1,30 @@
 """Shared reads for the Today, revision and planner screens: topics with mastery, when each was last practised,
-and the days the student studied. SQLite stores UTC; dates are turned into the student's local calendar days."""
+and the days the student studied. The database stores UTC; dates are turned into the student's own calendar days.
+
+Whose calendar: the browser sends its timezone with every request (header X-Timezone, see app.main), and that is used for the
+whole request. Without it (a scheduled job, an old client) the APP_TIMEZONE setting is used, India Standard Time by default.
+The server's own clock zone is never used: on a hosted server it is UTC, which puts "today" 5.5 hours off for a student in India.
+"""
+from contextvars import ContextVar
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app import db
+from app.config import settings
+
+_request_zone: ContextVar = ContextVar("request_zone", default=None)
+
+
+def use_timezone(name: str | None) -> None:
+    """Make ``name`` (an IANA zone such as "Asia/Kolkata") the student's calendar for the rest of this request; unknown names are ignored."""
+    try:
+        _request_zone.set(ZoneInfo(name) if name else None)
+    except (ZoneInfoNotFoundError, ValueError, OSError):
+        _request_zone.set(None)
+
+
+def current_zone() -> ZoneInfo:
+    return _request_zone.get() or ZoneInfo(settings.timezone)
 
 
 def local_date(timestamp: str | None) -> date | None:
@@ -15,11 +37,11 @@ def local_date(timestamp: str | None) -> date | None:
         return None
     if moment.tzinfo is None:
         moment = moment.replace(tzinfo=timezone.utc)
-    return moment.astimezone().date()
+    return moment.astimezone(current_zone()).date()
 
 
 def local_today() -> date:
-    return datetime.now().astimezone().date()
+    return datetime.now(current_zone()).date()
 
 
 def topics_with_progress(user_id: int):

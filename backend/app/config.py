@@ -74,6 +74,7 @@ class Settings:
     db_schema: str              # optional Postgres schema to work in (used to keep test runs apart from real data)
     samples_dir: Path
     demo_user_id: int
+    timezone: str          # the calendar used for "today" when the browser does not say (APP_TIMEZONE)
     auth_secret: str            # signs login tokens; empty = a random one is kept next to the database
     # --- accounts, email, reminders (each feature stays off until its settings are filled in)
     app_url: str                # the frontend address, used in links inside emails
@@ -111,6 +112,7 @@ class Settings:
             db_path=Path(_str("DB_PATH") or BACKEND_DIR / "data" / "eklavya.db"),
             samples_dir=Path(_str("SAMPLES_DIR") or REPO_DIR / "samples"),
             demo_user_id=_int("DEMO_USER_ID", 1, minimum=1),
+            timezone=_str("APP_TIMEZONE", "Asia/Kolkata"),
             auth_secret=_str("AUTH_SECRET"),
             app_url=_str("APP_URL", "http://localhost:3000").rstrip("/"),
             google_client_id=_str("GOOGLE_CLIENT_ID"),

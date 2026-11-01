@@ -167,6 +167,11 @@ class ToolContext:
     debate: Optional[dict] = None                # debate: {"side", "motion", "style"}
     debate_id: Optional[int] = None
     debate_rounds: list = field(default_factory=list)  # debate: one argument_score dict per student argument
+    current_question: Optional[dict] = None      # quiz: the question on screen {question, options, number}, kept so a reconnect can repeat it
+
+    def name_of(self, topic_id: Optional[int]) -> str:
+        """A topic's name from the list loaded when the call started: no database round trip on the event loop."""
+        return next((t["topic_name"] for t in self.topics if t["id"] == topic_id), "") if topic_id else ""
 
     def topic_id_for(self, name: Optional[str]) -> Optional[int]:
         """Best fuzzy match of a spoken/LLM topic name to a topic id."""
@@ -182,6 +187,14 @@ class ToolContext:
         return best if score >= 0.6 else None
 
 
+async def _log(ctx: ToolContext, *args) -> None:
+    """The decision log write, off the event loop. A failed log line never fails a tool."""
+    try:
+        await asyncio.to_thread(log_agent, ctx.user_id, *args)
+    except Exception:  # noqa: BLE001
+        log.exception("Could not write the decision log")
+
+
 def _num(v, default=0.5):
     try:
         return min(max(float(v), 0.0), 1.0)
@@ -191,9 +204,9 @@ def _num(v, default=0.5):
 
 async def search_notes(ctx: ToolContext, query: str = "", **_):
     hits = await asyncio.to_thread(search.search, ctx.user_id, query, ctx.document_id)
-    log_agent(ctx.user_id, "voice_tutor", f"search_notes('{query}')",
-              f"{len(hits)} chunks" + (f", best: {hits[0]['topic']} ({hits[0]['score']})" if hits else ""),
-              "Grounded the answer in notes" if hits else "Nothing found in notes", 0.8 if hits else 0.3)
+    await _log(ctx, "voice_tutor", f"search_notes('{query}')",
+               f"{len(hits)} chunks" + (f", best: {hits[0]['topic']} ({hits[0]['score']})" if hits else ""),
+               "Grounded the answer in notes" if hits else "Nothing found in notes", 0.8 if hits else 0.3)
     if not hits:
         return {"found": False, "message": "Nothing about this in the student's notes."}
     return {"found": True, "results": [
@@ -205,8 +218,8 @@ async def report_learner_state(ctx: ToolContext, topic: str = "", confusion=0.5,
     c, f, fr = _num(confusion), _num(confidence), _num(frustration, 0.0)
     tid = ctx.topic_id_for(topic)
     await asyncio.to_thread(db.save_learner_state, ctx.user_id, tid, c, f, fr, note)
-    log_agent(ctx.user_id, "learner_profile", f"Tone on '{topic}': confusion {c:.2f}, confidence {f:.2f}, frustration {fr:.2f}",
-              note or "Updated learner state", "Tutor adapts pace and tone", f)
+    await _log(ctx, "learner_profile", f"Tone on '{topic}': confusion {c:.2f}, confidence {f:.2f}, frustration {fr:.2f}",
+               note or "Updated learner state", "Tutor adapts pace and tone", f)
     await ctx.emit({"type": "emotion", "topic": topic, "confusion": c, "confidence": f, "frustration": fr, "note": note})
     return {"ok": True}
 
@@ -227,6 +240,7 @@ async def ask_quiz_question(ctx: ToolContext, topic: str = None, **_):
     ctx.asked_ids.append(q["question_id"])
     ctx.current_question_id = q["question_id"]
     number = len(ctx.asked_ids)
+    ctx.current_question = {"question": q["question"], "options": q["options"], "number": number}
     if focused:
         if number == 1:
             await ctx.emit({"type": "phase", "phase": "test", "topic": q["topic"]})
@@ -296,8 +310,8 @@ async def show_board(ctx: ToolContext, **args):
         return {"shown": False, "error": str(e)}
     # saved BEFORE it is shown: if the call ends the moment a board appears, the study pack still has it
     try:
-        db.execute("INSERT INTO boards (user_id, topic_id, title, kind, data) VALUES (?, ?, ?, ?, ?)",
-                   (ctx.user_id, ctx.focus_topic_id, card["title"], card["kind"], db.dumps(card)))
+        await asyncio.to_thread(db.execute, "INSERT INTO boards (user_id, topic_id, title, kind, data) VALUES (?, ?, ?, ?, ?)",
+                                (ctx.user_id, ctx.focus_topic_id, card["title"], card["kind"], db.dumps(card)))
     except Exception:  # noqa: BLE001 - a failed save must not stop the board from showing
         log.exception("Could not save the whiteboard")
     await ctx.emit({"type": "board", **card})
@@ -325,7 +339,7 @@ async def ask_viva_question(ctx: ToolContext, question: str = "", **_):
     ctx.viva_question = question
     number = len(ctx.viva_answers) + 1
     await ctx.emit({"type": "viva_question", "number": number, "total": scoring.VIVA_QUESTIONS, "question": question,
-                    "seconds": VIVA_ANSWER_SECONDS, "topic": _topic_name(ctx.focus_topic_id)})
+                    "seconds": VIVA_ANSWER_SECONDS, "topic": ctx.name_of(ctx.focus_topic_id)})
     return {"shown": True, "question_number": number, "of": scoring.VIVA_QUESTIONS}
 
 
@@ -381,9 +395,9 @@ async def finish_viva(ctx: ToolContext, strengths: str = "", improve: str = "", 
     await asyncio.to_thread(db.execute, "UPDATE vivas SET finished_at = CURRENT_TIMESTAMP, marks = ?, out_of = ?, "
                             "strengths = ?, improve = ? WHERE id = ?",
                             (total["marks"], total["out_of"], strengths, improve, ctx.viva_id))
-    log_agent(ctx.user_id, "examiner", f"Viva on {_topic_name(ctx.focus_topic_id)} finished",
-              f"{total['marks']}/{total['out_of']}", f"Report card: improve {improve}", 0.8)
-    await ctx.emit({"type": "viva_report", "topic": _topic_name(ctx.focus_topic_id), **total, "strengths": strengths,
+    await _log(ctx, "examiner", f"Viva on {ctx.name_of(ctx.focus_topic_id)} finished",
+               f"{total['marks']}/{total['out_of']}", f"Report card: improve {improve}", 0.8)
+    await ctx.emit({"type": "viva_report", "topic": ctx.name_of(ctx.focus_topic_id), **total, "strengths": strengths,
                     "improve": improve, "answers": ctx.viva_answers})
     return {"saved": True, **total}
 
@@ -419,8 +433,8 @@ async def finish_debate(ctx: ToolContext, student_score=0, eklavya_score=0, stre
     await asyncio.to_thread(db.execute, "UPDATE debates SET finished_at = CURRENT_TIMESTAMP, winner = ?, student_score = ?, "
                             "tutor_score = ?, strength = ?, improve = ? WHERE id = ?",
                             (winner, student, tutor, strength, improve, debate_id))
-    log_agent(ctx.user_id, "debater", f"Debate on {_topic_name(ctx.focus_topic_id)} finished after {len(ctx.debate_rounds)} arguments",
-              f"Winner: {winner} ({student} vs {tutor})", f"Verdict card: improve {improve}", 0.8)
+    await _log(ctx, "debater", f"Debate on {ctx.name_of(ctx.focus_topic_id)} finished after {len(ctx.debate_rounds)} arguments",
+               f"Winner: {winner} ({student} vs {tutor})", f"Verdict card: improve {improve}", 0.8)
     await ctx.emit({"type": "debate_verdict", "winner": winner, "student_score": student, "eklavya_score": tutor,
                     "strength": strength, "improve": improve, "rounds": len(ctx.debate_rounds)})
     return {"saved": True, "winner": winner}
@@ -444,5 +458,5 @@ async def dispatch(ctx: ToolContext, name: str, args: dict) -> dict:
     try:
         return await handler(ctx, **(args or {}))
     except Exception as e:  # noqa: BLE001 - surface to the model, keep the call alive
-        log_agent(ctx.user_id, "voice_tutor", f"Tool {name} failed", str(e)[:200], "Told the model the tool failed", 0.0)
+        await _log(ctx, "voice_tutor", f"Tool {name} failed", str(e)[:200], "Told the model the tool failed", 0.0)
         return {"error": f"{name} failed: {e}"}

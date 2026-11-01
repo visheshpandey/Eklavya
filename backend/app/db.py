@@ -115,6 +115,38 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, endpoint TEXT UNIQUE, p256dh TEXT, auth TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS doubts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, question TEXT, answer TEXT, follow_up TEXT, topic TEXT,
+    grounded INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS mock_exams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, minutes INTEGER, total INTEGER, correct INTEGER,
+    started_at TEXT DEFAULT CURRENT_TIMESTAMP, finished_at TEXT, seconds INTEGER
+);
+CREATE TABLE IF NOT EXISTS mock_exam_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, exam_id INTEGER, position INTEGER, question_id INTEGER, topic_id INTEGER,
+    topic TEXT, question TEXT, answer TEXT, correct TEXT, is_correct INTEGER
+);
+CREATE TABLE IF NOT EXISTS study_groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, code TEXT UNIQUE, owner_id INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS group_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, user_id INTEGER,
+    joined_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(group_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS group_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, group_id INTEGER, document_id INTEGER, shared_by INTEGER,
+    shared_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(group_id, document_id)
+);
+CREATE TABLE IF NOT EXISTS challenges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT UNIQUE, user_id INTEGER, topic TEXT, questions TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS challenge_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, challenge_id INTEGER, user_id INTEGER, correct INTEGER, total INTEGER,
+    seconds INTEGER, created_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(challenge_id, user_id)
+);
 """
 
 # Columns added after the first release: (table, column, type). init_db adds any that an older database lacks.
@@ -130,6 +162,7 @@ MIGRATIONS = (
     ("flashcards", "due_on", "TEXT"),                 # YYYY-MM-DD the card comes back; NULL = due now
     ("flashcards", "reviewed_at", "TEXT"),
     ("misconceptions", "question_id", "INTEGER"),   # the question the mistake was made on (flashcards from mistakes)
+    ("documents", "copied_from", "INTEGER"),          # notes added from a study group: the original document
 )
 
 
@@ -225,7 +258,7 @@ def get_conn():
             raise
         return
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(settings.db_path)
+    conn = sqlite3.connect(settings.db_path, timeout=30)   # wait for a busy database instead of failing after 5 s
     conn.row_factory = sqlite3.Row
     try:
         yield conn
@@ -247,6 +280,7 @@ def init_db():
             for table, column, kind in MIGRATIONS:
                 c.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {kind}")
         else:
+            c.execute("PRAGMA journal_mode=WAL")   # readers and a writer no longer block each other (voice calls write while pages load)
             c.executescript(SCHEMA)
             for table, column, kind in MIGRATIONS:
                 existing = {row[1] for row in c.execute(f"PRAGMA table_info({table})")}

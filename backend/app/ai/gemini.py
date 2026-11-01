@@ -90,6 +90,7 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
 
 BUSY_MESSAGE = "Gemini is busy right now. Please try again in a minute."
 PHOTO_BUSY_MESSAGE = "The photo reader is busy right now. Please try again in a minute."
+FAILED_MESSAGE = "Gemini could not finish that. Please try again."   # any other failure: the provider's own text goes to the log only
 
 
 def is_transient(error: str) -> bool:
@@ -101,7 +102,8 @@ def _failure(error: str, busy_message: str) -> str:
     if is_transient(error):
         log.warning("Gemini overloaded after %d attempts: %s", ATTEMPTS, error)
         return busy_message
-    return f"Gemini request failed: {error[:200]}"
+    log.warning("Gemini request failed: %s", error[:500])
+    return FAILED_MESSAGE
 
 
 def llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7, timeout_ms: int | None = None) -> dict | list:
@@ -167,8 +169,10 @@ def _read(contents, what: str, busy_message: str) -> str:
         log.warning("Gemini %s read failed (attempt %d/%d): %s", what, attempt, ATTEMPTS, last_error)
         if attempt < ATTEMPTS and any(marker.lower() in last_error.lower() for marker in TRANSIENT):
             time.sleep(RETRY_PAUSE_SECONDS * attempt)
-    raise LLMError(_failure(last_error, busy_message) if is_transient(last_error)
-                   else f"Gemini could not read the {what}: {last_error[:200]}")
+    if is_transient(last_error):
+        raise LLMError(_failure(last_error, busy_message))
+    log.warning("Gemini could not read the %s: %s", what, last_error[:500])
+    raise LLMError(f"Eklavya could not read this {what}. Please try again, or use a clearer one.")
 
 
 def read_image(data: bytes, mime_type: str) -> str:

@@ -30,4 +30,9 @@ def due(user_id: int = auth.CurrentUser):
 
 @router.post("/api/flashcards/{card_id}/review")
 def review(card_id: int, req: FlashcardReviewRequest, user_id: int = auth.CurrentUser):
-    return flashcards.review(user_id, card_id, req.knew, local_today())
+    return flashcards.review(user_id, card_id, req.knew, local_today(), req.hard)
+
+
+@router.post("/api/flashcards/reset")
+def reset(user_id: int = auth.CurrentUser):
+    return flashcards.reset_deck(user_id, local_today())

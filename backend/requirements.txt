@@ -7,3 +7,4 @@ pywebpush
 requests
 python-dotenv
 python-multipart
+tzdata

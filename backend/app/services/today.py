@@ -1,5 +1,5 @@
 """GET /api/today: the home screen. Streak, what is due for revision, a short plan for today, the last session."""
-from datetime import date
+from datetime import date, timedelta
 
 from app import db
 from app.domain.planner import build_plan
@@ -73,10 +73,12 @@ def _default_plan(due, new, mission, topics):
 def _payload(user_id, user, day, topics, due, plan):
     exam = user.get("target_exam_date")
     exam_day = local_date(f"{exam} 12:00:00") if exam else None
+    active = active_days(user_id)
     return {
         "date": day.isoformat(),
         "name": user.get("name") or "",
-        "streak": study_streak(active_days(user_id), day),
+        "streak": study_streak(active, day),
+        "week": [(day - timedelta(days=back)) in active for back in range(6, -1, -1)],   # the last 7 days, oldest first, today last
         "has_notes": bool(topics),
         "due": [{"topic_id": t["topic_id"], "topic": t["topic_name"], "mastery": t["mastery"],
                  "overdue_days": t["overdue_days"]} for t in due],
@@ -85,6 +87,7 @@ def _payload(user_id, user, day, topics, due, plan):
         "last_session": _last_session(user_id),
         "exam_date": exam,
         "exam_days_left": (exam_day - day).days if exam_day else None,
+        "cards_total": db.one("SELECT COUNT(*) AS n FROM flashcards WHERE user_id = ?", (user_id,))["n"],
         "cards_due": db.one("SELECT COUNT(*) AS n FROM flashcards WHERE user_id = ? AND (due_on IS NULL OR due_on <= ?)",
                             (user_id, day.isoformat()))["n"],
     }

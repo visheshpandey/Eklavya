@@ -8,6 +8,7 @@ mode=viva    oral exam by the examiner persona: 5 questions with probing, marks 
 mode=debate  the student debates the tutor about the chosen topic; side=for|against is the side the TUTOR argues,
              motion is optional free text (up to 200 characters; otherwise the tutor picks one),
              style=tough|friendly sets how hard the tutor pushes
+tutor=mentor|senior   the tutor's personality and voice (calm mentor, friendly senior)
 (default)    open conversation across all of the student's notes
 """
 import asyncio
@@ -24,18 +25,18 @@ MAX_MOTION_CHARS = 200
 
 @router.websocket("/ws/voice")
 async def voice(ws: WebSocket, user_id: int = auth.CurrentUser, lang: str = "hinglish", mode: str = "free", topic_id: int = None,
-                side: str = "for", motion: str = "", style: str = "tough"):
+                side: str = "for", motion: str = "", style: str = "tough", tutor: str = "mentor", resume: str = ""):
     await ws.accept()
-    topics = db.query(
-        "SELECT t.id, t.topic_name, t.document_id FROM topics t JOIN documents d ON d.id = t.document_id "
+    topics = await asyncio.to_thread(      # the event loop also answers every voice socket's pings: never wait on the database here
+        db.query, "SELECT t.id, t.topic_name, t.document_id FROM topics t JOIN documents d ON d.id = t.document_id "
         "WHERE d.user_id = ? ORDER BY d.id DESC, t.id", (user_id,))
     if not topics:
-        await ws.send_json({"type": "error", "message": "Upload your notes first, then start the voice session."})
+        await ws.send_json({"type": "error", "code": "need_notes", "retryable": False, "message": live.ERROR_MESSAGES["need_notes"]})
         await ws.close()
         return
     focus = next((t for t in topics if t["id"] == topic_id), None)
     if mode in live.FOCUSED_MODES and not focus:
-        await ws.send_json({"type": "error", "message": "Pick a topic from your notes first."})
+        await ws.send_json({"type": "error", "code": "need_topic", "retryable": False, "message": live.ERROR_MESSAGES["need_topic"]})
         await ws.close()
         return
     debate = {"side": "against" if side == "against" else "for", "motion": " ".join(motion.split())[:MAX_MOTION_CHARS],
@@ -43,7 +44,10 @@ async def voice(ws: WebSocket, user_id: int = auth.CurrentUser, lang: str = "hin
     if focus and mode in ("learn", "test", "revise"):   # write the test questions while the lesson runs, so the test starts without a pause
         prefetch = asyncio.create_task(asyncio.to_thread(quiz.warm_up, focus["id"]))   # noqa: F841 - kept referenced until done
     session = live.LiveTutorSession(ws, user_id, lang.lower(), focus["document_id"] if focus else None, topics,
-                                    connect=live.default_connect, mode=mode if focus else "free", focus_topic=focus, debate=debate)
+                                    connect=live.default_connect, mode=mode if focus else "free", focus_topic=focus, debate=debate, tutor=tutor)
+    saved = live.take_resume(resume, user_id)
+    if saved:   # the browser's connection dropped and it is back: carry on where the call was
+        session.restore(saved)
     await session.run()
     try:
         await ws.close()

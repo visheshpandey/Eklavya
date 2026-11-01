@@ -191,5 +191,27 @@ def retrieve_for_user(user_id: int, query: str, k: int = RETRIEVAL_TOP_K, query_
     return rank(chunks_of_user(user_id), query, k, query_vector, vectors)
 
 
+def coverage(question: str, chunks) -> float:
+    """Share (0 to 1) of the question's meaningful words that appear in the given passages: how well the notes answer it.
+    A word and its plural or "-ing" form count as the same."""
+    def stem(word: str) -> str:
+        for ending in ("ing", "es", "s"):
+            if len(word) > len(ending) + 2 and word.endswith(ending):
+                return word[: -len(ending)]
+        return word
+    wanted = {stem(t) for t in tokenize(question)}
+    if not wanted:
+        return 0.0
+    found = {stem(t) for c in chunks for t in tokenize(f"{c.get('heading') or ''} {c['text']}")}
+    return len(wanted & found) / len(wanted)
+
+
+def count_chunks(user_id: int, document_id: int = None) -> int:
+    """How many passages the student's notes (or one document) are made of."""
+    if document_id:
+        return db.one("SELECT COUNT(*) AS n FROM chunks WHERE document_id = ?", (document_id,))["n"]
+    return db.one("SELECT COUNT(*) AS n FROM chunks c JOIN documents d ON d.id = c.document_id WHERE d.user_id = ?", (user_id,))["n"]
+
+
 def has_notes(user_id: int) -> bool:
     return db.one("SELECT 1 AS present FROM documents WHERE user_id = ? LIMIT 1", (user_id,)) is not None

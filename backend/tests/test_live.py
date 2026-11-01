@@ -51,8 +51,8 @@ class FakeSession:
 
 def fake_connect(session):
     @asynccontextmanager
-    async def _c(system_prompt, tools=None):
-        session.system_prompt, session.tools = system_prompt, tools
+    async def _c(system_prompt, tools=None, voice=None):
+        session.system_prompt, session.tools, session.voice = system_prompt, tools, voice
         yield session
     return _c
 
@@ -165,23 +165,110 @@ def test_grade_without_question_and_unknown_tool_are_reported_to_the_model_not_c
     assert "Unknown tool" in by_id["g2"]["error"]
 
 
-def test_gemini_connection_failure_is_an_error_event_not_a_crash(monkeypatch):
+class DroppingSession(FakeSession):
+    """A session that dies while the tutor is talking, like a real upstream drop."""
+
+    async def receive(self):
+        raise ConnectionError("received 1011 (internal error) keepalive ping timeout; then sent 1011 (internal error)")
+        yield  # pragma: no cover
+
+
+def connect_sequence(*sessions):
+    """Each connection attempt gets the next session; their system prompts and first inputs are kept for checking."""
+    attempts = list(sessions)
+    seen = []
+
     @asynccontextmanager
-    async def boom(system_prompt, tools=None):
-        raise RuntimeError("model not found")
+    async def _c(system_prompt, tools=None, voice=None):
+        session = attempts.pop(0)
+        seen.append(session)
+        session.system_prompt = system_prompt
+        yield session
+    return _c, seen
+
+
+def test_gemini_connection_failure_is_a_coded_error_never_raw_text(monkeypatch):
+    @asynccontextmanager
+    async def boom(system_prompt, tools=None, voice=None):
+        raise RuntimeError("models/gemini-x is not found for API version v1beta")
         yield  # pragma: no cover
 
     monkeypatch.setattr(live, "default_connect", boom)
+    monkeypatch.setattr(live, "RECONNECTS", 0)
     with client.websocket_connect("/ws/voice") as ws:
         ev, _ = collect(ws, until="error")
-    assert ev[-1]["type"] == "error" and "Gemini Live failed" in ev[-1]["message"] and "model not found" in ev[-1]["message"]
+    err = ev[-1]
+    assert err["type"] == "error" and err["code"] == "upstream_unavailable" and err["retryable"] is True
+    assert "not found" not in err["message"] and "Gemini Live failed" not in err["message"]   # provider text stays in the server log
+
+
+def test_quota_errors_get_their_own_code(monkeypatch):
+    assert live.classify_error(RuntimeError("429 RESOURCE_EXHAUSTED: quota")) == ("quota", True)
+    assert live.classify_error(RuntimeError("GEMINI_API_KEY is not set")) == ("not_configured", False)
+    assert live.classify_error(TimeoutError("timed out during opening handshake")) == ("upstream_unavailable", True)
+
+
+def test_a_dropped_connection_is_retried_once_and_the_quiz_is_resumed(monkeypatch):
+    first = FakeSession([[call("ask_quiz_question", {}, "q1")], [sc(turn_complete=True)]])
+    first_receive = first.receive
+
+    async def drop_after_question():
+        async for m in first_receive():
+            yield m
+        raise ConnectionError("keepalive ping timeout")
+    first.receive = drop_after_question
+    second = FakeSession([[sc(turn_complete=True)]])
+    connect, seen = connect_sequence(first, second)
+    monkeypatch.setattr(live, "default_connect", connect)
+    monkeypatch.setattr(live.asyncio, "sleep", live.asyncio.sleep)   # keep the real sleep; the retry waits one second
+
+    uid = client.post("/api/auth/signup", json={"email": "resume@example.com", "password": "longenough1"}).json()
+    token, user = uid["token"], uid["user"]["id"]
+    doc = db.execute("INSERT INTO documents (user_id, file_name) VALUES (?, 'n.txt')", (user,))
+    topic = db.execute("INSERT INTO topics (document_id, topic_name) VALUES (?, 'Recall')", (doc,))
+    db.execute("INSERT INTO chunks (document_id, topic_id, heading, text) VALUES (?, ?, 'Recall', 'Recall is TP over TP+FN.')", (doc, topic))
+    db.execute("INSERT INTO quiz_questions (topic_id, question, options, correct, explanation, misconceptions) VALUES (?, 'What is recall?', ?, 'A', 'x', '{}')",
+               (topic, '["A. TP/(TP+FN)", "B. TP/(TP+FP)", "C. a", "D. b"]'))
+    try:
+        with client.websocket_connect(f"/ws/voice?token={token}&mode=test&topic_id={topic}") as ws:
+            events, _ = collect(ws, until="reconnecting")
+            assert [e["type"] for e in events].count("quiz_question") == 1
+            collect(ws, until="turn_complete")           # the second connection works and the call goes on
+    finally:
+        from app import accounts
+        accounts.erase_user(user)
+    assert len(seen) == 2
+    resume_text = seen[1].sent[0]["text"]
+    assert "connection dropped" in resume_text and "What is recall?" in resume_text and "waiting for the student" in resume_text
+
+
+def test_a_second_drop_ends_with_a_retryable_error_and_no_raw_text(monkeypatch):
+    connect, seen = connect_sequence(DroppingSession([]), DroppingSession([]))
+    monkeypatch.setattr(live, "default_connect", connect)
+    with client.websocket_connect("/ws/voice") as ws:
+        events, _ = collect(ws, until="error")
+    assert [e["type"] for e in events] == ["reconnecting", "error"] or events[-1]["type"] == "error"
+    err = events[-1]
+    assert err["code"] == "upstream_unavailable" and err["retryable"] and "1011" not in err["message"]
+    assert len(seen) == 2
+
+
+def test_gemini_go_away_reconnects_instead_of_ending(monkeypatch):
+    goaway = FakeSession([[NS(server_content=None, tool_call=None, go_away=NS(time_left="5s"))]])
+    after = FakeSession([[sc(turn_complete=True)]])
+    connect, seen = connect_sequence(goaway, after)
+    monkeypatch.setattr(live, "default_connect", connect)
+    with client.websocket_connect("/ws/voice") as ws:
+        events, _ = collect(ws, until="reconnecting")
+        collect(ws, until="turn_complete")
+    assert len(seen) == 2
 
 
 def test_no_notes_uploaded_is_told_to_upload_first():
     token = client.post("/api/auth/signup", json={"email": "nonotes@example.com", "password": "longenough1"}).json()["token"]
     with client.websocket_connect(f"/ws/voice?token={token}") as ws:
         ev = ws.receive_json()
-    assert ev["type"] == "error" and "Upload your notes" in ev["message"]
+    assert ev["type"] == "error" and ev["code"] == "need_notes" and "Upload your notes" in ev["message"]
 
 
 def test_user_text_goes_to_gemini_and_shows_as_transcript(monkeypatch):
@@ -197,3 +284,49 @@ def test_user_text_goes_to_gemini_and_shows_as_transcript(monkeypatch):
                 break
     assert any(s.get("text") == "what is recall" for s in fake.sent)
     assert any(e["type"] == "transcript" and e["role"] == "user" and e["text"] == "what is recall" for e in ev)
+
+
+def test_a_call_that_drops_can_be_picked_up_again_with_its_progress(monkeypatch):
+    """The browser's own connection drops mid-quiz: its token brings back the questions asked and the graded answers."""
+    live._resumable.clear()
+    first = FakeSession([[call("ask_quiz_question", {}, "q1")]])
+    connect, seen = connect_sequence(first)
+    monkeypatch.setattr(live, "default_connect", connect)
+    uid = client.post("/api/auth/signup", json={"email": "drop@example.com", "password": "longenough1"}).json()
+    token, user = uid["token"], uid["user"]["id"]
+    doc = db.execute("INSERT INTO documents (user_id, file_name) VALUES (?, 'n.txt')", (user,))
+    topic = db.execute("INSERT INTO topics (document_id, topic_name) VALUES (?, 'Recall')", (doc,))
+    db.execute("INSERT INTO chunks (document_id, topic_id, heading, text) VALUES (?, ?, 'Recall', 'Recall is TP over TP+FN.')", (doc, topic))
+    db.execute("INSERT INTO quiz_questions (topic_id, question, options, correct, explanation, misconceptions) VALUES (?, 'What is recall?', ?, 'A', 'x', '{}')",
+               (topic, '["A. TP/(TP+FN)", "B. TP/(TP+FP)", "C. a", "D. b"]'))
+    try:
+        with client.websocket_connect(f"/ws/voice?token={token}&mode=test&topic_id={topic}") as ws:
+            events, _ = collect(ws, until="quiz_question")
+            session_id = next(e["id"] for e in events if e["type"] == "session")
+            # the browser vanishes without sending {"type": "end"}
+        assert session_id in live._resumable
+
+        second = FakeSession([[sc(turn_complete=True)]])
+        connect2, seen2 = connect_sequence(second)
+        monkeypatch.setattr(live, "default_connect", connect2)
+        with client.websocket_connect(f"/ws/voice?token={token}&mode=test&topic_id={topic}&resume={session_id}") as ws:
+            collect(ws, until="turn_complete")
+        assert "connection dropped" in seen2[0].sent[0]["text"] and "What is recall?" in seen2[0].sent[0]["text"]
+        assert session_id not in live._resumable                      # a token works once
+        other = client.post("/api/auth/signup", json={"email": "thief@example.com", "password": "longenough1"}).json()
+        assert live.take_resume(session_id, other["user"]["id"]) is None   # and only for the same student
+    finally:
+        from app import accounts
+        accounts.erase_user(user)
+        for row in db.query("SELECT id FROM users WHERE email = 'thief@example.com'"):
+            accounts.erase_user(row["id"])
+
+
+def test_a_call_the_student_ended_cannot_be_resumed(monkeypatch):
+    live._resumable.clear()
+    session = FakeSession([[sc(turn_complete=True)]])
+    monkeypatch.setattr(live, "default_connect", fake_connect(session))
+    with client.websocket_connect("/ws/voice") as ws:
+        collect(ws)
+        ws.send_json({"type": "end"})
+    assert not live._resumable

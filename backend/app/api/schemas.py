@@ -79,6 +79,7 @@ class DeleteAccountRequest(BaseModel):
 
 class FlashcardReviewRequest(BaseModel):
     knew: bool
+    hard: bool = False   # "Hard": not forgotten, but back one box (ignored when knew is true)
 
 
 class LinkRequest(BaseModel):
@@ -93,3 +94,33 @@ class PushSubscription(BaseModel):
 class ReminderSettings(BaseModel):
     push: bool | None = None
     email: bool | None = None
+
+
+class MockExamStart(BaseModel):
+    count: int = Field(default=10, ge=3, le=30)
+    minutes: int = Field(default=15, ge=3, le=90)
+
+
+class MockExamSubmit(BaseModel):
+    answers: dict[str, str] = Field(default_factory=dict)   # question position -> chosen letter; missing = unanswered
+
+
+class GroupCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+
+class GroupJoin(BaseModel):
+    code: str = Field(min_length=4, max_length=20)
+
+
+class GroupShare(BaseModel):
+    document_id: int
+
+
+class ChallengeCreate(BaseModel):
+    topic_id: int
+
+
+class ChallengePlay(BaseModel):
+    answers: dict[str, str] = Field(default_factory=dict)
+    seconds: int = Field(default=0, ge=0, le=36000)

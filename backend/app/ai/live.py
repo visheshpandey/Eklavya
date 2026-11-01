@@ -12,15 +12,20 @@ import binascii
 import json
 import re
 import logging
+import secrets
+import time
+from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 from google import genai
 from google.genai import types
 
 from app import db
 from app.ai import prompts
 from app.ai.tools import ToolContext, dispatch, tools_for
+from app.domain import language_check
 from app.domain.scoring import VIVA_QUESTIONS
 from app.config import settings
 
@@ -39,7 +44,38 @@ DEBATE_STYLES = {
     "friendly": ("Friendly sparring partner. Still never agree by default and still argue your side every turn, but use "
                  "a lighter tone, one challenge per turn, and give the student a moment to think. Good for a first debate."),
 }
+# who the tutor is in learn/test/revise/free sessions: a personality line for the prompt and a Gemini Live voice
+TUTORS = {
+    "mentor": {"voice": None,   # None = LIVE_VOICE from the settings
+               "style": ("Calm mentor. Speak a little slower, warm and steady, with gentle encouragement and clear "
+                         "pauses. Reassure first, then guide.")},
+    "senior": {"voice": "Puck",
+               "style": ("Friendly senior. Upbeat, warm and a little playful, like a senior who loves this subject. Quick "
+                         "reactions, light humour, everyday examples, lots of energy. Always respectful: aap, never slang or pet names.")},
+}
+RESUME_SECONDS = 10 * 60   # how long a dropped call can be picked up again where it was
+_resumable: dict = {}      # token -> (expires_at, user_id, state): one entry per call that ended without the student ending it
+RESUME_FIELDS = ("asked_ids", "results", "current_question_id", "current_question", "mission_refreshed", "viva_id",
+                 "viva_question", "viva_answers", "debate_id", "debate_rounds")
+RECONNECTS = 1   # a dropped Gemini connection is retried once, invisibly, before the student is asked to reconnect
+# The browser maps these codes to friendly text in its own language; the message is the English fallback. Raw provider
+# text (exceptions, JSON) is logged on the server and never sent.
+ERROR_MESSAGES = {
+    "upstream_unavailable": "The voice connection was interrupted. Reconnect to carry on.",
+    "quota": "Eklavya's voice service is very busy right now. Wait a minute and try again.",
+    "not_configured": "Voice is not set up on this server yet.",
+    "session_limit": "Session time limit reached. Start a new session to continue.",
+    "bad_photo": "That photo could not be sent. Use a JPG, PNG or WebP under 4 MB.",
+    "need_notes": "Upload your notes first, then start the voice session.",
+    "need_topic": "Pick a topic from your notes first.",
+}
 LANGUAGE_NAMES = {"english": "English", "hindi": "Hindi", "hinglish": "Hinglish (Hindi and English mixed)"}
+# what the tutor may speak and write, per language (prompts/language_rules.md); also used by the Ask tutor
+LANGUAGE_RULES = {
+    "english": "English.",
+    "hindi": "Hindi written in Devanagari, keeping technical terms in English.",
+    "hinglish": "Hindi words written in Roman letters (never Devanagari) mixed with English, the way students write on WhatsApp.",
+}
 
 
 def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
@@ -105,7 +141,7 @@ def debate_plan(topic_name: str, side: str, motion: str) -> str:
 
 
 def build_system_prompt(language: str, topics: list, mode: str = "free", focus_topic: Optional[dict] = None,
-                        debate: Optional[dict] = None) -> str:
+                        debate: Optional[dict] = None, tutor: str = "mentor") -> str:
     persona = "persona_eklavya.md"
     plan = ""
     if focus_topic and mode in ("learn", "test"):
@@ -118,10 +154,18 @@ def build_system_prompt(language: str, topics: list, mode: str = "free", focus_t
         persona = "persona_debater.md"
         plan = debate_plan(focus_topic["topic_name"], debate["side"], debate["motion"]) + debate_scoring_rules()
     style = DEBATE_STYLES.get((debate or {}).get("style"), DEBATE_STYLES["tough"])
+    rules = prompts.load("language_rules.md").replace("{{LANGUAGE_RULE}}", LANGUAGE_RULES.get(language, LANGUAGE_RULES["hinglish"]))
     return (prompts.load(persona).replace("{{LANGUAGE}}", LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["hinglish"]))
             .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "not specified")
             .replace("{{STYLE}}", style)
-            .replace("{{SESSION_PLAN}}", plan))
+            .replace("{{SESSION_PLAN}}", plan)
+            + (f"\n\n# Your personality in this session\n{TUTORS.get(tutor, TUTORS['mentor'])['style']}\n"
+               if persona == "persona_eklavya.md" else "")
+            + "\n\n" + rules)
+
+
+def voice_for(tutor: str) -> str:
+    return TUTORS.get(tutor, TUTORS["mentor"])["voice"] or settings.live_voice
 
 
 def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> str:
@@ -147,13 +191,13 @@ def opening_message(language: str, mode: str, focus_topic: Optional[dict]) -> st
             "and ask what they want to work on.]")
 
 
-def build_config(system_prompt: str, tools=None) -> types.LiveConnectConfig:
+def build_config(system_prompt: str, tools=None, voice: Optional[str] = None) -> types.LiveConnectConfig:
     kwargs = dict(
         response_modalities=["AUDIO"],
         system_instruction=system_prompt,
         tools=tools or tools_for("free"),
         speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
-            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=settings.live_voice))),
+            prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice or settings.live_voice))),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
         realtime_input_config=types.RealtimeInputConfig(
@@ -164,19 +208,77 @@ def build_config(system_prompt: str, tools=None) -> types.LiveConnectConfig:
     return types.LiveConnectConfig(**kwargs)
 
 
-def default_connect(system_prompt: str, tools=None):
+def take_resume(token: Optional[str], user_id: int) -> Optional[dict]:
+    """The saved state of a dropped call, once, for the same student; None when it is unknown or too old."""
+    now = time.monotonic()
+    for key in [k for k, (expires, _, _) in _resumable.items() if expires < now]:
+        _resumable.pop(key, None)
+    entry = _resumable.pop(token, None) if token else None
+    return entry[2] if entry and entry[1] == user_id else None
+
+
+def classify_error(exc: BaseException) -> tuple:
+    """(code, retryable) for a failure on the Gemini side. The exception text itself is only for the server log."""
+    text = f"{type(exc).__name__} {exc}".lower()
+    if "api_key" in text or "api key" in text or "not set" in text:
+        return "not_configured", False
+    if "429" in text or "resource_exhausted" in text or "quota" in text or "rate limit" in text:
+        return "quota", True
+    return "upstream_unavailable", True
+
+
+def _use_longer_keepalive() -> None:
+    """The Gemini client opens its websocket with the library defaults (ping every 20 s, give up after 20 s, wait 10 s
+    for the handshake). On a busy or throttled server that is too tight and the connection drops with 1011 "keepalive
+    ping timeout" or "timed out during opening handshake". It has no setting for this, so the connect call is wrapped."""
+    from google.genai import live as genai_live
+    original = getattr(genai_live, "ws_connect", None)
+    if original is None or getattr(original, "_eklavya_keepalive", False):
+        return
+
+    def connect(*args, **kwargs):
+        kwargs.setdefault("ping_interval", KEEPALIVE_INTERVAL)
+        kwargs.setdefault("ping_timeout", KEEPALIVE_TIMEOUT)
+        kwargs.setdefault("open_timeout", HANDSHAKE_TIMEOUT)
+        return original(*args, **kwargs)
+
+    connect._eklavya_keepalive = True
+    genai_live.ws_connect = connect
+
+
+KEEPALIVE_INTERVAL, KEEPALIVE_TIMEOUT, HANDSHAKE_TIMEOUT = 20, 60, 30
+_use_longer_keepalive()
+_client = None
+_client_lock = asyncio.Lock()
+
+
+async def _get_client():
+    """One Gemini client for the whole server. Building it loads the TLS certificate store, which blocks for seconds on a
+    throttled host: it is done once, in a thread, never on the event loop that answers every voice socket's pings."""
+    global _client
+    async with _client_lock:
+        if _client is None:
+            _client = await asyncio.to_thread(
+                lambda: genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(api_version="v1beta")))
+        return _client
+
+
+@asynccontextmanager
+async def default_connect(system_prompt: str, tools=None, voice: Optional[str] = None):
     """Real Gemini Live connection (an async context manager). Replaced in tests."""
     if not settings.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set in backend/.env")
-    client = genai.Client(api_key=settings.gemini_api_key, http_options=types.HttpOptions(api_version="v1beta"))
-    return client.aio.live.connect(model=settings.gemini_live_model, config=build_config(system_prompt, tools))
+    client = await _get_client()
+    async with client.aio.live.connect(model=settings.gemini_live_model, config=build_config(system_prompt, tools, voice)) as session:
+        yield session
 
 
 class LiveTutorSession:
     def __init__(self, ws: WebSocket, user_id: int, language: str, document_id: Optional[int],
                  topics: list, connect=None, mode: str = "free", focus_topic: Optional[dict] = None,
-                 debate: Optional[dict] = None):
+                 debate: Optional[dict] = None, tutor: str = "mentor"):
         self.ws, self.user_id, self.language = ws, user_id, language
+        self.tutor = tutor if tutor in TUTORS else "mentor"
         self.topics = topics
         self.mode, self.focus_topic, self.debate = mode, focus_topic, debate   # debate: {"side": "for"|"against", "motion": str}
         self.connect = connect or default_connect
@@ -188,6 +290,11 @@ class LiveTutorSession:
         self.turns = 0
         self.session_id = None
         self.closed = False
+        self.started = time.monotonic()   # the session time limit counts across reconnects
+        self.token = secrets.token_urlsafe(12)   # lets the browser pick this call up again after its own connection drops
+        self.ended_by_student = False
+        self.nudge = False        # the tutor's last turn slipped on language or address: it is reminded after that turn
+        self.resumed = False
 
     # ---- browser-facing helpers
     async def emit(self, event: dict):
@@ -211,6 +318,9 @@ class LiveTutorSession:
     async def _final(self, role: str):
         buf = self.user_buf if role == "user" else self.tutor_buf
         text = TRANSCRIPT_MARKERS.sub("", buf).strip()
+        if role == "tutor" and text and (slips := language_check.violations(text, self.language)):
+            log.warning("The tutor slipped in %s: %s", self.language, "; ".join(slips))
+            self.nudge = True
         if role == "user":
             self.user_buf = ""
         else:
@@ -260,6 +370,10 @@ class LiveTutorSession:
                 await self._final("user")
                 await self._final("tutor")
                 self.turns += 1
+                if self.nudge:   # before turn_complete reaches the browser, so the reminder is on its way before the student replies
+                    self.nudge = False
+                    await session.send_realtime_input(text=language_check.REMINDER.format(
+                        rule=LANGUAGE_RULES.get(self.language, LANGUAGE_RULES["hinglish"])))
                 await self.emit({"type": "turn_complete"})
 
         tc = getattr(msg, "tool_call", None)
@@ -270,9 +384,8 @@ class LiveTutorSession:
                 responses.append(types.FunctionResponse(name=fc.name, id=fc.id, response=result))
             await session.send_tool_response(function_responses=responses)
 
-        if getattr(msg, "go_away", None) is not None:
-            await self.emit({"type": "error", "message": "Gemini is ending this voice session. Please start it again."})
-            raise _SessionEnded()
+        if getattr(msg, "go_away", None) is not None:   # Gemini asks the client to reconnect: treated like any dropped connection
+            raise ConnectionError("Gemini sent go_away")
 
     async def _gemini_to_browser(self, session):
         while True:  # receive() yields one turn at a time
@@ -295,6 +408,7 @@ class LiveTutorSession:
                     continue
                 kind = data.get("type")
                 if kind == "end":
+                    self.ended_by_student = True
                     return
                 if kind == "audio_stream_end":
                     await session.send_realtime_input(audio_stream_end=True)
@@ -318,7 +432,7 @@ class LiveTutorSession:
         except (binascii.Error, ValueError):
             raw = b""
         if mime not in PHOTO_TYPES or not raw or len(raw) > MAX_PHOTO_BYTES:
-            await self.emit({"type": "error", "message": "That photo could not be sent. Use a JPG, PNG or WebP under 4 MB."})
+            await self.emit({"type": "error", "code": "bad_photo", "retryable": False, "message": ERROR_MESSAGES["bad_photo"]})
             return
         note = " ".join(str(data.get("note", "")).split())[:300]
         instruction = ("[The student just showed you this photo (a textbook page, notes or a question). Look at it carefully. "
@@ -332,17 +446,67 @@ class LiveTutorSession:
         await self._final("user")
         await self._final("tutor")
         self.closed = True       # nothing more goes to the browser; what is left is saving what happened
-        # a direct write, not a thread: it is one tiny UPDATE, and it must not depend on the event loop's executor
-        # still being alive while the connection is being torn down
-        db.execute("UPDATE voice_sessions SET ended_at = CURRENT_TIMESTAMP, turns = ? WHERE id = ?", (self.turns, self.session_id))
-
-    async def run(self):
-        self.session_id = await asyncio.to_thread(
-            db.execute, "INSERT INTO voice_sessions (user_id, mode, language, study_mode, topic_id) VALUES (?, ?, ?, ?, ?)",
-            (self.user_id, "gemini-live", self.language, self.mode, self.focus_topic["id"] if self.focus_topic else None))
+        sql, args = "UPDATE voice_sessions SET ended_at = CURRENT_TIMESTAMP, turns = ? WHERE id = ?", (self.turns, self.session_id)
         try:
-            prompt = build_system_prompt(self.language, self.topics, self.mode, self.focus_topic, self.debate)
-            async with self.connect(prompt, tools_for(self.mode)) as session:
+            await asyncio.to_thread(db.execute, sql, args)   # normally off the event loop, which also answers every voice socket
+        except RuntimeError:   # the executor is already shutting down (server stopping): write it directly, it is one tiny UPDATE
+            db.execute(sql, args)
+
+    def restore(self, state: dict) -> None:
+        """Pick a dropped call up again: the questions asked, graded answers, viva marks and debate rounds come back."""
+        for name in RESUME_FIELDS:
+            if name in state:
+                setattr(self.ctx, name, state[name])
+        self.resumed = True
+
+    def _keep_for_resume(self) -> None:
+        """A call that ended without the student ending it (their connection dropped, or ours did) can be resumed."""
+        if self.ended_by_student:
+            return
+        ctx = self.ctx
+        if not (ctx.results or ctx.viva_answers or ctx.debate_rounds or ctx.asked_ids or self.turns):
+            return
+        _resumable[self.token] = (time.monotonic() + RESUME_SECONDS, self.user_id,
+                                  {name: getattr(ctx, name) for name in RESUME_FIELDS})
+
+    def _client_gone(self) -> bool:
+        return self.ws.client_state != WebSocketState.CONNECTED or self.ws.application_state != WebSocketState.CONNECTED
+
+    def resume_message(self) -> str:
+        """What to tell the tutor after a reconnect so it carries on instead of starting over."""
+        lang = LANGUAGE_NAMES.get(self.language, "Hinglish")
+        ctx, topic = self.ctx, (self.focus_topic or {}).get("topic_name")
+        facts = []
+        if topic:
+            facts.append(f'The topic is "{topic}".')
+        if self.mode in ("learn", "test", "revise") and self.focus_topic:
+            right = sum(1 for r in ctx.results if r["is_correct"])
+            facts.append(f"{len(ctx.results)} of {ctx.test_total} test questions are already graded ({right} right); do not ask those again.")
+            waiting = ctx.current_question
+            if waiting and ctx.current_question_id and not any(r["question_id"] == ctx.current_question_id for r in ctx.results):
+                facts.append(f'Question {waiting["number"]} is still waiting for the student\'s answer: "{waiting["question"]}" '
+                             f'with options {"; ".join(waiting["options"])}. Read it again briefly and wait for their answer.')
+        elif self.mode == "viva":
+            marks = ", ".join(f'{a["mark"]}' for a in ctx.viva_answers) or "none yet"
+            facts.append(f"{len(ctx.viva_answers)} of {VIVA_QUESTIONS} viva questions are marked (marks: {marks}).")
+            if ctx.viva_question:
+                facts.append(f'The question waiting for an answer is: "{ctx.viva_question}". Repeat it briefly and wait.')
+        elif self.mode == "debate" and self.debate:
+            facts.append(f'Debate motion: "{self.debate["motion"] or "the one you chose"}". You argue {self.debate["side"]}. '
+                         f"{len(ctx.debate_rounds)} of the student's arguments are already scored.")
+        return (f"[The connection dropped for a moment and is back. Say one short line in {lang} that you are back, then carry on "
+                f"exactly where you were. Do not start over and do not repeat what is already done. {' '.join(facts)}]")
+
+    async def _connected(self, resume: bool):
+        """One connection to Gemini, from handshake to the end of the call (or until it drops, which raises)."""
+        prompt = build_system_prompt(self.language, self.topics, self.mode, self.focus_topic, self.debate, self.tutor)
+        resume = resume or self.resumed
+        async with self.connect(prompt, tools_for(self.mode), voice=voice_for(self.tutor)) as session:
+            if resume:
+                await self.emit({"type": "session", "id": self.token})
+                await session.send_realtime_input(text=self.resume_message())
+            else:
+                await self.emit({"type": "session", "id": self.token})
                 if self.focus_topic and self.mode in ("learn", "test"):
                     await self.emit({"type": "phase", "phase": "teaching" if self.mode == "learn" else "test",
                                      "topic": self.focus_topic["topic_name"]})
@@ -353,26 +517,52 @@ class LiveTutorSession:
                 elif self.focus_topic and self.mode in ("viva", "revise"):
                     await self.emit({"type": "phase", "phase": self.mode, "topic": self.focus_topic["topic_name"]})
                 await session.send_realtime_input(text=opening_message(self.language, self.mode, self.focus_topic))
-                tasks = [asyncio.create_task(self._gemini_to_browser(session)),
-                         asyncio.create_task(self._browser_to_gemini(session)),
-                         asyncio.create_task(asyncio.sleep(settings.session_cap_seconds))]
+            remaining = max(1.0, settings.session_cap_seconds - (time.monotonic() - self.started))
+            tasks = [asyncio.create_task(self._gemini_to_browser(session)),
+                     asyncio.create_task(self._browser_to_gemini(session)),
+                     asyncio.create_task(asyncio.sleep(remaining))]
+            try:
+                done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                for t in done:
+                    if t is tasks[2]:
+                        await self.emit({"type": "error", "code": "session_limit", "retryable": False,
+                                         "message": ERROR_MESSAGES["session_limit"]})
+                    else:
+                        exc = t.exception()
+                        if exc is not None and not isinstance(exc, _SessionEnded):
+                            raise exc
+            finally:
+                for t in tasks:
+                    t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def run(self):
+        self.session_id = await asyncio.to_thread(
+            db.execute, "INSERT INTO voice_sessions (user_id, mode, language, study_mode, topic_id) VALUES (?, ?, ?, ?, ?)",
+            (self.user_id, "gemini-live", self.language, self.mode, self.focus_topic["id"] if self.focus_topic else None))
+        try:
+            attempt = 0
+            while True:
                 try:
-                    done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-                    for t in done:
-                        if t is tasks[2]:
-                            await self.emit({"type": "error", "message": "Session time limit reached. Start a new session to continue."})
-                        else:
-                            exc = t.exception()
-                            if exc is not None and not isinstance(exc, _SessionEnded):
-                                raise exc
-                finally:
-                    for t in tasks:
-                        t.cancel()
-                    await asyncio.gather(*tasks, return_exceptions=True)
-        except Exception as e:  # noqa: BLE001 - tell the client, never hide it
-            log.exception("Live session failed")
-            await self.emit({"type": "error", "message": f"Gemini Live failed: {e}"})
+                    await self._connected(resume=attempt > 0)
+                    break
+                except Exception as exc:  # noqa: BLE001 - classified below; nothing raw reaches the browser
+                    log.exception("Live session failed")
+                    if self._client_gone():
+                        break
+                    code, retryable = classify_error(exc)
+                    out_of_time = time.monotonic() - self.started >= settings.session_cap_seconds
+                    if retryable and attempt < RECONNECTS and not out_of_time:
+                        attempt += 1   # one transparent retry: the tutor is told where the lesson was and carries on
+                        await self._final("user")
+                        await self._final("tutor")
+                        await self.emit({"type": "reconnecting", "attempt": attempt})
+                        await asyncio.sleep(1)
+                        continue
+                    await self.emit({"type": "error", "code": code, "retryable": retryable, "message": ERROR_MESSAGES[code]})
+                    break
         finally:
+            self._keep_for_resume()
             # shielded: if this handler is cancelled (server shutdown, a dropped connection) the end time and the turn
             # count are still written, so the session is never left looking unfinished
             await asyncio.shield(self._save_ending())

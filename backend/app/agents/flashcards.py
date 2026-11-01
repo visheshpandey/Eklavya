@@ -83,8 +83,11 @@ def cards_for(user_id: int, topic_id: int = None):
 BOX_DAYS = (0, 1, 3, 7, 14, 30)
 
 
-def next_box(box: int | None, knew: bool) -> int:
-    return min((box or 0) + 1, len(BOX_DAYS) - 1) if knew else 0
+def next_box(box: int | None, knew: bool, hard: bool = False) -> int:
+    """Got it moves up a box, Again goes back to box 0, Hard steps back one box (the card is not forgotten, just shaky)."""
+    if knew:
+        return min((box or 0) + 1, len(BOX_DAYS) - 1)
+    return max((box or 0) - 1, 0) if hard else 0
 
 
 def due_cards(user_id: int, today: date):
@@ -94,11 +97,17 @@ def due_cards(user_id: int, today: date):
         "ORDER BY COALESCE(f.box, 0), f.id", (user_id, today.isoformat()))
 
 
-def review(user_id: int, card_id: int, knew: bool, today: date):
+def reset_deck(user_id: int, today: date) -> dict:
+    """"Reset today's deck": every card comes back as new, due now."""
+    db.execute("UPDATE flashcards SET box = 0, due_on = NULL, reviewed_at = NULL WHERE user_id = ?", (user_id,))
+    return {"due_count": len(due_cards(user_id, today))}
+
+
+def review(user_id: int, card_id: int, knew: bool, today: date, hard: bool = False):
     card = db.one("SELECT id, box FROM flashcards WHERE id = ? AND user_id = ?", (card_id, user_id))
     if not card:
         raise NotFoundError("Unknown flashcard")
-    box = next_box(card["box"], knew)
+    box = next_box(card["box"], knew, hard)
     due = today + timedelta(days=BOX_DAYS[box])
     db.execute("UPDATE flashcards SET box = ?, due_on = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?",
                (box, due.isoformat(), card_id))

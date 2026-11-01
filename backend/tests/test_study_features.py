@@ -303,7 +303,9 @@ def test_a_bad_photo_is_refused_with_a_clear_message(monkeypatch):
     with client.websocket_connect("/ws/voice") as ws:
         ws.send_json({"type": "photo", "mime": "image/gif", "data": base64.b64encode(b"GIF89a").decode()})
         msg = ws.receive_json()
-    assert msg["type"] == "error" and "JPG, PNG or WebP" in msg["message"]
+        while msg["type"] != "error":   # the call announces its session id first
+            msg = ws.receive_json()
+    assert msg["code"] == "bad_photo" and "JPG, PNG or WebP" in msg["message"]
 
 
 def test_transcription_markers_never_reach_the_student(monkeypatch):
@@ -511,3 +513,42 @@ def test_every_persona_keeps_one_language_and_never_assumes_gender():
     assert "false negative is a real positive that was missed" in prompts["debater"] and "Never swap them" in prompts["debater"]
     revise = build_system_prompt("hinglish", topics, "revise", focus)
     assert "session language in every turn" in revise
+
+
+@pytest.mark.parametrize("failure, friendly", [
+    ("503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The model is overloaded'}}", "The photo reader is busy right now. Please try again in a minute."),
+    ("429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'status': 'RESOURCE_EXHAUSTED'}}", "The photo reader is busy right now. Please try again in a minute."),
+    ("400 INVALID_ARGUMENT. {'error': {'message': 'Unable to process input image', 'details': ['x' * 50]}}", "Eklavya could not read this photo. Please try again, or use a clearer one."),
+])
+def test_uploading_a_photo_when_gemini_fails_shows_friendly_words_over_http(monkeypatch, failure, friendly):
+    """The whole path: POST a photo -> Gemini says 503 / 429 / something else -> the student gets a plain sentence, never the provider text."""
+    monkeypatch.setattr(gemini, "RETRY_PAUSE_SECONDS", 0)
+
+    class Failing:
+        class models:
+            @staticmethod
+            def generate_content(**kw):
+                raise RuntimeError(failure)
+
+    monkeypatch.setattr(gemini, "_get_client", lambda: Failing)
+    response = client.post("/api/upload-document", files={"file": ("page.jpg", b"\xff\xd8\xff fake jpeg", "image/jpeg")}, data={"user_id": "1"})
+    assert response.status_code == 502
+    body = response.json()
+    assert body["error"] == friendly and body["code"] == "llm_unavailable"
+    assert not any(raw in body["error"] for raw in ("503", "429", "400", "UNAVAILABLE", "INVALID_ARGUMENT", "{"))
+
+
+def test_a_scanned_pdf_or_link_that_gemini_cannot_read_never_shows_provider_text(monkeypatch):
+    from app.errors import LLMError
+    monkeypatch.setattr(gemini, "RETRY_PAUSE_SECONDS", 0)
+
+    class Failing:
+        class models:
+            @staticmethod
+            def generate_content(**kw):
+                raise RuntimeError("500 INTERNAL. {'error': 'internal details'}")
+
+    monkeypatch.setattr(gemini, "_get_client", lambda: Failing)
+    with pytest.raises(LLMError) as err:
+        gemini.read_pdf(b"%PDF-1.4")
+    assert "INTERNAL" not in str(err.value) and "{" not in str(err.value)

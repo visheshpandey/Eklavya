@@ -12,7 +12,7 @@ import requests
 from app import auth, db
 from app.config import settings
 from app.errors import BadRequestError, NotFoundError, TooManyRequestsError, UnauthorizedError
-from app.services import mailer
+from app.services import challenges, groups, mailer
 from app.services.documents import delete_document
 
 # ---------------------------------------------------------------- rate limits (one server process, so memory is enough)
@@ -80,7 +80,7 @@ def change_password(user_id: int, current: str, new: str) -> dict:
 
 # rows that belong to the user directly; documents (with their topics, notes and questions) are removed first
 _USER_TABLES = ("learner_mastery", "quiz_attempts", "misconceptions", "study_missions", "agent_logs", "learner_state",
-                "boards", "flashcards", "password_resets", "push_subscriptions")
+                "boards", "flashcards", "password_resets", "push_subscriptions", "doubts")
 
 
 def delete_account(user_id: int, password: str, confirm: str) -> dict:
@@ -99,7 +99,11 @@ def erase_user(user_id: int) -> None:
     """Remove a user and every row that belongs to them."""
     for doc in db.query("SELECT id FROM documents WHERE user_id = ?", (user_id,)):
         delete_document(user_id, doc["id"])
+    groups.leave_all(user_id)
+    challenges.erase(user_id)
     with db.get_conn() as conn:
+        conn.execute("DELETE FROM mock_exam_items WHERE exam_id IN (SELECT id FROM mock_exams WHERE user_id = ?)", (user_id,))
+        conn.execute("DELETE FROM mock_exams WHERE user_id = ?", (user_id,))
         conn.execute("DELETE FROM transcripts WHERE session_id IN (SELECT id FROM voice_sessions WHERE user_id = ?)", (user_id,))
         conn.execute("DELETE FROM viva_answers WHERE viva_id IN (SELECT id FROM vivas WHERE user_id = ?)", (user_id,))
         conn.execute("DELETE FROM debate_rounds WHERE debate_id IN (SELECT id FROM debates WHERE user_id = ?)", (user_id,))

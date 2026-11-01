@@ -26,4 +26,5 @@ def delete_document(user_id: int, document_id: int) -> None:
         conn.execute("DELETE FROM chunk_embeddings WHERE chunk_id IN (SELECT id FROM chunks WHERE document_id = ?)", (document_id,))
         conn.execute("DELETE FROM chunks WHERE document_id = ?", (document_id,))
         conn.execute("DELETE FROM topics WHERE document_id = ?", (document_id,))
+        conn.execute("DELETE FROM group_documents WHERE document_id = ?", (document_id,))   # no longer shared
         conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
