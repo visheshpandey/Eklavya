@@ -18,9 +18,16 @@ const QUOTES = [
 const dayNumber = (date) => Math.floor(date.getTime() / 86_400_000);
 
 export function mountTodayHome({ store, head, hero, route, subjects, quote, talkButton, mapButton, storage = globalThis.localStorage, getName,
-  onStartSession, onReviewCards, onAddNotes, onSubject, onTalk, onMap, reduceMotion = false }) {
+  onStartSession, onReviewCards, onAddNotes, onSubject, onTalk, onMap, mountScene = null, reduceMotion = false }) {
   const day = new Date().toISOString().slice(0, 10);
   let done = loadRouteDone(storage, day);
+  let deskEl = null, floatEl = null, stickyOpen = null, stickyStreak = null, scene = null;
+  const sceneInfo = ({ today, dashboard, steps }) => {   // what the 3D book's pages and cards say
+    const next = steps[1].action ?? steps[0].action;
+    const row = next ? (dashboard?.mastery ?? []).find((m) => m.topic_id === next.topicId) : null;
+    return { topic: next ? (row?.topic_name ?? steps[1].sub.replace(/, in a voice session$/, '')) : '', mastery: row?.mastery_score ?? 0,
+      open: (dashboard?.alerts ?? []).filter((a) => a.type === 'misconception').length, streak: today?.streak ?? 0, steps: steps.map((step) => step.title) };
+  };
 
   const dataNow = () => {
     const state = store.getState();
@@ -39,7 +46,8 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
       el('p', { class: 'lead', text: 'Let\'s make one thing clearer today.' }));
   }
 
-  function drawHero({ today, dashboard, steps }) {
+  function drawHero(data) {
+    const { today, dashboard, steps } = data;
     const next = steps[1].action ?? steps[0].action;
     const topicRow = next ? (dashboard?.mastery ?? []).find((m) => m.topic_id === next.topicId) : null;
     const topicName = topicRow?.topic_name ?? steps[1].sub.replace(/, in a voice session$/, '');
@@ -54,10 +62,21 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
       el('div', { class: 'page r' }, el('span', { class: 'mono', text: 'Where you are' }), el('div', { class: 'hill hb' }), el('div', { class: 'hill hf' }),
         el('p', { class: 'cap', text: 'Pick up where you left off.' }), el('i'), el('i')),
       el('div', { class: 'spine' }));
-    const desk = el('div', { class: 'desk', id: 'desk', 'aria-hidden': 'true' },
-      el('div', { class: 'float' }, book),
-      el('div', { class: 'sticky n1' }, el('small', { class: 'mono', text: 'Open mistakes' }), el('strong', { text: String(open) })),
-      el('div', { class: 'sticky n2' }, el('small', { class: 'mono', text: 'Keep it going' }), el('strong', {}, `${streak}-day streak.`)));
+    if (!deskEl) {   // built once and kept: the 3D scene lives in it and must not be rebuilt each time the data refreshes
+      floatEl = el('div', { class: 'float' }, book);
+      stickyOpen = el('strong', { text: String(open) });
+      stickyStreak = el('strong', {}, `${streak}-day streak.`);
+      deskEl = el('div', { class: 'desk', id: 'desk', 'aria-hidden': 'true' }, floatEl,
+        el('div', { class: 'sticky n1' }, el('small', { class: 'mono', text: 'Open mistakes' }), stickyOpen),
+        el('div', { class: 'sticky n2' }, el('small', { class: 'mono', text: 'Keep it going' }), stickyStreak));
+      scene = mountScene?.(deskEl, sceneInfo(data)) ?? null;
+    } else {
+      floatEl.replaceChildren(book);
+      stickyOpen.textContent = String(open);
+      stickyStreak.textContent = `${streak}-day streak.`;
+      scene?.update(sceneInfo(data));
+    }
+    const desk = deskEl;
 
     const startButton = el('button', { class: 'btn btn-primary', type: 'button',
       onclick: () => (next ? onStartSession(next.mode ?? 'learn', next.topicId) : onAddNotes()) }, next ? 'Start learning ↗' : 'Add notes ↗');

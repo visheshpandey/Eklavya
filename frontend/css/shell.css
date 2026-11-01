@@ -422,3 +422,9 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .card, .stat { transition: box-shadow .25s; }
 .card:hover, .stat:hover { box-shadow: 0 14px 26px var(--drop-shadow); }
 .rstep .mk svg { width: 100%; height: 100%; display: block; }
+
+/* the 3D scenes: the canvas fills its host; the drawn version underneath stays as the fallback and fades out once the scene is up */
+.scene-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 1; transition: opacity .4s; }
+.desk.waiting .scene-canvas { opacity: 0; }
+.desk.is-3d .float, .desk.is-3d .sticky { opacity: 0; animation: none; }
+.desk.is-3d { perspective: none; }

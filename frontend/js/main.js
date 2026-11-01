@@ -34,7 +34,7 @@ import { mountStudyHeader } from './components/study-header.js';
 import { mountStudyLaunch } from './components/study-launch.js';
 import { mountSessionOrb } from './components/session-orb.js';
 import { mountStageTools } from './components/stage-tools.js';
-import { startMotion } from './motion/index.js';
+import { mountHeroScene, startMotion } from './motion/index.js';
 import { mountCelebration } from './components/celebration.js';
 import { mountStepper } from './components/stepper.js';
 import { mountDebateTag } from './components/debate-tag.js';
@@ -169,7 +169,7 @@ store.select(selectDashboard, () => ask.redrawSide());
 const reviewCards = () => showView(VIEWS.FLASHCARDS);
 const todayHome = mountTodayHome({
   store, head: byId('todayHead'), hero: byId('todayHero'), route: byId('route'), subjects: byId('subjects'), quote: byId('quote'),
-  talkButton: byId('talkIt'), mapButton: byId('seeMap'), getName: () => getUser()?.name ?? '', reduceMotion,
+  talkButton: byId('talkIt'), mapButton: byId('seeMap'), getName: () => getUser()?.name ?? '', reduceMotion, mountScene: mountHeroScene,
   onStartSession: (mode, topicId) => startMode(mode, topicId),
   onReviewCards: reviewCards, onAddNotes: openNotes,
   onSubject: (topicId) => { showView(VIEWS.PROGRESS); conceptMap.select(topicId); },
