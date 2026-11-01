@@ -34,6 +34,9 @@ const quiet = (fn) => {
   } catch { /* already gone */ }
 };
 
+/** How long the microphone stays closed at the start of a call so the opening greeting is not cut off by its own echo. */
+export const GREETING_GRACE_MS = 12000;
+
 export class VoiceClient {
   /**
    * @param {{onEvent: (event: object) => void, onStatus: (status: string) => void, onLevel?: (level: number) => void}} handlers
@@ -128,7 +131,13 @@ export class VoiceClient {
 
     const source = micCtx.createMediaStreamSource(stream);
     this.node = new AudioWorkletNode(micCtx, 'pcm-capture');
-    this.node.port.onmessage = (e) => { if (this.ws === ws && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
+    // The tutor's opening line is spoken through the speakers, and a laptop microphone hears it: that sounds like the student talking, the
+    // server treats it as an interruption, and the greeting is cut off after a few words ("Hello! Aaj hum"). So the microphone stays closed
+    // until the first turn is complete, or GREETING_GRACE_MS has passed. A resumed call has no greeting to protect.
+    this.micOpen = Boolean(resumeId);
+    clearTimeout(this.micTimer);
+    if (!this.micOpen) this.micTimer = setTimeout(() => { this.micOpen = true; }, GREETING_GRACE_MS);
+    this.node.port.onmessage = (e) => { if (this.ws === ws && this.micOpen && ws.readyState === WebSocket.OPEN) ws.send(e.data); };
     source.connect(this.node);
     this.micMeter = meter(micCtx, source);
     this._setStatus(VOICE_STATUS.LISTENING);
@@ -171,6 +180,7 @@ export class VoiceClient {
     if (typeof message.data !== 'string') { this._play(message.data); return; }
     let event;
     try { event = JSON.parse(message.data); } catch { return; }
+    if (event.type === 'turn_complete') this.micOpen = true;   // the greeting (or any first turn) is finished: the student can speak
     if (event.type === 'interrupted') this._flushPlayback();
     if (event.type === 'session') this.resumeId = event.id;   // lets a dropped call be picked up again
     this.onEvent(event);
@@ -211,6 +221,8 @@ export class VoiceClient {
 
   /** End the current session (and cancel a start that is still waiting). */
   _cleanup() {
+    clearTimeout(this.micTimer);
+    this.micOpen = false;
     this.session++;
     quiet(() => this.node?.disconnect());
     quiet(() => this.stream?.getTracks().forEach((t) => t.stop()));

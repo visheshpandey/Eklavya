@@ -77,19 +77,23 @@
         <header class="top">
           <span class="mono brand-top">Eklavya / <b id="crumb">Today</b></span>
           <div class="topacts">
-            <button class="btn btn-secondary" id="soundBtn" type="button" aria-pressed="true"><span class="sound-label">Sound on</span></button>
-            <label class="visually-hidden" for="tutor">Tutor personality: calm mentor or friendly senior</label>
-            <select id="tutor" class="select">
-              <option value="mentor" selected title="Calm mentor">Mentor</option>
-              <option value="senior" title="Friendly senior">Senior</option>
-            </select>
-            <label class="visually-hidden" for="lang">Tutor language</label>
-            <select id="lang" class="select">
-              <option value="hinglish" selected>Hinglish</option>
-              <option value="english">English</option>
-              <option value="hindi" lang="hi">हिन्दी</option>
-            </select>
-            <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
+            <div id="topMenu" class="topmenu" role="group" aria-label="Settings">
+              <button class="btn btn-secondary" id="soundBtn" type="button" aria-pressed="true"><span class="sound-label">Sound on</span></button>
+              <label class="menu-label" for="tutor">Tutor personality: calm mentor or friendly senior</label>
+              <select id="tutor" class="select">
+                <option value="mentor" selected title="Calm mentor">Mentor</option>
+                <option value="senior" title="Friendly senior">Senior</option>
+              </select>
+              <label class="menu-label" for="lang">Tutor language</label>
+              <select id="lang" class="select">
+                <option value="hinglish" selected>Hinglish</option>
+                <option value="english">English</option>
+                <option value="hindi" lang="hi">हिन्दी</option>
+              </select>
+              <span class="menu-label">Display</span>
+              <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
+            </div>
+            <button id="btnMore" class="icon-btn" type="button" aria-expanded="false" aria-controls="topMenu" aria-label="Settings: sound, tutor, language, display"><span aria-hidden="true" style="font-size:22px;line-height:1">⋯</span></button>
             <button id="btnSignIn" class="btn btn-primary" type="button" hidden>Sign in</button>   <!-- guests only: the way in is always in view -->
             <button id="btnAccountTop" class="icon-btn top-account" type="button" aria-label="Account"><span data-icon="user" data-size="18"></span></button>
             <button id="btnCommand" class="btn btn-secondary" type="button" aria-label="Search or jump to" data-i18n-label="cmd.trigger" aria-keyshortcuts="Control+K Meta+K"><span data-icon="magnifying-glass" data-size="16"></span><span class="cmd-trigger-text" data-i18n="cmd.search">Search</span><kbd id="kbdHint" aria-hidden="true">Ctrl K</kbd></button>

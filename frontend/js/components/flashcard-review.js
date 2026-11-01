@@ -26,7 +26,11 @@ export function mountFlashcardReview({ store, root, onLoadDue, onLoadAll, onRate
 
   function draw() {
     const card = current();
-    if (loading) { render(root, el('p', { class: 'hint', role: 'status', text: 'Loading your deck…' })); return; }
+    if (loading) {   // the shape of what is coming, shimmering, instead of a blank panel with a sentence
+      render(root, el('div', { class: 'fc-skeleton', role: 'status', 'aria-label': 'Loading your deck' },
+        el('span', { class: 'skeleton sk-pill' }), el('span', { class: 'skeleton sk-card' }), el('span', { class: 'skeleton sk-line' }), el('span', { class: 'skeleton sk-line' })));
+      return;
+    }
     if (!card) {
       render(root,
         el('span', { class: 'duepill' }, mock ? 'Round complete' : el('b', { text: '0' }), mock ? '' : ' due today'),

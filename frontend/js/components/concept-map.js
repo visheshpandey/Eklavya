@@ -22,8 +22,10 @@ export function mapGeometry(count) {
   const ringRadius = radial ? Math.max(135, Math.ceil(4.6 * count)) : 420 / 2 - 70;   // wider ring for more topics: circles never touch
   // circles shrink as the ring fills, but stay big enough for a 3-digit percentage
   const nodeRadius = Math.max(11, Math.min(20, Math.floor((Math.PI * ringRadius) / Math.max(count, 1) - 4)));
-  const size = !radial ? 420 : labelled ? Math.max(540, 2 * (ringRadius + nodeRadius + 100)) : 2 * (ringRadius + nodeRadius + 16);   // room for the names
-  return { size, ringRadius, nodeRadius, radial, labelChars: radial ? 15 : 22, labelled };
+  const labelChars = radial ? 26 : 22;   // radial names run along a spoke on one line; the others wrap onto two lines of this length
+  const room = Math.ceil(labelChars * 5.8) + 14;   // the room a name needs beyond its circle (10.5px type)
+  const size = !radial ? 420 + 2 * 60 : labelled ? Math.max(600, 2 * (ringRadius + nodeRadius + room)) : 2 * (ringRadius + nodeRadius + 16);
+  return { size, ringRadius, nodeRadius, radial, labelChars, labelled };
 }
 
 /** Positions on a ring, in the order given (topics of one document stay together). */
@@ -35,6 +37,20 @@ export function ringLayout(count, size = 420, radius = size / 2 - 70) {
 }
 
 const shorten = (text, max) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
+
+/** A name on up to `maxLines` lines of about `perLine` characters, broken at spaces; only a name longer than all lines together is cut. */
+export function wrapLabel(text, perLine = 22, maxLines = 2) {
+  const lines = [];
+  let current = '';
+  for (const word of String(text).split(/\s+/).filter(Boolean)) {
+    if (current && `${current} ${word}`.length > perLine) { lines.push(current); current = word; } else current = current ? `${current} ${word}` : word;
+  }
+  if (current) lines.push(current);
+  if (lines.length <= maxLines) return lines.map((line) => shorten(line, perLine + 6));
+  const kept = lines.slice(0, maxLines);
+  kept[maxLines - 1] = shorten(`${kept[maxLines - 1]} ${lines.slice(maxLines).join(' ')}`, perLine + 6);
+  return kept;
+}
 
 export function mountConceptMap({ store, root, onStudy, onAsk }) {
   let selected = null;   // the circle whose card is showing; kept when the map redraws
@@ -122,7 +138,9 @@ export function mountConceptMap({ store, root, onStudy, onAsk }) {
             'dominant-baseline': 'middle', transform: `rotate(${left ? degrees + 180 : degrees} ${lx} ${ly})` }, text);
         } else {
           const outward = Math.cos(p.angle) >= 0 ? 'start' : 'end';
-          label = svgEl('text', { x: lx, y: ly + 4, class: 'map-label', 'text-anchor': Math.abs(Math.cos(p.angle)) < 0.2 ? 'middle' : outward }, text);
+          const lines = wrapLabel(node.topic, geo.labelChars, 2);   // a long name goes on two lines instead of being cut
+          label = svgEl('text', { x: lx, y: ly + 4 - (lines.length - 1) * 6, class: 'map-label', 'text-anchor': Math.abs(Math.cos(p.angle)) < 0.2 ? 'middle' : outward },
+            lines.map((line, i) => svgEl('tspan', { x: lx, dy: i ? '1.15em' : '0' }, line)));
         }
       }
       const group = svgEl('g', { class: 'map-node', role: 'button', tabindex: '0', 'aria-pressed': String(node.id === selected), 'aria-label': `${node.topic}, ${percent}%, ${status.label}` },

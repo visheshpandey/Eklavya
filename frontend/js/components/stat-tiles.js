@@ -27,12 +27,12 @@ export function mountStatTiles({ store, root }) {
       el('strong', { class: 'tnum', style: tone ? `color:var(--${tone})` : null, text: value }),
       el('p', { text: note }));
     render(root,
-      tile(t('stat.mastery', language), average == null ? '—' : `${average}%`, mastery.length ? `Across ${subjects} subject${subjects === 1 ? '' : 's'}, ${mastery.length} topics` : 'Add notes to begin'),
-      tile(t('stat.answers', language), attempts.length ? String(attempts.length) : '—', attempts.length ? `${right} correct · ${attempts.length - right} to revisit` : 'Answer a question to see this'),
-      tile('Cards known today', cardsTotal ? `${cardsKnown} / ${cardsTotal}` : '—', cardsTotal ? 'From your flashcard decks' : 'Make cards in the Flashcards tab'),
+      tile(t('stat.mastery', language), `${average ?? 0}%`, mastery.length ? `Across ${subjects} subject${subjects === 1 ? '' : 's'}, ${mastery.length} topics` : 'Add notes to begin'),
+      tile(t('stat.answers', language), String(attempts.length), attempts.length ? `${right} correct · ${attempts.length - right} to revisit` : 'Answer a question to see this'),
+      tile('Cards known today', `${cardsKnown} / ${cardsTotal}`, cardsTotal ? 'From your flashcard decks' : 'Make cards in the Flashcards tab'),
       tile('Open misconceptions', open ? String(open).padStart(2, '0') : '00', open ? 'Worth clearing up next' : 'None open right now', open ? 'accent-text' : null),
       tile(t('stat.fixed', language), String(fixed), fixed ? 'Cleared by getting it right' : 'None cleared yet', fixed ? 'ok-text' : null),
-      tile(t('stat.streak', language), streak ? t('stat.days', language, { n: streak }) : '—', t('stat.streakNote', language)));
+      tile(t('stat.streak', language), t(streak === 1 ? 'stat.day' : 'stat.days', language, { n: streak }), streak ? t('stat.streakNote', language) : 'Study today to start one'));
   }
   store.select(selectDashboard, draw);
   store.select(selectToday, draw);

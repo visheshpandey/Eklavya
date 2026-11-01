@@ -114,6 +114,14 @@ byId('lang').addEventListener('change', (event) => store.dispatch(actions.langua
 if (/Mac|iPhone|iPad/.test(navigator.platform || '')) byId('kbdHint').textContent = '⌘ K';
 store.select(selectVoiceStatus, (status) => { byId('app').dataset.live = status === VOICE_STATUS.IDLE ? 'off' : 'on'; });   // a live call hides the picker above it
 
+// phones: the settings menu opens from the "..." button, closes on Escape, on a click elsewhere and when a screen is chosen
+const topMenu = byId('topMenu');
+const setMenu = (open) => { topMenu.classList.toggle('open', open); byId('btnMore').setAttribute('aria-expanded', String(open)); };
+byId('btnMore').addEventListener('click', (event) => { event.stopPropagation(); setMenu(!topMenu.classList.contains('open')); });
+document.addEventListener('click', (event) => { if (!event.target.closest('#topMenu')) setMenu(false); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && topMenu.classList.contains('open')) { setMenu(false); byId('btnMore').focus(); } });
+store.select(selectView, () => setMenu(false));
+
 // sound: a soft page turn when things flip or open, and "Listen" on an answer
 const sound = createSound({ on: loadSound() });
 const drawSound = () => {

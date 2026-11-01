@@ -261,3 +261,31 @@ test('the session id from the server is remembered and sent back to resume a dro
   client.stop();
   assert.equal(client.sendText('x'), false);   // no open call: the caller is told, so it can keep the answer
 });
+
+test('the microphone stays closed until the greeting is finished, then opens; a resumed call opens at once', async () => {
+  const { GREETING_GRACE_MS } = await import('../js/services/voice-client.js');
+  assert.equal(GREETING_GRACE_MS, 12000);
+  const { client, allowMic, settle } = setup();
+  const started = client.start({ lang: 'english' });
+  allowMic();
+  await settle();
+  sockets[0].open();
+  await started;
+  const chunk = { data: new ArrayBuffer(640) };
+  client.node.port.onmessage(chunk);                                   // the echo of the greeting: held back
+  assert.equal(sockets[0].sent.length, 0);
+  sockets[0].onmessage({ data: JSON.stringify({ type: 'turn_complete' }) });
+  client.node.port.onmessage(chunk);                                   // the greeting is done: the student's voice goes through
+  assert.equal(sockets[0].sent.length, 1);
+  client.stop();
+
+  sockets.length = 0; micRequests.length = 0;
+  const again = setup();
+  const resumed = again.client.start({ lang: 'english', mode: 'test', topicId: 3 });
+  again.allowMic();
+  await again.settle();
+  sockets[0].open();
+  await resumed;
+  assert.equal(again.client.micOpen, false);                           // a new call protects its greeting
+  again.client.stop();
+});

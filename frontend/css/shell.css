@@ -200,9 +200,11 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .recent button:hover { background: var(--sage); }
 
 /* ---------- Progress */
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 12px; margin-top: 8px; }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }   /* six tiles: 2 x 3, 3 x 2 or 6 x 1, never a lonely last one */
+@media (min-width: 640px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1180px) { .stats { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .stat { padding: 18px; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); }
-.stat strong { display: block; font: 400 44px/1 var(--font-serif); margin: 8px 0 4px; }
+.stat strong { display: block; font: 400 clamp(32px, 3.4vw, 44px)/1 var(--font-serif); margin: 8px 0 4px; }
 .stat p { font-size: 12px; color: var(--ink-3); }
 .mrow { display: grid; grid-template-columns: 130px minmax(0, 1fr) 42px; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .mrow:last-child { border-bottom: 0; }
@@ -229,6 +231,20 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .detail p { color: var(--ink-3); font-size: 13px; }
 .detail .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* ---------- exam plan: subjects said once */
+.plan-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-right: var(--s-3); }
+.plan-subject { color: var(--accent-text); padding-right: 2px; }
+
+/* ---------- loading skeleton (cards that are on their way) */
+.skeleton { position: relative; overflow: hidden; background: var(--surface-3); border-radius: var(--r-panel); }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--paper-hi) 70%, transparent), transparent); animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { to { transform: translateX(100%); } }
+.sk-pill { width: 110px; height: 28px; }
+.sk-card { width: min(460px, 100%); height: 260px; }
+.sk-line { height: 14px; width: min(460px, 100%); }
+@media (prefers-reduced-motion: reduce) { .skeleton::after { animation: none; display: none; } }
+
 /* ---------- Flashcards */
 .fcwrap { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(220px, .7fr); gap: 16px; margin-top: 8px; }
 .fcmain { background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 14px; min-width: 0; }
@@ -252,6 +268,7 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .lb b { font: 400 20px var(--font-serif); }
 .lb small { font: 8px var(--font-mono); color: var(--ink-3); }
 .fc-decks { margin-top: 24px; }
+.fc-skeleton { display: grid; justify-items: center; gap: 14px; width: 100%; }
 
 /* ---------- Notes: drop zone and documents */
 .drop { display: flex; align-items: center; gap: 16px; padding: 20px; margin-top: 8px; border: 1px dashed var(--ink-3); border-radius: var(--r-panel); background: var(--paper-hi); flex-wrap: wrap; transition: background .2s, border-color .2s; }
@@ -354,20 +371,34 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 #soundBtn::before { content: "♪"; font-size: 15px; line-height: 1; margin-right: 6px; }
 #soundBtn[aria-pressed="false"] { color: var(--ink-3); text-decoration: line-through; }
 #soundBtn[aria-pressed="false"]::before { text-decoration: none; opacity: .5; }
+/* settings (sound, mentor, language, display): shown in the bar on a desktop, collapsed into one menu on a phone */
+.topmenu { display: contents; }
+#btnMore { display: none; }
+.menu-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 700px) {
+  .top { position: relative; }
+  #btnMore { display: inline-flex; }
+  .topmenu { display: none; position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; width: min(320px, calc(100vw - 32px));
+    flex-direction: column; align-items: stretch; gap: 8px; padding: 16px; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 18px 40px var(--drop-shadow); }
+  .topmenu.open { display: flex; }
+  .topmenu .menu-label { position: static; width: auto; height: auto; clip: auto; white-space: normal; font: 500 10px/1.4 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+  .topmenu .select { max-width: none; width: 100%; min-height: var(--tap); }
+  .topmenu #soundBtn { justify-content: flex-start; }
+  .topmenu #btnTheme { width: 100%; }
+  .brand-top { display: block; margin-right: auto; }
+  .topacts { margin-left: auto; flex-wrap: nowrap; gap: 6px; }
+}
+
 @media (max-width: 520px) {
   .rate .mono { flex-basis: 100%; }
   .rate button { flex: 1; min-height: var(--tap); }
   .ifly { --s: .72; }
   .hero { padding: 22px; }
   .top { padding: 8px 0; gap: 6px; }
-  .brand-top { display: none; }
-  .topacts { width: 100%; flex-wrap: nowrap; gap: 6px; }
-  .topacts .select { flex: 1 1 0; min-width: 0; max-width: none; padding-inline: 8px; }
-  .topacts .btn, .topacts .icon-btn { flex: none; min-width: 36px; width: 36px; padding: 0; justify-content: center; }
-  .topacts #btnSignIn { width: auto; padding: 0 12px; }
+  .topacts .btn, .topacts .icon-btn { flex: none; min-width: 40px; height: 40px; padding: 0; justify-content: center; }
+  .topacts #btnSignIn { width: auto; padding: 0 14px; }
   .topacts .cmd-trigger-text, .topacts #btnCommand kbd { display: none; }
-  .sound-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* still read aloud, no longer drawn */
-  #soundBtn::before { margin: 0; }
+  .topmenu #soundBtn { width: 100%; padding: 0 12px; justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { .book, .sub, .card3, .intro *, .float, .wave i { animation: none !important; transition: none !important; } }
 

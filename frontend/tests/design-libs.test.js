@@ -124,3 +124,26 @@ test('the streak card words its note for no streak, a first day and a run', asyn
   assert.equal(streakNote(1), 'A first day. Come back tomorrow.');
   assert.equal(streakNote(7), '7 days in a row. Keep it going.');
 });
+
+test('plan items are grouped by subject so the prefix is said once', async () => {
+  const { splitSubject, groupBySubject } = await import('../js/lib/subjects.js');
+  assert.deepEqual(splitSubject('Software: Process scheduling'), { subject: 'Software', topic: 'Process scheduling' });
+  assert.deepEqual(splitSubject('Precision'), { subject: null, topic: 'Precision' });
+  assert.deepEqual(splitSubject('Ratio: a:b'), { subject: 'Ratio', topic: 'a:b' });
+  assert.deepEqual(splitSubject(null), { subject: null, topic: '' });
+  const groups = groupBySubject([
+    { topic: 'Software: Deadlocks', kind: 'learn' }, { topic: 'Maths: Limits', kind: 'revise' }, { topic: 'Software: Paging', kind: 'test' }, { topic: 'Recall', kind: 'learn' }]);
+  assert.deepEqual(groups.map((g) => [g.subject, g.items.map((i) => i.shortTopic)]),
+    [['Software', ['Deadlocks', 'Paging']], ['Maths', ['Limits']], [null, ['Recall']]]);
+});
+
+test('a long concept-map name wraps onto two lines and is cut only when it cannot fit', async () => {
+  const { wrapLabel } = await import('../js/components/concept-map.js');
+  assert.deepEqual(wrapLabel('Classification in Machine Learning'), ['Classification in', 'Machine Learning']);
+  assert.deepEqual(wrapLabel('Precision'), ['Precision']);
+  assert.deepEqual(wrapLabel('OS: Processes and Threads'), ['OS: Processes and', 'Threads']);
+  const long = wrapLabel('Introduction to the mathematical foundations of statistical learning theory and its applications');
+  assert.equal(long.length, 2);
+  assert.ok(long[1].endsWith('…'));
+  assert.deepEqual(wrapLabel(''), []);
+});

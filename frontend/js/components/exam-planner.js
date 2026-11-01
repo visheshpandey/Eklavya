@@ -2,6 +2,7 @@
 import { el, render as replaceContent } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { t } from '../lib/strings.js';
+import { groupBySubject } from '../lib/subjects.js';
 import { selectLanguage, selectPlan } from '../state/selectors.js';
 
 const MINUTE_CHOICES = [15, 30, 45, 60, 90];
@@ -23,9 +24,12 @@ export function mountExamPlanner({ store, root, onSave, onClear, onOpenItem }) {
     return el('li', { class: 'plan-day' },
       el('span', { class: 'plan-date', text: dayLabel(day.date, language) }),
       day.items.length
-        ? el('span', { class: 'plan-day-items' }, day.items.map((item) => el('button', {
-          class: `chip kind-${item.kind}`, type: 'button', title: `${t(`kind.${item.kind}`, language)} · ${item.minutes} min`,
-          onclick: () => onOpenItem(item) }, `${item.topic} · ${t(`kind.${item.kind}`, language)}`)))
+        // the subject is said once ("Software"), then its topics: no "Software:" repeated on every chip
+        ? el('span', { class: 'plan-day-items' }, groupBySubject(day.items).map((group) => el('span', { class: 'plan-group' },
+          group.subject ? el('span', { class: 'plan-subject mono', text: group.subject }) : null,
+          group.items.map((item) => el('button', {
+            class: `chip kind-${item.kind}`, type: 'button', title: `${item.topic} · ${t(`kind.${item.kind}`, language)} · ${item.minutes} min`,
+            onclick: () => onOpenItem(item) }, `${item.shortTopic} · ${t(`kind.${item.kind}`, language)}`)))))
         : el('span', { class: 'hint', text: t('planner.rest', language) }));
   }
 

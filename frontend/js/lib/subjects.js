@@ -26,5 +26,23 @@ export function groupSubjects(mastery = []) {
   });
 }
 
+/** "Software: Process scheduling" -> {subject: "Software", topic: "Process scheduling"}; a name with no short prefix has no subject. */
+export function splitSubject(name) {
+  const match = /^([^:]{2,40}):\s+(\S.*)$/.exec(String(name ?? '').trim());
+  return match ? { subject: match[1].trim(), topic: match[2].trim() } : { subject: null, topic: String(name ?? '').trim() };
+}
+
+/** A day's plan items grouped by subject, in order of first appearance: [{subject, items: [{...item, shortTopic}]}]. */
+export function groupBySubject(items = []) {
+  const groups = new Map();
+  for (const item of items) {
+    const { subject, topic } = splitSubject(item.topic);
+    const key = subject ?? '';
+    if (!groups.has(key)) groups.set(key, { subject, items: [] });
+    groups.get(key).items.push({ ...item, shortTopic: topic });
+  }
+  return [...groups.values()];
+}
+
 /** Two letters for a document's cover tile ("Introduction to ML" -> "IN"). */
 export const coverLetters = (name) => String(name ?? '').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2).toUpperCase() || '··';
