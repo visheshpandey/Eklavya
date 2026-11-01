@@ -43,7 +43,7 @@ export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target =
   }
 
   const ticks = new Set();
-  const clock = new THREE.Clock();
+  let last = 0, elapsed = 0;   // our own clock (THREE.Clock is deprecated)
   let running = false;
   let onScreen = false;
   const size = () => {
@@ -55,14 +55,17 @@ export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target =
     for (const tick of ticks) tick.resize?.(width, height, camera);
   };
   const frame = () => {
-    const delta = Math.min(clock.getDelta(), 0.1), time = clock.elapsedTime;
+    const now = performance.now();
+    const delta = Math.min((now - last) / 1000, 0.1);
+    last = now; elapsed += delta;
+    const time = elapsed;
     for (const tick of ticks) tick.run?.(delta, time);
     camera.lookAt(lookAt);
     renderer.render(scene, camera);
   };
   const sync = () => {
     const should = onScreen && !document.hidden;
-    if (should && !running) { running = true; clock.getDelta(); renderer.setAnimationLoop(frame); }
+    if (should && !running) { running = true; last = performance.now(); renderer.setAnimationLoop(frame); }
     if (!should && running) { running = false; renderer.setAnimationLoop(null); }
   };
   const resizer = new ResizeObserver(size);
