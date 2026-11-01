@@ -2,7 +2,7 @@
 // (Strong 80+, Growing 60-79, Revisit under 60) and it shows its percentage and, up to MAX_LABELLED topics, its name. Many topics: the
 // ring grows and the names run outwards along their own spoke, so two names can never overlap.
 //   - hover or keyboard focus on a circle dims the topics it is not linked to and lights its links, and shows a tip with the name
-//   - click, tap, Enter or Space selects a circle: the card under the map shows its status and links, with "Study this" and "Ask about it"
+//   - click, tap, Enter or Space selects a circle: the card under the map shows its status and links, with "Learn this", "Test me" and "Ask about it"
 // Circles are real buttons. The list under the picture says the same thing for screen readers.
 import { el, render as replaceContent, svgEl } from '../lib/dom.js';
 import { masteryStatus } from '../lib/subjects.js';
@@ -52,7 +52,7 @@ export function wrapLabel(text, perLine = 22, maxLines = 2) {
   return kept;
 }
 
-export function mountConceptMap({ store, root, onStudy, onAsk }) {
+export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, onSelected = null }) {
   let selected = null;   // the circle whose card is showing; kept when the map redraws
 
   function draw() {
@@ -109,12 +109,14 @@ export function mountConceptMap({ store, root, onStudy, onAsk }) {
         el('div', {}, el('span', { class: 'mono', text: `${status.label} · ${Math.round(node.mastery)}% mastery` }), el('h3', { class: 'serif-sm', text: node.topic }),
           el('p', { text: linked.length ? `Connects to ${linked.join(', ')}.` : 'No links found in your notes yet.' })),
         el('div', { class: 'acts' },
-          el('button', { class: 'btn btn-primary', type: 'button', onclick: () => onStudy(node.id) }, 'Study this ↗'),
+          el('button', { class: 'btn btn-primary', type: 'button', onclick: () => onStudy(node.id) }, 'Learn this ↗'),
+          onTest ? el('button', { class: 'btn btn-secondary', type: 'button', onclick: () => onTest(node.id) }, 'Test me') : null,
           el('button', { class: 'btn btn-secondary', type: 'button', onclick: () => onAsk(node.topic) }, 'Ask about it')));
     }
 
     function select(id) {
       selected = id;
+      onSelected?.(id);
       groups.forEach((group, key) => group.setAttribute('aria-pressed', String(key === id)));
       spotlight(id);
       drawDetail();

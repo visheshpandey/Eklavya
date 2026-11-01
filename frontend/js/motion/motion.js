@@ -3,10 +3,10 @@
 // components already drew: it watches the page for new elements instead of changing how they are made.
 import { selectToday, selectView } from '../state/selectors.js';
 import { PALETTE, finePointer, loadScript } from './env.js';
-import { CHECK, FLAME } from './lottie-data.js';
+import { CHECK, DOWNLOAD, FLAME } from './lottie-data.js';
 
 const REVEAL = '.hero, .section, .card, .stat, .sub, .rstep, .plan-group, .map-frame, .doc, .badge, .lb-row, .group-card, .block';
-const COUNT = '.stat strong, #streakDays, .sub .row strong';
+const COUNT = '.stat strong, #streakDays, .sub .row strong, .mring-num';
 const BARS = '.bar > i, .meter > span';
 const TILT = '.card, .stat, .sub, .mode';
 const NO_TILT = 'textarea, input, select, .card3, .call, dialog';
@@ -76,6 +76,33 @@ export async function initMotion({ store }) {
     }
   }
 
+  // ---- the mastery ring fills from empty
+  function rings(root = document) {
+    for (const circle of root.querySelectorAll('.mring .fg')) {
+      if (!visible(circle) || circle.dataset.ring) continue;
+      circle.dataset.ring = '1';
+      const full = Number(circle.dataset.circ), target = parseFloat(circle.style.strokeDashoffset);
+      if (!once(`ring|${target}`)) continue;
+      circle.style.strokeDashoffset = String(full);
+      ScrollTrigger.create({ trigger: circle, start: 'top 96%', once: true, onEnter: () => gsap.to(circle.style, { strokeDashoffset: target, duration: 1.4, ease: 'power3.out' }) });
+    }
+  }
+
+  // ---- "Download study pack": a small arrow-into-tray animation pops up over the button
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest?.('#btnPack');
+    if (!button) return;
+    const bubble = document.createElement('span');
+    bubble.className = 'dl-bubble';
+    bubble.setAttribute('aria-hidden', 'true');
+    const box = button.getBoundingClientRect();
+    Object.assign(bubble.style, { left: `${box.left + box.width / 2}px`, top: `${box.top - 8}px` });
+    document.body.append(bubble);
+    const animation = lottie.loadAnimation({ container: bubble, renderer: 'svg', loop: false, autoplay: true, animationData: DOWNLOAD });
+    gsap.fromTo(bubble, { y: 6, opacity: 0, scale: 0.8 }, { y: -10, opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' });
+    gsap.to(bubble, { opacity: 0, delay: 1.5, duration: 0.3, onComplete: () => { animation.destroy(); bubble.remove(); } });
+  }, true);
+
   // ---- the checkmark that draws itself when a route step is ticked
   function checks(root = document) {
     for (const mark of root.querySelectorAll('.rstep.done .mk:not([data-lt])')) {
@@ -102,7 +129,7 @@ export async function initMotion({ store }) {
 
   // one pass over what is on screen now, and again whenever the components draw something new
   const main = document.getElementById('main') ?? document.body;
-  const pass = (root) => { reveal(root); counts(root); bars(root); checks(root); watchRoute(); };
+  const pass = (root) => { reveal(root); counts(root); bars(root); rings(root); checks(root); watchRoute(); };
   let queued = false;
   new MutationObserver(() => {
     if (queued) return;

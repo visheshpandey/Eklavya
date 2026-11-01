@@ -87,3 +87,22 @@ export function mountOrb(button) {
     setLevel(level) { latest.level = level; current()?.setLevel(level); },
   };
 }
+
+/**
+ * The 3D concept map on Progress. Built when it scrolls into view, freed when it leaves. Returns { update(map), focus(id) }.
+ * Without WebGL or with "reduce motion" the host stays hidden and the page's own SVG map is what shows.
+ */
+export function mountGraph(host, onPick) {
+  if (reducedMotion() || !hasWebGL()) return { update() {}, focus() {} };
+  const section = host.closest('section');
+  let map = null;
+  const sync = () => { const has = Boolean(map?.nodes?.length); host.hidden = !has; section?.classList.toggle('is-3d', has); };
+  const current = whileVisible(host, async (element) => {
+    const { createGraph } = await import('./graph-3d.js');
+    return createGraph(element, map, { onPick });
+  }, () => {});
+  return {
+    update(next) { map = next; sync(); current()?.update(next); },
+    focus(id) { current()?.focus(id); },
+  };
+}

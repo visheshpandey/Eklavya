@@ -34,7 +34,8 @@ import { mountStudyHeader } from './components/study-header.js';
 import { mountStudyLaunch } from './components/study-launch.js';
 import { mountSessionOrb } from './components/session-orb.js';
 import { mountStageTools } from './components/stage-tools.js';
-import { mountHeroScene, startMotion } from './motion/index.js';
+import { selectConceptMap } from './state/selectors.js';
+import { mountGraph, mountHeroScene, startMotion } from './motion/index.js';
 import { mountCelebration } from './components/celebration.js';
 import { mountStepper } from './components/stepper.js';
 import { mountDebateTag } from './components/debate-tag.js';
@@ -50,6 +51,7 @@ import { mountMissionCard } from './components/mission-card.js';
 import { mountMasteryChart } from './components/mastery-chart.js';
 import { mountMasteryRows } from './components/mastery-rows.js';
 import { mountConceptMap } from './components/concept-map.js';
+import { mountMasteryRing } from './components/mastery-ring.js';
 import { mountFlashcards } from './components/flashcards.js';
 import { mountFlashcardReview } from './components/flashcard-review.js';
 import { mountResultsList } from './components/results-list.js';
@@ -288,11 +290,15 @@ mountStatTiles({ store, root: byId('statTiles') });
 mountMissionCard({ store, root: byId('mission') });
 mountMasteryChart({ store, root: byId('chart') });
 mountMasteryRows({ store, root: byId('masteryRows') });
+mountMasteryRing({ store, root: byId('masteryRing') });
+const graph3d = mountGraph(byId('graph3d'), (id) => conceptMap.select(id));   // the 3D version of the map; the page's own cards and list stay
 const conceptMap = mountConceptMap({
-  store, root: byId('conceptMap'),
+  store, root: byId('conceptMap'), onSelected: (id) => graph3d.focus(id),
+  onTest: (topicId) => { showView(VIEWS.STUDY); startMode(SESSION_MODE.TEST, topicId); },
   onStudy: (topicId) => { showView(VIEWS.STUDY); startMode(SESSION_MODE.LEARN, topicId); },
   onAsk: (topicName) => { showView(VIEWS.ASK); ask.askNow(`Explain ${topicName} in simple words.`); },
 });
+store.select(selectConceptMap, (map) => graph3d.update(map));
 mountResultsList({ store, root: byId('results') });
 mountStudyPack({
   store, button: byId('btnPack'), packRoot: byId('printPack'),
