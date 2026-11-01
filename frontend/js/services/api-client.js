@@ -13,10 +13,16 @@ export class ApiError extends Error {
   }
 }
 
+/** The browser's timezone, e.g. "Asia/Kolkata". */
+function timezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; }
+}
+
 async function request(path, { method = 'GET', json, form } = {}) {
   const options = { method, headers: {} };
   const token = getToken();
   if (token) options.headers.authorization = `Bearer ${token}`;
+  options.headers['x-timezone'] = timezone();   // "today" and streaks follow the student's own calendar
   if (json) { options.headers['content-type'] = 'application/json'; options.body = JSON.stringify(json); }
   if (form) options.body = form;
 
@@ -59,8 +65,30 @@ export const backend = {
   pushUnsubscribe: (subscription) => request('/api/push/unsubscribe', { method: 'POST', json: subscription }),
   testReminder: () => request('/api/reminders/test', { method: 'POST' }),
   dueCards: () => request('/api/flashcards/due'),
-  reviewCard: (cardId, knew) => request(`/api/flashcards/${cardId}/review`, { method: 'POST', json: { knew } }),
+  reviewCard: (cardId, knew, hard = false) => request(`/api/flashcards/${cardId}/review`, { method: 'POST', json: { knew, hard } }),
+  resetDeck: () => request('/api/flashcards/reset', { method: 'POST' }),
   importLink: (url) => request('/api/import-link', { method: 'POST', json: { url } }),
+  ask: (question, language) => request('/api/tutor/ask', { method: 'POST', json: { question, language } }),
+  doubts: (query = '') => request(`/api/doubts${query ? `?q=${encodeURIComponent(query)}` : ''}`),
+  deleteDoubt: (id) => request(`/api/doubts/${id}`, { method: 'DELETE' }),
+  clearDoubts: () => request('/api/doubts', { method: 'DELETE' }),
+  startMockExam: (count, minutes) => request('/api/mock-exam/start', { method: 'POST', json: { count, minutes } }),
+  submitMockExam: (examId, answers) => request(`/api/mock-exam/${examId}/submit`, { method: 'POST', json: { answers } }),
+  mockExams: () => request('/api/mock-exams'),
+  badges: () => request('/api/badges'),
+  groups: () => request('/api/groups'),
+  createGroup: (name) => request('/api/groups', { method: 'POST', json: { name } }),
+  joinGroup: (code) => request('/api/groups/join', { method: 'POST', json: { code } }),
+  group: (id) => request(`/api/groups/${id}`),
+  leaveGroup: (id) => request(`/api/groups/${id}/members/me`, { method: 'DELETE' }),
+  shareNotes: (id, documentId) => request(`/api/groups/${id}/notes`, { method: 'POST', json: { document_id: documentId } }),
+  unshareNotes: (id, documentId) => request(`/api/groups/${id}/notes/${documentId}`, { method: 'DELETE' }),
+  addSharedNotes: (id, documentId) => request(`/api/groups/${id}/notes/${documentId}/add`, { method: 'POST' }),
+  challenges: () => request('/api/challenges'),
+  createChallenge: (topicId) => request('/api/challenges', { method: 'POST', json: { topic_id: topicId } }),
+  openChallenge: (code) => request(`/api/challenges/${encodeURIComponent(code)}`),
+  challengeResult: (code) => request(`/api/challenges/${encodeURIComponent(code)}/result`),
+  playChallenge: (code, answers, seconds) => request(`/api/challenges/${encodeURIComponent(code)}/play`, { method: 'POST', json: { answers, seconds } }),
   dashboard: (userId) => request(`/api/dashboard?user_id=${userId}`),
   topic: (topicId, userId) => request(`/api/topics/${topicId}?user_id=${userId}`),
   deleteDocument: (documentId, userId) => request(`/api/documents/${documentId}?user_id=${userId}`, { method: 'DELETE' }),

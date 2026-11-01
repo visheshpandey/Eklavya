@@ -5,8 +5,11 @@
 // components call t(key, language, values).
 
 const EN = {
-  'tab.today': 'Today', 'tab.notes': 'Notes', 'tab.study': 'Study', 'tab.progress': 'Progress',
-  'brand.tag': 'Your voice study mentor', 'cmd.trigger': 'Search or jump to', 'convo.title': 'Conversation', 'stat.mastery': 'Average mastery', 'stat.masteryNote': 'across {n} topics', 'stat.answers': 'Answers', 'stat.answersNote': 'correct', 'stat.fixed': 'Misconceptions fixed', 'stat.fixedOpen': '{n} still open', 'stat.fixedNone': 'none open', 'stat.streak': 'Study streak', 'stat.days': '{n} days', 'stat.streakNote': 'keep it going tonight',
+  'tab.today': 'Today', 'tab.notes': 'My notes', 'tab.study': 'Study room', 'tab.progress': 'Progress', 'tab.ask': 'Ask Eklavya', 'tab.groups': 'Study groups', 'tab.flashcards': 'Flashcards',
+  'm.today': 'Today', 'm.notes': 'Notes', 'm.study': 'Study', 'm.ask': 'Ask', 'm.cards': 'Cards', 'm.progress': 'Progress', 'm.groups': 'Groups',
+  'rail.streak': 'Learning streak', 'cmd.search': 'Search', 'notes.lead': 'Add PDFs, text files or a photo of a page. Eklavya reads them, finds the topics and answers from them.',
+  'notes.dropTitle': 'Drop your notes here',
+  'brand.tag': 'your study space', 'cmd.trigger': 'Search or jump to', 'convo.title': 'Conversation', 'stat.mastery': 'Average mastery', 'stat.masteryNote': 'across {n} topics', 'stat.answers': 'Answers', 'stat.answersNote': 'correct', 'stat.fixed': 'Misconceptions fixed', 'stat.fixedOpen': '{n} still open', 'stat.fixedNone': 'none open', 'stat.streak': 'Study streak', 'stat.days': '{n} days', 'stat.streakNote': 'keep it going tonight',
   'notes.title': 'Your notes', 'notes.upload': 'Upload notes', 'notes.demo': 'Try the demo notes', 'notes.search': 'Search topics',
   'notes.hint': 'PDF (even scanned), text, or a photo of a page', 'notes.loading': 'Loading…',
   'lib.loading': 'Loading your notes...', 'lib.noneTitle': 'No notes yet',
@@ -70,11 +73,20 @@ const EN = {
   'results.viva': 'Viva on {topic}', 'results.debate': 'Debate on {topic}',
 
   'celebrate.mastery': '{topic} +{n}%', 'celebrate.streak': '{n}-day streak. Keep going.',
+  'conn.lost': 'Connection lost. Reconnect?', 'conn.reconnect': 'Reconnect', 'conn.reconnecting': 'Connection dropped. Reconnecting…',
+  'conn.queued': 'Not connected. Your answer will be sent as soon as you reconnect.',
+  'err.upstream_unavailable': 'The voice connection was interrupted.', 'err.quota': "Eklavya's voice service is very busy right now. Wait a minute and try again.",
+  'err.not_configured': 'Voice is not set up on this server yet.', 'err.session_limit': 'Session time limit reached. Start a new session to continue.',
+  'err.bad_photo': 'That photo could not be sent. Use a JPG, PNG or WebP under 4 MB.', 'err.need_notes': 'Upload your notes first, then start the voice session.',
+  'err.need_topic': 'Pick a topic from your notes first.', 'err.generic': 'Something went wrong with the voice session. Please try again.',
   'photo.sent': 'You shared a photo', 'photo.noCall': 'Start a conversation first, then show Eklavya a photo.',
 };
 
 const HI = {
-  'tab.today': 'आज', 'tab.notes': 'नोट्स', 'tab.study': 'पढ़ाई', 'tab.progress': 'प्रगति',
+  'tab.today': 'आज', 'tab.notes': 'मेरे नोट्स', 'tab.study': 'पढ़ाई का कमरा', 'tab.progress': 'प्रगति', 'tab.ask': 'एकलव्य से पूछें', 'tab.groups': 'स्टडी ग्रुप', 'tab.flashcards': 'फ़्लैशकार्ड',
+  'm.today': 'आज', 'm.notes': 'नोट्स', 'm.study': 'पढ़ाई', 'm.ask': 'पूछें', 'm.cards': 'कार्ड', 'm.progress': 'प्रगति', 'm.groups': 'ग्रुप',
+  'rail.streak': 'सीखने की लय', 'cmd.search': 'खोजें', 'notes.lead': 'PDF, टेक्स्ट फ़ाइल या पन्ने की फ़ोटो जोड़ें। एकलव्य उन्हें पढ़कर टॉपिक बनाता है और उन्हीं से जवाब देता है।',
+  'notes.dropTitle': 'अपने नोट्स यहाँ छोड़ें',
   'brand.tag': 'आपका आवाज़ वाला स्टडी मेंटर', 'cmd.trigger': 'खोजें या सीधे जाएँ', 'convo.title': 'बातचीत', 'stat.mastery': 'औसत महारत', 'stat.masteryNote': '{n} विषयों में', 'stat.answers': 'जवाब', 'stat.answersNote': 'सही', 'stat.fixed': 'सुधरी गलतफ़हमियाँ', 'stat.fixedOpen': '{n} अभी बाकी', 'stat.fixedNone': 'कोई बाकी नहीं', 'stat.streak': 'लगातार पढ़ाई', 'stat.days': '{n} दिन', 'stat.streakNote': 'आज रात भी जारी रखें',
   'notes.title': 'आपके नोट्स', 'notes.upload': 'नोट्स अपलोड करें', 'notes.demo': 'डेमो नोट्स आज़माएँ', 'notes.search': 'टॉपिक खोजें',
   'notes.hint': 'PDF, टेक्स्ट, या पेज की फ़ोटो', 'notes.loading': 'लोड हो रहा है…',
@@ -139,6 +151,12 @@ const HI = {
   'results.viva': '{topic} पर वाइवा', 'results.debate': '{topic} पर बहस',
 
   'celebrate.mastery': '{topic} +{n}%', 'celebrate.streak': 'लगातार {n} दिन। ऐसे ही चलते रहें।',
+  'conn.lost': 'कनेक्शन टूट गया। फिर से जोड़ें?', 'conn.reconnect': 'फिर से जोड़ें', 'conn.reconnecting': 'कनेक्शन टूटा। फिर से जोड़ रहे हैं…',
+  'conn.queued': 'कनेक्शन नहीं है। फिर से जुड़ते ही आपका जवाब भेज दिया जाएगा।',
+  'err.upstream_unavailable': 'आवाज़ का कनेक्शन टूट गया।', 'err.quota': 'अभी एकलव्य की आवाज़ सेवा बहुत व्यस्त है। एक मिनट रुककर फिर कोशिश करें।',
+  'err.not_configured': 'इस सर्वर पर आवाज़ अभी तैयार नहीं है।', 'err.session_limit': 'सत्र का समय पूरा हो गया। जारी रखने के लिए नया सत्र शुरू करें।',
+  'err.bad_photo': 'वह फ़ोटो भेजी नहीं जा सकी। 4 MB से छोटी JPG, PNG या WebP चुनें।', 'err.need_notes': 'पहले अपने नोट्स जोड़ें, फिर आवाज़ सत्र शुरू करें।',
+  'err.need_topic': 'पहले अपने नोट्स से एक टॉपिक चुनें।', 'err.generic': 'आवाज़ सत्र में कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।',
   'photo.sent': 'आपने एक फ़ोटो भेजी', 'photo.noCall': 'पहले बातचीत शुरू करें, फिर एकलव्य को फ़ोटो दिखाएँ।',
 };
 

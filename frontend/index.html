@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#f5f2ec" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0c1413" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#29483e" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151d1a" media="(prefers-color-scheme: dark)">
   <title>Eklavya: voice study mentor</title>
   <meta name="description"
     content="Talk to a study mentor that teaches from your own notes, draws while it explains, tests you by voice, takes a viva, debates you, and plans your revision until the exam.">
@@ -15,169 +15,303 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/tokens.css">
   <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/skin.css">
+  <link rel="stylesheet" href="css/shell.css">
   <link rel="stylesheet" href="css/print.css" media="print">
 </head>
 
 <body>
   <a class="skip-link" href="#main">Skip to the study area</a>
 
-  <div id="app" class="app" data-view="today">
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true"><span data-icon="target" data-size="22"></span></span>
-        <div class="brand-text">
-          <h1 class="brand-name" translate="no">Eklavya</h1>
-          <span class="brand-tag" data-i18n="brand.tag">Your voice study mentor</span>
-        </div>
+  <!-- opening animation: a book opens and lands on the Today desk (once per visit, skippable) -->
+  <div class="intro" id="intro" hidden role="dialog" aria-label="Opening Eklavya">
+    <div class="ibg"></div>
+    <div class="ifly" id="ifly">
+      <div class="ibook" aria-hidden="true">
+        <div class="iback"></div>
+        <div class="ipage ip3"><span class="mono">Chapter 01</span><strong>Your own pace.<br>Your own understanding.</strong><p>A study mentor grounded in your notes.</p></div>
+        <div class="ipage ip2"></div>
+        <div class="ipage ip1"></div>
+        <div class="icover"><div class="f"><span class="mark">e</span><b>eklavya</b><span class="mono">Study companion</span></div><div class="b"></div></div>
       </div>
+    </div>
+    <span class="mono cue">Opening your study space</span>
+    <button class="skip" id="skip" type="button">Skip intro</button>
+  </div>
 
-      <nav id="tabs" class="tabs" aria-label="Sections">
-        <div class="tablist" role="tablist" aria-label="Sections">
-          <button id="tab-today" class="tab" role="tab" type="button" data-view="today" aria-controls="panel-today"
-            aria-selected="true"><span data-icon="house"></span><span data-i18n="tab.today">Today</span></button>
-          <button id="tab-library" class="tab" role="tab" type="button" data-view="library" aria-controls="panel-library"
-            aria-selected="false" tabindex="-1"><span data-icon="notebook"></span><span data-i18n="tab.notes">Notes</span></button>
-          <button id="tab-study" class="tab" role="tab" type="button" data-view="study" aria-controls="panel-study"
-            aria-selected="false" tabindex="-1"><span data-icon="chalkboard-teacher"></span><span data-i18n="tab.study">Study</span></button>
-          <button id="tab-progress" class="tab" role="tab" type="button" data-view="progress" aria-controls="panel-progress"
-            aria-selected="false" tabindex="-1"><span data-icon="chart-line-up"></span><span data-i18n="tab.progress">Progress</span></button>
+  <div id="app" class="app" data-view="today" data-live="off">
+    <div class="frame">
+      <aside class="rail">
+        <div class="brand">
+          <span class="logo" aria-hidden="true">e</span>
+          <div><b translate="no">eklavya</b><span class="mono" data-i18n="brand.tag">Your study space</span></div>
         </div>
-      </nav>
 
-      <div class="topbar-actions">
-        <button id="btnCommand" class="cmd-trigger" type="button" aria-keyshortcuts="Control+K Meta+K"><span data-icon="magnifying-glass" data-size="16"></span><span class="cmd-trigger-text" data-i18n="cmd.trigger">Search or jump to</span><span class="cmd-keys" aria-hidden="true"><kbd>Ctrl</kbd><kbd>K</kbd></span></button>
-        <span id="streakChip" class="streak-chip" hidden><span data-icon="fire" data-size="14"></span><span id="streakText"></span></span>
-        <label class="visually-hidden" for="lang">Tutor language</label>
-        <select id="lang" class="select">
-          <option value="hinglish" selected>Hinglish</option>
-          <option value="english">English</option>
-          <option value="hindi" lang="hi">हिन्दी</option>
-        </select>
-        <button id="btnAccount" class="account-btn" type="button"><span data-icon="user" data-size="18"></span><span id="accountText" class="account-text"></span></button>
-        <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
-      </div>
-    </header>
-
-    <div id="banner" class="banner" role="alert" hidden></div>
-
-    <div class="shell">
-      <aside id="panel-library" class="library" aria-labelledby="library-title">
-        <div class="library-head">
-          <h2 id="library-title" class="panel-title" data-i18n="notes.title">Your notes</h2>
-          <div class="library-actions">
-            <button id="btnUpload" class="btn btn-primary" type="button"><span data-icon="upload-simple" data-size="18"></span><span data-i18n="notes.upload">Upload notes</span></button>
-            <button id="btnDemo" class="btn btn-quiet" type="button" data-i18n="notes.demo">Try the demo notes</button>
-            <input id="file" type="file" accept=".pdf,.txt,.png,.jpg,.jpeg,.webp,.heic,image/*" hidden aria-label="Choose a PDF, a text file or a photo of your notes">
+        <nav id="tabs" class="rail-nav" aria-label="Sections">
+          <div class="rail-nav" role="tablist" aria-orientation="vertical" aria-label="Sections">
+            <button id="tab-today" class="rtab" role="tab" type="button" data-view="today" aria-controls="panel-today" aria-selected="true"><span class="rtab-label"><span data-icon="house" data-size="18"></span><span data-i18n="tab.today">Today</span></span></button>
+            <button id="tab-library" class="rtab" role="tab" type="button" data-view="library" aria-controls="panel-library" aria-selected="false" tabindex="-1"><span class="rtab-label"><span data-icon="notebook" data-size="18"></span><span data-i18n="tab.notes">My notes</span></span></button>
+            <button id="tab-study" class="rtab" role="tab" type="button" data-view="study" aria-controls="panel-study" aria-selected="false" tabindex="-1"><span class="rtab-label"><span data-icon="chalkboard-teacher" data-size="18"></span><span data-i18n="tab.study">Study room</span></span></button>
+            <button id="tab-ask" class="rtab" role="tab" type="button" data-view="ask" aria-controls="panel-ask" aria-selected="false" tabindex="-1"><span class="rtab-label"><span data-icon="chats-circle" data-size="18"></span><span data-i18n="tab.ask">Ask Eklavya</span></span></button>
+            <button id="tab-progress" class="rtab" role="tab" type="button" data-view="progress" aria-controls="panel-progress" aria-selected="false" tabindex="-1"><span class="rtab-label"><span data-icon="chart-line-up" data-size="18"></span><span data-i18n="tab.progress">Progress</span></span></button>
+            <button id="tab-flashcards" class="rtab" role="tab" type="button" data-view="flashcards" aria-controls="panel-flashcards" aria-selected="false" tabindex="-1"><span class="rtab-label"><span data-icon="cards" data-size="18"></span><span data-i18n="tab.flashcards">Flashcards</span></span><span class="count" id="dueNav" aria-label="cards due">0</span></button>
+            <button id="tab-groups" class="rtab" role="tab" type="button" data-view="groups" aria-controls="panel-groups" aria-selected="false" tabindex="-1"><span class="rtab-label"><span data-icon="student" data-size="18"></span><span data-i18n="tab.groups">Study groups</span></span></button>
           </div>
-          <p class="hint upload-hint" data-i18n="notes.hint">PDF, text, or a photo of a page</p>
-          <div id="linkImport" class="link-import"></div>
-          <div class="search">
-            <span data-icon="magnifying-glass" data-size="18"></span>
-            <label class="visually-hidden" for="librarySearch" data-i18n="notes.search">Search topics</label>
-            <input id="librarySearch" class="field" type="search" placeholder="Search topics" data-i18n-placeholder="notes.search" autocomplete="off">
-          </div>
+        </nav>
+
+        <div class="streakcard">
+          <span class="mono" data-i18n="rail.streak">Learning streak</span>
+          <strong class="tnum"><span id="streakDays">00</span> <small id="streakUnit">days</small></strong>
+          <p id="streakNote">Study today to start a streak.</p>
+          <div class="week" id="weekDots" role="img" aria-label="Active 0 of the last 7 days"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
-        <div id="library" class="library-list"></div>
+
+        <button id="btnAccount" class="me" type="button">
+          <span class="av" id="meAvatar" aria-hidden="true">E</span>
+          <span><b id="accountText">Sign in</b><small id="meSub">Demo learner</small></span>
+        </button>
       </aside>
 
-      <main id="main" class="workspace" tabindex="-1">
-        <section id="panel-today" class="panel" role="tabpanel" aria-labelledby="tab-today">
-          <div id="today" class="today"></div>
-          <section id="planner" class="block planner" aria-label="Exam planner"></section>
-        </section>
+      <div class="main-col">
+        <header class="top">
+          <span class="mono brand-top">Eklavya / <b id="crumb">Today</b></span>
+          <div class="topacts">
+            <button class="btn btn-secondary" id="soundBtn" type="button" aria-pressed="true"><span class="sound-label">Sound on</span></button>
+            <label class="visually-hidden" for="tutor">Tutor personality: calm mentor or friendly senior</label>
+            <select id="tutor" class="select">
+              <option value="mentor" selected title="Calm mentor">Mentor</option>
+              <option value="senior" title="Friendly senior">Senior</option>
+            </select>
+            <label class="visually-hidden" for="lang">Tutor language</label>
+            <select id="lang" class="select">
+              <option value="hinglish" selected>Hinglish</option>
+              <option value="english">English</option>
+              <option value="hindi" lang="hi">हिन्दी</option>
+            </select>
+            <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
+            <button id="btnAccountTop" class="icon-btn top-account" type="button" aria-label="Account"><span data-icon="user" data-size="18"></span></button>
+            <button id="btnCommand" class="btn btn-secondary" type="button" aria-label="Search or jump to" data-i18n-label="cmd.trigger" aria-keyshortcuts="Control+K Meta+K"><span data-icon="magnifying-glass" data-size="16"></span><span class="cmd-trigger-text" data-i18n="cmd.search">Search</span><kbd id="kbdHint" aria-hidden="true">Ctrl K</kbd></button>
+          </div>
+        </header>
 
-        <section id="panel-study" class="panel" role="tabpanel" aria-labelledby="tab-study">
-          <div id="studyHeader" class="study-header"></div>
+        <div id="banner" class="banner" role="alert" hidden></div>
 
-          <div class="study-main">
-          <div class="stage">
-            <button id="orb" class="orb" type="button" data-state="idle" aria-label="Start a voice conversation"></button>
-            <div class="stage-text">
-              <p id="status" class="stage-status">Tap to talk to Eklavya</p>
-              <p class="stage-hint" data-i18n="stage.hint">Headphones work best.</p>
-              <p id="debateTag" class="debate-tag" hidden></p>
-              <ol id="stepper" class="stepper" aria-label="Lesson steps" hidden></ol>
-              <div id="stageTools" class="stage-tools"></div>
+        <main id="main" class="workspace" tabindex="-1">
+
+          <!-- TODAY -->
+          <section id="panel-today" class="panel" role="tabpanel" aria-labelledby="tab-today">
+            <div id="todayHead"></div>
+            <div id="todayHero"></div>
+            <div class="section"><div><span class="mono">Today's route</span><h2 class="section-title">One step at a time.</h2></div></div>
+            <div class="two">
+              <section class="card" id="route" aria-label="Today's route"></section>
+              <section class="card note-card">
+                <span class="mono">A note from Eklavya</span>
+                <p class="quote" id="quote">“You don't have to know it all. Just understand the next thing.”</p>
+                <button class="linkbtn" id="talkIt" type="button">Talk it through ↗</button>
+              </section>
             </div>
-            <p id="celebrate" class="celebrate" role="status" hidden></p>
-          </div>
-          <p id="caption" class="caption" aria-hidden="true" hidden></p>
-
-          <section id="board" class="board" aria-labelledby="board-title" hidden></section>
-          <section id="viva" class="quiz viva" aria-label="Viva" hidden></section>
-          <section id="debateScore" class="quiz debate-score" aria-label="Debate score" hidden></section>
-
-          <div id="quizcard" class="quiz" hidden></div>
-          <div id="summary" class="summary" hidden></div>
-          <div id="studyMission" class="mission" hidden></div>
-
-          </div>
-          <div class="study-side">
-          <section class="convo" aria-labelledby="convo-title">
-            <header class="convo-head"><h3 id="convo-title" data-i18n="convo.title">Conversation</h3><span id="liveTag" class="live-tag" hidden><span class="live-dot" aria-hidden="true"></span>Live</span></header>
-          <div id="chat" class="chat" role="log" aria-live="off" aria-label="Conversation" tabindex="0">
-            <p class="chat-empty">Try saying: “Mujhe precision aur recall simple example se samjhao”</p>
-          </div>
-
-          <form id="textform" class="composer" autocomplete="off">
-            <label class="visually-hidden" for="textin">Message to Eklavya</label>
-            <input id="textin" class="field" type="text" placeholder="Or type a message to Eklavya" data-i18n-placeholder="composer.placeholder" disabled>
-            <button id="textsend" class="btn btn-primary" type="submit" disabled data-i18n="composer.send">Send</button>
-          </form>
+            <div class="section"><div><span class="mono">Your subjects</span><h2 class="section-title">Taking shape.</h2></div><button class="linkbtn" id="seeMap" type="button">See how they connect ↗</button></div>
+            <div class="subs" id="subjects"></div>
+            <div class="today-more">
+              <span class="mono">More for today</span>
+              <div id="today" class="today"></div>
+              <section id="planner" class="block planner" aria-label="Exam planner"></section>
+            </div>
           </section>
 
-          <div id="emotion" class="emotion" hidden></div>
-          </div>
-        </section>
+          <!-- MY NOTES -->
+          <section id="panel-library" class="panel" role="tabpanel" aria-labelledby="tab-library">
+            <div><p class="mono">Your knowledge, in one place</p><h1 class="page-title">Your library<em>.</em></h1>
+              <p class="lead" data-i18n="notes.lead">Add PDFs, text files or a photo of a page. Eklavya reads them, finds the topics and answers from them.</p></div>
+            <div class="drop" id="drop">
+              <div><b data-i18n="notes.dropTitle">Drop your notes here</b><p data-i18n="notes.hint">PDF (even scanned), text, or a photo of a page. Up to 10 MB per file.</p></div>
+              <div class="drop-acts">
+                <button id="btnUpload" class="btn btn-primary" type="button"><span data-icon="upload-simple" data-size="18"></span><span data-i18n="notes.upload">Upload notes</span></button>
+                <button id="btnDemo" class="btn btn-secondary" type="button" data-i18n="notes.demo">Try the demo notes</button>
+              </div>
+              <input id="file" type="file" accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp,.heic,image/*" multiple hidden aria-label="Choose PDFs, text files or photos of your notes">
+            </div>
+            <div class="notes-tools">
+              <div id="linkImport" class="link-import"></div>
+              <div class="search">
+                <span data-icon="magnifying-glass" data-size="18"></span>
+                <label class="visually-hidden" for="librarySearch" data-i18n="notes.search">Search topics</label>
+                <input id="librarySearch" class="field" type="search" placeholder="Search topics" data-i18n-placeholder="notes.search" autocomplete="off">
+              </div>
+            </div>
+            <div class="docs-wrap"><div id="library" class="library-list"></div></div>
+          </section>
 
-        <section id="panel-progress" class="panel" role="tabpanel" aria-labelledby="tab-progress">
-          <div class="panel-head">
-            <h2 class="panel-title" data-i18n="progress.title">Your progress</h2>
-            <button id="btnPack" class="btn btn-secondary" type="button"></button>
-          </div>
-          <div id="statTiles" class="stat-tiles"></div>
-          <div id="mission" class="mission" hidden></div>
-          <div class="progress-grid">
-            <section class="block wide" aria-labelledby="h-chart">
-              <h3 id="h-chart" data-i18n="progress.chart">Mastery over time</h3>
-              <div id="chart" class="chart"></div>
+          <!-- STUDY ROOM -->
+          <section id="panel-study" class="panel" role="tabpanel" aria-labelledby="tab-study">
+            <div id="studyIntro">
+              <div class="studyhead">
+                <div>
+                  <span class="mono">Your personal study session</span>
+                  <h2>A real conversation<br><em>with your notes.</em></h2>
+                  <p>Talk out loud or type. Every answer comes from the material in your library.</p>
+                  <button class="btn btn-primary" id="startTalk" type="button">Start a voice session ↗</button>
+                </div>
+                <div class="wave" aria-hidden="true">
+                  <i style="--bar:30px;--d:0"></i><i style="--bar:58px;--d:.3"></i><i style="--bar:86px;--d:.6"></i><i style="--bar:44px;--d:.9"></i><i style="--bar:96px;--d:.2"></i><i style="--bar:52px;--d:.5"></i><i style="--bar:72px;--d:.8"></i><i style="--bar:36px;--d:.1"></i>
+                </div>
+              </div>
+              <div class="section"><div><span class="mono">Pick a topic</span><h2 class="section-title">Where to begin?</h2></div></div>
+              <div class="orbit" id="orbit" role="group" aria-label="Topics you can study. Drag or use the arrow keys to turn."><div class="ring" id="ring"></div><span class="mono orbit-hint" id="orbitHint">Drag to turn · Arrow keys work too</span></div>
+              <div class="section"><div><span class="mono">Choose a way in</span><h2 class="section-title">What would help now?</h2></div></div>
+              <p class="studyfor mono" id="studyFor" role="status"></p>
+              <div class="modes" id="modes">
+                <button class="mode feat" type="button" data-mode="learn"><span class="serif-sm">Learn</span><p>Build an idea from the ground up with an everyday example.</p><span class="mono">Teach · Practise · Recap →</span></button>
+                <button class="mode" type="button" data-mode="test"><span class="serif-sm">Test</span><p>Answer three questions by voice, graded against your notes.</p><span class="mono">Quick check →</span></button>
+                <button class="mode" type="button" data-mode="revise"><span class="serif-sm">Revise</span><p>A short recap board and two questions.</p><span class="mono">5 minutes →</span></button>
+                <button class="mode" type="button" data-mode="viva"><span class="serif-sm">Viva</span><p>Practise explaining an idea the way an examiner asks it.</p><span class="mono">Examiner style →</span></button>
+                <button class="mode" type="button" data-mode="debate"><span class="serif-sm">Debate</span><p>Take a side on a claim and back it with evidence.</p><span class="mono">Argue with evidence →</span></button>
+                <button class="mode" type="button" data-mode="free"><span class="serif-sm">Free talk</span><p>Follow your curiosity across every topic in the library.</p><span class="mono">No fixed agenda →</span></button>
+              </div>
+            </div>
+
+            <div id="studyHeader" class="study-header"></div>
+
+            <div class="study-grid">
+              <div class="study-main">
+                <div class="stage">
+                  <div id="avatar" class="avatar-slot"></div>
+                  <button id="orb" class="orb" type="button" data-state="idle" aria-label="Start a voice conversation"></button>
+                  <div class="stage-text">
+                    <p id="status" class="stage-status">Tap to talk to Eklavya</p>
+                    <p class="stage-hint" data-i18n="stage.hint">Headphones work best.</p>
+                    <p id="debateTag" class="debate-tag" hidden></p>
+                    <ol id="stepper" class="stepper" aria-label="Lesson steps" hidden></ol>
+                    <div id="reconnect" class="reconnect" role="alert" hidden></div>
+                    <div id="stageTools" class="stage-tools"></div>
+                    <button id="btnCallScreen" class="btn btn-secondary btn-sm" type="button" hidden>Full screen call</button>
+                  </div>
+                  <p id="celebrate" class="celebrate" role="status" hidden></p>
+                </div>
+                <p id="caption" class="caption" aria-hidden="true" hidden></p>
+
+                <section id="board" class="board" aria-labelledby="board-title" hidden></section>
+                <section id="viva" class="quiz viva" aria-label="Viva" hidden></section>
+                <section id="debateScore" class="quiz debate-score" aria-label="Debate score" hidden></section>
+
+                <div id="quizcard" class="quiz" hidden></div>
+                <div id="summary" class="summary" hidden></div>
+                <div id="studyMission" class="mission" hidden></div>
+              </div>
+              <div class="study-side">
+                <section class="convo" aria-labelledby="convo-title">
+                  <header class="convo-head"><h3 id="convo-title" data-i18n="convo.title">Conversation</h3><span id="liveTag" class="live-tag" hidden><span class="live-dot" aria-hidden="true"></span>Live</span></header>
+                  <div id="chat" class="chat" role="log" aria-live="off" aria-label="Conversation" tabindex="0">
+                    <p class="chat-empty">Try saying: “Mujhe precision aur recall simple example se samjhao”</p>
+                  </div>
+                  <form id="textform" class="composer" autocomplete="off">
+                    <label class="visually-hidden" for="textin">Message to Eklavya</label>
+                    <input id="textin" class="field" type="text" placeholder="Or type a message to Eklavya" data-i18n-placeholder="composer.placeholder" disabled>
+                    <button id="textsend" class="btn btn-primary" type="submit" disabled data-i18n="composer.send">Send</button>
+                  </form>
+                </section>
+                <div id="emotion" class="emotion" hidden></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ASK -->
+          <section id="panel-ask" class="panel" role="tabpanel" aria-labelledby="tab-ask">
+            <div><p class="mono">No guesswork. Just your material.</p><h1 class="page-title">Ask Eklavya<em>.</em></h1></div>
+            <div class="askgrid">
+              <div style="min-width:0"><div id="ask" class="ask"></div></div>
+              <aside class="card" style="align-self:start">
+                <span class="mono">Your sources</span>
+                <h3 class="serif-sm" style="margin:6px 0 10px">What Eklavya can use</h3>
+                <div id="srcList"></div>
+                <div id="recentWrap" hidden><span class="mono" style="display:block;margin-top:16px">Recent doubts</span><div class="recent" id="recentDoubts"></div></div>
+              </aside>
+            </div>
+            <section class="block" aria-labelledby="h-doubts">
+              <h3 id="h-doubts">Your doubts</h3>
+              <div id="doubts" class="doubts"></div>
             </section>
-            <section class="block wide" aria-labelledby="h-map">
-              <h3 id="h-map" data-i18n="progress.map">How your topics connect</h3>
-              <div id="conceptMap" class="concept-map"></div>
-            </section>
-            <section class="block" aria-labelledby="h-cards">
-              <h3 id="h-cards" data-i18n="progress.cards">Flashcards</h3>
-              <div id="flashcards" class="flashcards"></div>
-            </section>
-            <section class="block" aria-labelledby="h-results">
-              <h3 id="h-results" data-i18n="progress.results">Viva and debate results</h3>
-              <ul id="results" class="list results"></ul>
-            </section>
-            <section class="block" aria-labelledby="h-mis">
-              <h3 id="h-mis" data-i18n="progress.mistakes">Misconceptions</h3>
-              <ul id="alerts" class="list"></ul>
-            </section>
-            <section class="block" aria-labelledby="h-hist">
-              <h3 id="h-hist" data-i18n="progress.recent">Recent answers</h3>
-              <ul id="history" class="list history"></ul>
-            </section>
-            <section class="block wide" aria-labelledby="h-log">
-              <h3 id="h-log" data-i18n="progress.why">Why the tutor did that</h3>
-              <ul id="log" class="list log" tabindex="0" aria-labelledby="h-log"></ul>
-            </section>
-          </div>
-        </section>
-      </main>
+          </section>
+
+          <!-- PROGRESS -->
+          <section id="panel-progress" class="panel" role="tabpanel" aria-labelledby="tab-progress">
+            <div class="panel-head">
+              <div><p class="mono">Progress you can explain</p><h1 class="page-title">The bigger picture<em>.</em></h1><p class="lead">What you understand, what needs work, and how it connects.</p></div>
+              <button id="btnPack" class="btn btn-secondary" type="button"></button>
+            </div>
+            <div id="statTiles" class="stats"></div>
+            <div id="mission" class="mission" hidden></div>
+
+            <div class="section"><div><span class="mono">Concept map</span><h2 class="section-title">How your ideas connect.</h2></div></div>
+            <section class="block wide" aria-labelledby="h-map"><h3 id="h-map" class="visually-hidden" data-i18n="progress.map">How your topics connect</h3><div id="conceptMap" class="concept-map"></div></section>
+
+            <div class="two">
+              <section class="card"><span class="mono">Mastery by subject</span><div id="masteryRows"></div></section>
+              <section class="card"><span class="mono" id="h-mis" data-i18n="progress.mistakes">Misconceptions</span><ul id="alerts" class="list"></ul></section>
+            </div>
+
+            <div class="splitcta clay">
+              <div><span class="mono">A quick reality check</span><h2>Test the whole deck.</h2><p>Every flashcard in a shuffled order, including the ones you already know. Practice only: it does not change your schedule.</p>
+                <button class="btn btn-primary" id="mockRoundBtn" type="button">Start a mock round ↗</button></div>
+              <div class="ppl" aria-hidden="true"><span style="left:10%;top:20%">M</span><span style="left:45%;top:5%">N</span><span style="right:8%;top:40%">D</span><span style="left:28%;bottom:4%">C</span></div>
+            </div>
+
+            <div class="progress-grid">
+              <section class="block wide" aria-labelledby="h-badges"><h3 id="h-badges">Badges</h3><div id="badges" class="badges"></div></section>
+              <section class="block wide" aria-labelledby="h-mock"><h3 id="h-mock">Mock exam</h3><div id="mock" class="mock"></div></section>
+              <section class="block wide" aria-labelledby="h-chart"><h3 id="h-chart" data-i18n="progress.chart">Mastery over time</h3><div id="chart" class="chart"></div></section>
+              <section class="block" aria-labelledby="h-results"><h3 id="h-results" data-i18n="progress.results">Viva and debate results</h3><ul id="results" class="list results"></ul></section>
+              <section class="block" aria-labelledby="h-hist"><h3 id="h-hist" data-i18n="progress.recent">Recent answers</h3><ul id="history" class="list history"></ul></section>
+              <section class="block wide" aria-labelledby="h-log"><h3 id="h-log" data-i18n="progress.why">Why the tutor did that</h3><ul id="log" class="list log" tabindex="0" aria-labelledby="h-log"></ul></section>
+            </div>
+          </section>
+
+          <!-- FLASHCARDS -->
+          <section id="panel-flashcards" class="panel" role="tabpanel" aria-labelledby="tab-flashcards">
+            <div><p class="mono">Small repetitions. Long memory.</p><h1 class="page-title">Flashcards<em>.</em></h1></div>
+            <div class="fcwrap">
+              <div class="fcmain" id="fcReview"></div>
+              <aside class="card" style="align-self:start">
+                <span class="mono">Spaced repetition</span>
+                <h3 class="serif-sm" style="margin:6px 0 10px">Memory needs a revisit.</h3>
+                <p style="color:var(--ink-3);font-size:13px">“Got it” moves a card to a longer gap. “Hard” steps it back one box. “Again” brings it back today. Your schedule is saved with your account.</p>
+                <div class="lb"><div><b>0</b><small>NOW</small></div><div><b>1</b><small>1 DAY</small></div><div><b>2</b><small>3 DAYS</small></div><div><b>3</b><small>7 DAYS</small></div><div><b>4</b><small>14 DAYS</small></div><div><b>5</b><small>30 DAYS</small></div></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" id="resetDeck" type="button">Reset today's deck</button><button class="btn btn-secondary" id="mockRoundBtn2" type="button">Mock round</button></div>
+              </aside>
+            </div>
+            <section class="block fc-decks" aria-labelledby="h-cards"><h3 id="h-cards" data-i18n="progress.cards">Your decks</h3><div id="flashcards" class="flashcards"></div></section>
+          </section>
+
+          <!-- STUDY GROUPS -->
+          <section id="panel-groups" class="panel" role="tabpanel" aria-labelledby="tab-groups">
+            <div><p class="mono">Learn better, together</p><h1 class="page-title">Your study circle<em>.</em></h1><p class="lead">Share notes, compare progress and challenge a friend.</p></div>
+            <div id="groups" class="groups"></div>
+            <section class="block" aria-labelledby="h-challenge"><h3 id="h-challenge">Challenge a friend</h3><div id="challenge" class="challenge"></div></section>
+          </section>
+        </main>
+      </div>
     </div>
+
+    <nav id="mtabs" class="mnav" aria-label="Sections (phone)">
+      <div role="tablist" aria-label="Sections">
+        <button id="mtab-today" class="mtab" role="tab" type="button" data-view="today" aria-controls="panel-today" aria-selected="true"><span data-icon="house" data-size="20"></span><span data-i18n="m.today">Today</span></button>
+        <button id="mtab-library" class="mtab" role="tab" type="button" data-view="library" aria-controls="panel-library" aria-selected="false" tabindex="-1"><span data-icon="notebook" data-size="20"></span><span data-i18n="m.notes">Notes</span></button>
+        <button id="mtab-study" class="mtab" role="tab" type="button" data-view="study" aria-controls="panel-study" aria-selected="false" tabindex="-1"><span data-icon="chalkboard-teacher" data-size="20"></span><span data-i18n="m.study">Study</span></button>
+        <button id="mtab-ask" class="mtab" role="tab" type="button" data-view="ask" aria-controls="panel-ask" aria-selected="false" tabindex="-1"><span data-icon="chats-circle" data-size="20"></span><span data-i18n="m.ask">Ask</span></button>
+        <button id="mtab-flashcards" class="mtab" role="tab" type="button" data-view="flashcards" aria-controls="panel-flashcards" aria-selected="false" tabindex="-1"><span data-icon="cards" data-size="20"></span><span data-i18n="m.cards">Cards</span></button>
+        <button id="mtab-progress" class="mtab" role="tab" type="button" data-view="progress" aria-controls="panel-progress" aria-selected="false" tabindex="-1"><span data-icon="chart-line-up" data-size="20"></span><span data-i18n="m.progress">Progress</span></button>
+        <button id="mtab-groups" class="mtab" role="tab" type="button" data-view="groups" aria-controls="panel-groups" aria-selected="false" tabindex="-1"><span data-icon="student" data-size="20"></span><span data-i18n="m.groups">Groups</span></button>
+      </div>
+    </nav>
   </div>
 
   <dialog id="auth" class="auth"></dialog>
   <dialog id="account" class="auth account"></dialog>
   <dialog id="command" class="command" aria-label="Command menu"></dialog>
+  <div id="call" class="call" hidden></div>
+  <dialog id="exam" class="auth exam" aria-labelledby="exam-title"></dialog>
   <dialog id="onboarding" class="onboarding" aria-labelledby="onb-title"></dialog>
   <div id="printPack" class="print-pack"></div>
   <div id="announcer" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>

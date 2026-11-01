@@ -12,6 +12,8 @@ export const SERVER_EVENT = Object.freeze({
   BOARD: 'board', VIVA_QUESTION: 'viva_question', VIVA_MARK: 'viva_mark', VIVA_REPORT: 'viva_report',
   DEBATE_SCORE: 'debate_score', DEBATE_VERDICT: 'debate_verdict',
   INTERRUPTED: 'interrupted', TURN_COMPLETE: 'turn_complete', ERROR: 'error',
+  SESSION: 'session', RECONNECTING: 'reconnecting',
+  CONNECTION_LOST: 'connection_lost',   // made by the voice client itself when the socket closes without the student ending the call
 });
 
 /** What the tutor does when a session starts. REVISE: 5-minute spaced revision. VIVA: oral exam with marks.

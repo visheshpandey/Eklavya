@@ -48,9 +48,10 @@ eklavya/
 │   ├── config.js                 environment config: backend URL, user id
 │   ├── serve.py                  static dev server (set PORT inside)
 │   ├── manifest.webmanifest, sw.js, icons/   installable app (offline start of the page shell)
-│   ├── css/                      tokens.css (colours, type, spacing, light/dark), base.css (reset, focus,
-│   │                             reduced motion), layout.css (sidebar + workspace, bottom tabs on phones),
-│   │                             components.css (buttons, library, quiz, chart, lists), skin.css (the Eklavya look from docs/design/Eklavya-design.html, loaded last), print.css (study
+│   ├── css/                      tokens.css (colours, type, spacing, light/dark; generated from one table of values),
+│   │                             base.css (reset, focus, fonts, reduced motion), components.css (buttons, library, quiz, chart,
+│   │                             lists), skin.css (component polish), shell.css (the new layout and screens from
+│   │                             docs/design/new-frontend, loaded last), print.css (study
 │   │                             pack). See docs/DESIGN.md
 │   ├── js/
 │   │   ├── main.js               entry: wires store + services + controllers + components
@@ -68,7 +69,9 @@ eklavya/
 │   │                             announcer, i18n, nav-tabs, theme-toggle, onboarding), today (today-view,
 │   │                             exam-planner), library, study (study-header, session-orb, stage-tools,
 │   │                             celebration, stepper, debate-tag, whiteboard, viva-card, debate-score,
-│   │                             quiz-card, summary-card, chat, text-input, emotion-card), progress
+│   │                             quiz-card, summary-card, chat, text-input, emotion-card, avatar (drawn face, mood from
+                             lib/avatar-mood.js), call-screen (full-screen call)), ask-view, groups-view, challenge-view,
+                             mock-exam, badges-view, progress
 │   │                             (mission-card, mastery-chart, concept-map, flashcards, results-list,
 │   │                             study-pack, alerts-list, history-list, decision-log)
 │   └── tests/                    node:test, no dependencies: `npm test`
@@ -106,6 +109,7 @@ raise `ConfigError` at startup. Settings are listed in `backend/.env.example`:
 | `HOST`, `PORT`, `RELOAD` | `0.0.0.0`, `5000`, `false` | used by `python main.py` |
 | `CORS_ORIGINS` | `*` | comma-separated allowed origins |
 | `LOG_LEVEL`, `MAX_UPLOAD_MB` | `INFO`, `10` | |
+| `APP_TIMEZONE` | `Asia/Kolkata` | the calendar for "today" when the browser does not send its zone |
 | `DB_PATH`, `SAMPLES_DIR`, `DEMO_USER_ID` | `data/eklavya.db`, `../samples`, `1` | |
 
 **Errors:** raise from `app/errors.py`: `BadRequestError` (400), `NotFoundError` (404),
@@ -216,7 +220,7 @@ API ignores a single frame sent as video. Transcription markers such as `<no spe
 before anything is shown.
 
 HTTP endpoints added with the study features: `GET /api/today`, `GET /api/history`, `GET|PUT|DELETE /api/plan`,
-`GET /api/concept-map`, `GET /api/flashcards`, `POST /api/flashcards/generate`; `POST /api/upload-document` also
+`GET /api/concept-map`, `GET /api/flashcards`, `POST /api/flashcards/generate`; `POST /api/tutor/ask` + `GET|DELETE /api/doubts` (text tutor and its saved history); `/api/mock-exam/*` and `GET /api/mock-exams`; `GET /api/badges`; `/api/groups/*` (study groups, shared notes, leaderboard) and `/api/challenges/*` (friend challenges); the WebSocket also takes `tutor=mentor|senior`; `POST /api/upload-document` also
 accepts a photo of notes (png, jpg, webp, heic), read by Gemini.
 
 Event fields (server to browser). Optional fields are marked `?`; unknown events must be ignored, so a newer server
@@ -238,9 +242,34 @@ never breaks an older page.
 | `debate_score` | `round`, `evidence`, `logic`, `rebuttal`, `strength` (each 0 to 10), `note`, `average` |
 | `debate_verdict` | `winner` (`student`, `eklavya`, `draw`), `student_score`, `eklavya_score`, `strength`, `improve`, `rounds` |
 | `interrupted`, `turn_complete` | no fields |
-| `error` | `message` (Gemini unavailable, quota, a bad photo, the session time limit). The client shows it and ends the call. |
+| `session` | `id`: a token for picking this call up again if the browser's connection drops (send it back as `&resume=<id>`; valid once, for the same student, for 10 minutes) |
+| `reconnecting` | `attempt`: Gemini's side dropped and the server is retrying by itself, telling the tutor where the lesson was |
+| `error` | `code`, `retryable`, `message` (English fallback). Codes: `upstream_unavailable`, `quota`, `not_configured`, `session_limit`, `bad_photo`, `need_notes`, `need_topic`. The browser writes its own text per code (`err.<code>` in strings.js) and never shows provider text. `retryable` shows "Connection lost. Reconnect?". |
+| `connection_lost` | made by the browser's voice client, not the server: the socket closed without the student ending the call |
 
 Audio chunks are about 20 to 40 ms. There is one demo student, `user_id = 1`, and no login.
+
+### Keeping voice calls alive
+
+Every voice socket is answered by the same event loop that serves all requests, so a loop that stalls drops every call ("keepalive
+ping timeout", close 1011). Rules: nothing on the voice path may block the loop (database calls from async code go through
+`asyncio.to_thread`, the Gemini client is built once in a thread, uploads and links run in the thread pool); uvicorn runs with
+`ws_ping_interval=20, ws_ping_timeout=60` and no per-message compression (`main.py`, `render.yaml`); the Gemini connection gets the
+same keepalive values (`live._use_longer_keepalive`). `app/lag_monitor.py` logs a warning, with the stack, whenever the loop was
+blocked for over a second: read it first when calls drop. If Gemini's side drops, the server reconnects once by itself
+(`live.RECONNECTS`) and tells the tutor where the quiz, viva or debate was; if the browser's side drops, `resume=<id>` brings back
+the questions asked, graded answers, viva marks and debate rounds.
+
+### Language and address
+
+`prompts/language_rules.md` is appended to every persona: Hinglish is Hindi in Roman letters only, no other language, "aap" and never
+bhai/yaar/dost/tum. `domain/language_check.py` checks what the tutor wrote: the Ask tutor regenerates once and cleans what is left; the
+live tutor cannot be unsaid, so a slip is logged and the model is reminded before its next turn.
+
+### Time zones
+
+"Today", streaks and the study pack follow the student's calendar: the browser sends `X-Timezone` with every request
+(`progress_data.use_timezone`); without it `APP_TIMEZONE` (default `Asia/Kolkata`) is used. The server's own zone is never used.
 
 ## 5. Running and testing
 

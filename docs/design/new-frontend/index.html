@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#29483e">
+  <meta name="description" content="Eklavya, a voice-first study mentor grounded in your own notes.">
+  <title>Eklavya Study Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="intro" id="intro" hidden role="dialog" aria-label="Opening Eklavya">
+  <div class="ibg"></div>
+  <div class="ifly" id="ifly">
+    <div class="ibook" aria-hidden="true">
+      <div class="iback"></div>
+      <div class="ipage ip3"><span class="mono">Chapter 01</span><strong>Your own pace.<br>Your own understanding.</strong><p>A study mentor grounded in your notes.</p></div>
+      <div class="ipage ip2"></div>
+      <div class="ipage ip1"></div>
+      <div class="icover"><div class="f"><span class="mark">e</span><b>eklavya</b><span class="mono">Study companion</span></div><div class="b"></div></div>
+    </div>
+  </div>
+  <span class="mono cue">Opening your study space</span>
+  <button class="skip" id="skip">Skip intro</button>
+</div>
+
+<div class="shell">
+<aside class="side">
+  <div class="brand"><span class="mark">e</span><div><b>eklavya</b><span class="mono">your study space</span></div></div>
+  <nav class="nav" aria-label="Main">
+    <button data-view="today" aria-current="page">Today</button>
+    <button data-view="notes">My notes</button>
+    <button data-view="study">Study room</button>
+    <button data-view="ask">Ask Eklavya</button>
+    <button data-view="progress">Progress</button>
+    <button data-view="flashcards">Flashcards <span class="count" id="dueNav">8</span></button>
+    <button data-view="groups">Study groups</button>
+  </nav>
+  <div class="streak"><span class="mono">Learning streak</span><strong class="tab">07 <small>days</small></strong><p>Seven days in a row. Keep it going.</p><div class="week" aria-label="Active all 7 of the last 7 days"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="me"><span class="av">V</span><div><b>Vishu</b><small>Demo learner</small></div></div>
+</aside>
+
+<div class="main">
+  <header class="top">
+    <span class="mono">Eklavya / <b id="crumb">Today</b></span>
+    <div class="topacts">
+      <button class="btn-ghost" id="soundBtn" aria-pressed="true">Sound on</button>
+      <button class="btn-ghost" data-action="search">Search<kbd id="kbdHint">Ctrl K</kbd></button>
+    </div>
+  </header>
+
+  <section class="view" id="v-today">
+    <p class="mono" id="todayDate">Your study space</p>
+    <h1><span id="greet">Welcome back,</span> <em>Vishu.</em></h1>
+    <p class="lead">Let's make one thing clearer today.</p>
+
+    <div class="hero">
+      <div>
+        <span class="mono">● Your next session</span>
+        <h2>Machine Learning,<br><em>without the mystery.</em></h2>
+        <p>Continue with Gradient Descent. We'll take it one clear step at a time.</p>
+        <button class="btn" data-open="Machine Learning · Gradient Descent" data-mode="learn">Start learning ↗</button>
+      </div>
+      <div class="stage" id="stage" aria-hidden="true">
+        <div class="float">
+          <div class="book" id="book">
+            <div class="cover"></div>
+            <div class="page l"><span class="mono">Chapter 04</span><div class="t">Gradient Descent</div><i></i><i></i><i class="s"></i><div class="eq">θ ← θ − α·∇J(θ)</div><i></i></div>
+            <div class="page r"><span class="mono">The intuition</span><div class="hill hb"></div><div class="hill hf"></div><p class="cap">Move downhill, one measured step at a time.</p><i></i><i></i></div>
+            <div class="spine"></div>
+          </div>
+        </div>
+        <div class="note n1"><small class="mono">Key idea</small><strong>∇J(θ)</strong></div>
+        <div class="note n2"><small class="mono">Remember</small><strong>Small steps.<br>Better models.</strong></div>
+      </div>
+    </div>
+
+    <div class="section"><div><span class="mono">Today's route</span><h2>One step at a time.</h2></div></div>
+    <div class="two">
+      <section class="card">
+        <span class="mono" id="routeLabel">1 of 3 steps done</span>
+        <span class="bar"><i id="routeBar" style="width:33%"></i></span>
+        <button class="step" data-step="recall" data-action="recall"><span class="mk">01</span><span><b>Quick recall</b><small>Neural Networks</small></span><time>5 min</time></button>
+        <button class="step" data-step="concept" data-open="Machine Learning · Gradient Descent" data-mode="learn"><span class="mk">02</span><span><b>Understand a concept</b><small>Gradient Descent, in a voice session</small></span><time>12 min</time></button>
+        <button class="step" data-step="cards" data-view="flashcards"><span class="mk">03</span><span><b>Review flashcards</b><small id="routeCards">8 cards due today</small></span><time>6 min</time></button>
+      </section>
+      <section class="card note-card">
+        <span class="mono">A note from Eklavya</span>
+        <p class="quote">“You don't have to know it all. Just understand the next thing.”</p>
+        <button class="linkbtn" data-open="Machine Learning · Gradient Descent" data-mode="free">Talk it through ↗</button>
+      </section>
+    </div>
+
+    <div class="section"><div><span class="mono">Your subjects</span><h2>Taking shape.</h2></div><button class="linkbtn" data-view="progress">See how they connect ↗</button></div>
+    <div class="subs">
+      <button class="sub s-g" data-topic="ml"><span class="mono">In motion</span><span class="h3">Machine Learning</span><span class="det">7 passages · 2 to revisit</span><span class="bar"><i style="width:72%"></i></span><span class="row mono"><span>Mastery</span><strong>72%</strong></span></button>
+      <button class="sub s-c" data-topic="nn"><span class="mono">Needs a look</span><span class="h3">Neural Networks</span><span class="det">4 passages · Revisit today</span><span class="bar"><i style="width:48%"></i></span><span class="row mono"><span>Mastery</span><strong>48%</strong></span></button>
+      <button class="sub s-b" data-topic="dl"><span class="mono">Feeling good</span><span class="h3">Deep Learning</span><span class="det">4 passages · Strong recall</span><span class="bar"><i style="width:84%"></i></span><span class="row mono"><span>Mastery</span><strong>84%</strong></span></button>
+    </div>
+  </section>
+
+  <section class="view" id="v-notes" hidden>
+    <p class="mono">Your knowledge, in one place</p>
+    <h1>Your library<em>.</em></h1>
+    <p class="lead">Add a .txt file and Ask Eklavya can answer from it right away.</p>
+    <div class="drop" id="drop">
+      <div><b>Drop your notes here</b><p>Plain text (.txt or .md) is searchable instantly. PDFs and photos need the backend to read them. Up to 10 MB per file.</p></div>
+      <button class="btn" data-action="upload">Browse files</button>
+      <input type="file" id="file" accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp" multiple hidden>
+    </div>
+    <div class="docs" id="docs">
+      <article class="doc"><div class="cov" style="background:var(--sage)">ML</div><div><h3>Introduction to Machine Learning</h3><p>Sample notes · 7 passages · Supervised learning, loss, gradient descent, evaluation</p></div><button class="btn-ghost" data-open="Machine Learning" data-mode="learn">Study ↗</button></article>
+      <article class="doc"><div class="cov" style="background:var(--clay-pale)">NN</div><div><h3>Neural Networks, Unit 3</h3><p>Sample notes · 4 passages · Neurons, activation, backpropagation, overfitting</p></div><button class="btn-ghost" data-open="Neural Networks" data-mode="learn">Study ↗</button></article>
+      <article class="doc"><div class="cov" style="background:var(--blue-pale)">DL</div><div><h3>Deep Learning reading list</h3><p>Sample notes · 4 passages · CNNs, RNNs, transformers</p></div><button class="btn-ghost" data-open="Deep Learning" data-mode="learn">Study ↗</button></article>
+    </div>
+  </section>
+
+  <section class="view" id="v-study" hidden>
+    <div class="studyhead">
+      <div>
+        <span class="mono">Your personal study session</span>
+        <h2 style="margin-top:10px">A real conversation<br><em>with your notes.</em></h2>
+        <p>Ask out loud or type. Every answer comes from the material in your library.</p>
+        <button class="btn" data-open="Machine Learning · Gradient Descent" data-mode="learn">Start a voice session ↗</button>
+      </div>
+      <div class="wave" aria-hidden="true">
+        <i style="--bar:30px;--d:0"></i><i style="--bar:58px;--d:.3"></i><i style="--bar:86px;--d:.6"></i><i style="--bar:44px;--d:.9"></i><i style="--bar:96px;--d:.2"></i><i style="--bar:52px;--d:.5"></i><i style="--bar:72px;--d:.8"></i><i style="--bar:36px;--d:.1"></i>
+      </div>
+    </div>
+
+    <div class="section"><div><span class="mono">Pick a topic</span><h2>Where to begin?</h2></div></div>
+    <div class="orbit" id="orbit" aria-label="Topics you can study. Drag or use the arrow keys to turn.">
+      <div class="ring" id="ring">
+        <button class="onode" data-open="Machine Learning · Gradient Descent" data-mode="learn"><small>Start here</small>Gradient Descent</button>
+        <button class="onode" data-open="Machine Learning" data-mode="learn"><small>Foundation</small>Machine Learning</button>
+        <button class="onode" data-open="Neural Networks" data-mode="revise"><small>Revisit</small>Neural Networks</button>
+        <button class="onode" data-open="Deep Learning" data-mode="test"><small>Strong</small>Deep Learning</button>
+        <button class="onode" data-open="Deep Learning · CNN" data-mode="learn"><small>Image models</small>CNN</button>
+      </div>
+      <span class="mono orbit-hint">Drag to turn · Arrow keys work too</span>
+    </div>
+
+    <div class="section"><div><span class="mono">Choose a way in</span><h2>What would help now?</h2></div></div>
+    <div class="modes">
+      <button class="mode feat" data-open="Machine Learning · Gradient Descent" data-mode="learn"><span class="h3">Learn</span><p>Build an idea from the ground up with an everyday example.</p><span class="mono">Teach · Practise · Recap →</span></button>
+      <button class="mode" data-open="Machine Learning · Gradient Descent" data-mode="test"><span class="h3">Test</span><p>Answer a question, then check it against your notes.</p><span class="mono">Quick check →</span></button>
+      <button class="mode" data-open="Machine Learning · Gradient Descent" data-mode="revise"><span class="h3">Revise</span><p>A short recap of the three ideas behind gradient descent.</p><span class="mono">5 minutes →</span></button>
+      <button class="mode" data-open="Machine Learning" data-mode="viva"><span class="h3">Viva</span><p>Practise explaining an idea the way an examiner asks it.</p><span class="mono">Examiner style →</span></button>
+      <button class="mode" data-open="Deep Learning" data-mode="debate"><span class="h3">Debate</span><p>Take a side on a claim and back it with evidence.</p><span class="mono">Argue with evidence →</span></button>
+      <button class="mode" data-open="Your whole library" data-mode="free"><span class="h3">Free talk</span><p>Follow your curiosity across every topic in the library.</p><span class="mono">No fixed agenda →</span></button>
+    </div>
+  </section>
+
+  <section class="view" id="v-ask" hidden>
+    <p class="mono">No guesswork. Just your material.</p>
+    <h1>Ask Eklavya<em>.</em></h1>
+    <div class="askgrid">
+      <div style="min-width:0">
+        <div class="askcard">
+          <span class="mono">English or Hinglish</span>
+          <h2>What are you trying<br>to understand?</h2>
+          <p>Eklavya searches your notes and shows the exact passages it used.</p>
+          <div class="chips">
+            <button data-fill="Explain gradient descent in simple words.">Explain gradient descent</button>
+            <button data-fill="What is the difference between CNN and RNN?">CNN vs RNN</button>
+            <button data-fill="Learning rate bada ho toh kya hota hai?">Learning rate (Hinglish)</button>
+            <button data-fill="How do I reduce overfitting?">Reduce overfitting</button>
+          </div>
+        </div>
+        <form class="composer" id="askForm">
+          <textarea id="askIn" placeholder="Ask something from your notes…" aria-label="Your question"></textarea>
+          <div class="cbot"><small>Answers are limited to your library.</small><button class="btn" type="submit">Ask ↗</button></div>
+        </form>
+        <p class="err" id="askErr" role="alert"></p>
+        <div id="answer" aria-live="polite"></div>
+      </div>
+      <aside class="card" style="align-self:start">
+        <span class="mono">Your sources</span>
+        <h3 style="margin:6px 0 10px">What Eklavya can use</h3>
+        <div id="srcList">
+          <div class="src"><span class="badge">ML</span><span><b>Introduction to ML</b><small>7 passages indexed</small></span></div>
+          <div class="src"><span class="badge">NN</span><span><b>Neural Networks</b><small>4 passages indexed</small></span></div>
+          <div class="src"><span class="badge">DL</span><span><b>Deep Learning list</b><small>4 passages indexed</small></span></div>
+        </div>
+        <div id="doubtWrap" hidden><span class="mono" style="display:block;margin-top:16px">Recent doubts</span><div class="doubts" id="doubts"></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="view" id="v-progress" hidden>
+    <p class="mono">Progress you can explain</p>
+    <h1>The bigger picture<em>.</em></h1>
+    <p class="lead">What you understand, what needs work, and how it connects.</p>
+    <div class="stats">
+      <div class="stat"><span class="mono">Overall mastery</span><strong class="tab">68%</strong><p>Across 3 active subjects</p></div>
+      <div class="stat"><span class="mono">Questions answered</span><strong class="tab">42</strong><p>31 correct · 11 to revisit</p></div>
+      <div class="stat"><span class="mono">Cards known today</span><strong class="tab" id="statKnown">0 / 8</strong><p>From today's flashcard deck</p></div>
+      <div class="stat"><span class="mono">Open misconceptions</span><strong class="tab" style="color:var(--accent)">03</strong><p>Worth clearing up next</p></div>
+    </div>
+
+    <div class="section"><div><span class="mono">Concept map</span><h2>How your ideas connect.</h2></div></div>
+    <div class="cmap" id="cmap"><svg id="cmapSvg" aria-hidden="true"></svg></div>
+    <div class="legend"><span><i class="st-strong"></i>Strong · 80%+</span><span><i class="st-grow"></i>Growing · 60–79%</span><span><i class="st-low"></i>Revisit · below 60%</span></div>
+    <div class="card detail" id="detail">
+      <div><span class="mono" id="dStatus">Select a topic</span><h3 id="dName" style="margin:4px 0">Tap any topic on the map</h3><p id="dText">You'll see its mastery and what it links to.</p></div>
+      <div class="acts" id="dActs" hidden><button class="btn" id="dStudy">Study this ↗</button><button class="btn-ghost" id="dAsk">Ask about it</button></div>
+    </div>
+
+    <div class="two" style="margin-top:14px">
+      <section class="card">
+        <span class="mono">Mastery by subject</span>
+        <div class="mrow"><div><b>Machine Learning</b><small>7 passages</small></div><span class="bar"><i style="width:72%;background:var(--ochre)"></i></span><strong>72%</strong></div>
+        <div class="mrow"><div><b>Neural Networks</b><small>4 passages</small></div><span class="bar"><i style="width:48%"></i></span><strong>48%</strong></div>
+        <div class="mrow"><div><b>Deep Learning</b><small>4 passages</small></div><span class="bar"><i style="width:84%;background:var(--ok)"></i></span><strong>84%</strong></div>
+      </section>
+      <section class="card">
+        <span class="mono">Patterns to clear up</span>
+        <div class="miss"><span class="lvl lv-hi">HIGH</span><div><b>Backpropagation direction</b><small>Neural Networks · Confident wrong answer</small></div></div>
+        <div class="miss"><span class="lvl lv-md">MED</span><div><b>Bias vs. variance</b><small>Machine Learning · Repeated confusion</small></div></div>
+        <div class="miss"><span class="lvl lv-lo">LOW</span><div><b>Pooling operation</b><small>Deep Learning · Needs one more example</small></div></div>
+      </section>
+    </div>
+    <div class="empty" style="margin-top:14px;background:var(--clay-pale)">
+      <div><span class="mono">A quick reality check</span><h2 style="margin-top:8px">Test the whole deck.</h2><p>All 8 cards in a shuffled order, including ones you already know.</p><button class="btn" data-action="mock">Start a mock round ↗</button></div>
+      <div class="ppl" aria-hidden="true"><span style="left:10%;top:20%">M</span><span style="left:45%;top:5%">N</span><span style="right:8%;top:40%">D</span><span style="left:28%;bottom:4%">C</span></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-flashcards" hidden>
+    <p class="mono">Small repetitions. Long memory.</p>
+    <h1>Flashcards<em>.</em></h1>
+    <div class="fcwrap">
+      <div class="fcmain">
+        <span class="pill"><b id="due">8</b> due today</span>
+        <div class="flip">
+          <button class="card3" id="fcard" aria-label="Flip the card">
+            <span class="face"><span class="mono" id="fTopic">Machine Learning</span><span class="q" id="fq">Loading your deck</span><span class="mono">Tap or press Space to reveal</span></span>
+            <span class="face back"><span class="mono">Answer</span><span class="q" id="fa"></span></span>
+          </button>
+        </div>
+        <div class="fcctl">
+          <button class="btn-ghost" id="fPrev">← Previous</button>
+          <span class="mono tab" id="fPos">Card 01 of 08</span>
+          <button class="btn" id="fNext">Next →</button>
+        </div>
+        <div class="rate" id="rateRow"><span class="mono">How did that feel?</span><button data-rate="again">Again</button><button data-rate="hard">Hard</button><button data-rate="known">Got it</button></div>
+      </div>
+      <aside class="card" style="align-self:start">
+        <span class="mono">Spaced repetition</span>
+        <h3 style="margin:6px 0 10px">Memory needs a revisit.</h3>
+        <p style="color:var(--muted);font-size:13px">"Got it" removes a card from today's deck. "Again" and "Hard" send it to the back. Your progress is saved in this browser and resets each day.</p>
+        <div class="lb"><div><b>0</b><small>NOW</small></div><div><b>1</b><small>1 DAY</small></div><div><b>2</b><small>3 DAYS</small></div><div><b>3</b><small>7 DAYS</small></div><div><b>4</b><small>14 DAYS</small></div><div><b>5</b><small>30 DAYS</small></div></div>
+        <button class="btn-ghost" data-action="resetDeck">Reset today's deck</button>
+      </aside>
+    </div>
+  </section>
+
+  <section class="view" id="v-groups" hidden>
+    <p class="mono">Learn better, together</p>
+    <h1>Your study circle<em>.</em></h1>
+    <p class="lead">Share notes, compare progress and challenge a friend.</p>
+    <div class="empty">
+      <div class="ppl" aria-hidden="true"><span style="left:12%;top:24%">V</span><span style="left:52%;top:10%">A</span><span style="left:20%;bottom:6%">R</span><span style="right:10%;bottom:20%">M</span></div>
+      <div>
+        <span class="mono">A space for your people</span>
+        <h2 style="margin:8px 0 10px">Good ideas get better<br>when they're shared.</h2>
+        <p>Groups need personal accounts, which this preview doesn't have yet.</p>
+        <button class="btn-ghost" id="howBtn" aria-expanded="false" aria-controls="howList">How groups will work</button>
+        <ol class="how" id="howList" hidden>
+          <li>Create a group and invite friends with a link.</li>
+          <li>Share a set of notes so everyone studies from the same material.</li>
+          <li>Challenge a friend to a five-question round on any topic.</li>
+          <li>Your own mastery and misconceptions stay private.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+</div>
+</div>
+
+<nav class="mnav" aria-label="Mobile">
+  <button data-view="today" aria-current="page"><span>⌂</span>Today</button>
+  <button data-view="notes"><span>▤</span>Notes</button>
+  <button data-view="study"><span>✧</span>Study</button>
+  <button data-view="ask"><span>◌</span>Ask</button>
+  <button data-view="flashcards"><span>❏</span>Cards</button>
+  <button data-view="progress"><span>⌁</span>Progress</button>
+</nav>
+
+<div class="modal" id="voice" hidden role="dialog" aria-modal="true" aria-labelledby="vt">
+  <div class="voice">
+    <div class="vtop"><span class="mono" id="vmode">Eklavya live · Learn</span><button class="x" data-close aria-label="Close session">×</button></div>
+    <div class="vbody" id="vbody">
+      <span class="mono" id="vtopic">Machine Learning · Gradient Descent</span>
+      <h2 id="vt">Let's make it <em>make sense.</em></h2>
+      <div class="orb" aria-hidden="true"><i></i><i></i><span class="core">e.</span></div>
+      <div class="vbars" id="vbars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="vq" id="vq"></p>
+      <p class="tx" id="vtx" aria-live="polite"></p>
+      <span class="mono" id="vsrc"></span>
+      <form class="vform" id="vForm">
+        <input id="vIn" placeholder="Type a question, or use the mic" aria-label="Ask your mentor">
+        <button class="btn" type="submit">Ask</button>
+      </form>
+    </div>
+    <div class="vctl">
+      <button id="micBtn" aria-pressed="false">Start mic</button>
+      <button class="end" data-close>End session</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="palette" hidden role="dialog" aria-modal="true" aria-label="Search">
+  <div class="pal">
+    <input id="palIn" placeholder="Go to a page, topic or document" aria-label="Search" autocomplete="off">
+    <div class="plist" id="plist"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

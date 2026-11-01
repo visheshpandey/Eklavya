@@ -10,6 +10,8 @@ export const ActionType = Object.freeze({
   TOPIC_LOADED: 'topic/loaded',
   NOTES_RESET: 'data/notesReset',
   SESSION_STARTED: 'session/started',
+  CONNECTION_LOST: 'session/connectionLost',
+  SESSION_RESUMED: 'session/resumed',
   TRANSCRIPT_RECEIVED: 'session/transcript',
   TURN_INTERRUPTED: 'session/interrupted',
   EMOTION_REPORTED: 'session/emotion',
@@ -57,6 +59,8 @@ export const actions = {
   emotionReported: make(ActionType.EMOTION_REPORTED),          // server `emotion` event
   phaseChanged: make(ActionType.PHASE_CHANGED),                // server `phase` event
   questionAsked: make(ActionType.QUESTION_ASKED),              // server `quiz_question` event
+  connectionLost: make(ActionType.CONNECTION_LOST),            // {code, retryable}: the call dropped; the Reconnect prompt shows
+  sessionResumed: make(ActionType.SESSION_RESUMED),            // the student pressed Reconnect: keep the quiz, viva and debate on screen
   answerGraded: make(ActionType.ANSWER_GRADED),                // server `mastery` event
   testSummarized: make(ActionType.TEST_SUMMARIZED),            // server `test_summary` event
   missionReceived: make(ActionType.MISSION_RECEIVED),          // server `mission` event

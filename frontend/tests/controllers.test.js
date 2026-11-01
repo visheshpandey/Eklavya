@@ -65,6 +65,14 @@ test('notes: a backend failure becomes a banner, never an exception', async () =
   assert.equal(store.getState().banner, 'Cannot reach the backend');
 });
 
+test('notes: a busy photo reader is shown as a plain sentence in the banner, and the upload button comes back', async () => {
+  const busy = 'The photo reader is busy right now. Please try again in a minute.';
+  const { store, notes } = setup({ backendOverrides: { uploadDocument: async () => { throw new ApiError(busy, { status: 502, code: 'llm_unavailable' }); } } });
+  await notes.uploadFile({ name: 'page.jpg' });   // resolves: the failure is reported, never thrown
+  assert.equal(store.getState().banner, busy);
+  assert.ok(!/503|429|UNAVAILABLE/.test(store.getState().banner));
+});
+
 test('notes: opening a topic selects it then stores its details', async () => {
   const { store, notes } = setup();
   await notes.openTopic(1);
@@ -77,14 +85,14 @@ test('session: start passes mode, topic and language to the voice client and res
   voice.status = 'listening';                                   // a session is already running
   await session.start('learn', 5);
   assert.equal(voice.stopped, 1);                               // it was ended first
-  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'learn', topicId: 5, side: undefined, motion: undefined, style: undefined }]);
+  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'learn', topicId: 5, side: undefined, motion: undefined, style: undefined, tutor: 'mentor' }]);
   assert.equal(store.getState().session.mode, 'learn');
 });
 
 test('session: a debate passes the side Eklavya takes and the motion to the voice client', async () => {
   const { store, session, voice } = setup();
   await session.start('debate', 5, { side: 'against', motion: 'Precision beats recall' });
-  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'debate', topicId: 5, side: 'against', motion: 'Precision beats recall', style: undefined }]);
+  assert.deepEqual(voice.started, [{ userId: 1, lang: 'hinglish', mode: 'debate', topicId: 5, side: 'against', motion: 'Precision beats recall', style: undefined, tutor: 'mentor' }]);
   assert.equal(store.getState().session.mode, 'debate');
 });
 
@@ -112,6 +120,15 @@ test('session: server events update the matching state', () => {
   assert.equal(s.mission.title, 'Fix it');
 });
 
+test('session: a transcript sent as a replacement replaces the bubble instead of piling up', () => {
+  const { store, session } = setup();
+  for (const text of ['Hello', 'Hello there', 'Hello there, ready?']) {
+    session.handleEvent({ type: 'transcript', role: 'tutor', text, final: false, replace: true });
+  }
+  assert.equal(store.getState().session.messages.length, 1);
+  assert.equal(store.getState().session.messages[0].text, 'Hello there, ready?');
+});
+
 test('session: a graded answer shows a toast and refreshes the dashboard', () => {
   const { store, session, calls } = setup();
   session.handleEvent({ type: 'mastery', topic: 'Precision', before: 38, after: 47.3, is_correct: true, misconception: null });
@@ -120,12 +137,54 @@ test('session: a graded answer shows a toast and refreshes the dashboard', () =>
   assert.deepEqual(calls, ['dashboard']);
 });
 
-test('session: a server error stops the voice session and is shown', () => {
+test('session: a server error shows friendly copy for its code, never the provider text', () => {
   const { store, session, voice } = setup();
   voice.status = 'listening';
-  session.handleEvent({ type: 'error', message: 'Gemini Live failed: quota' });
+  session.handleEvent({ type: 'error', code: 'need_notes', retryable: false, message: 'Gemini Live failed: {"error": 429 quota}' });
   assert.equal(voice.stopped, 1);
-  assert.equal(store.getState().banner, 'Gemini Live failed: quota');
+  assert.equal(store.getState().banner, 'Upload your notes first, then start the voice session.');
+  session.handleEvent({ type: 'error', code: 'something_new', message: 'raw provider text' });
+  assert.equal(store.getState().banner, 'Something went wrong with the voice session. Please try again.');   // an unknown code is still friendly
+  assert.ok(!JSON.stringify(store.getState().toasts).includes('provider'));
+});
+
+test('session: a retryable error offers Reconnect instead of a dead end', () => {
+  const { store, session, voice } = setup();
+  voice.status = 'listening';
+  session.handleEvent({ type: 'error', code: 'upstream_unavailable', retryable: true, message: 'x' });
+  assert.deepEqual(store.getState().session.lost, { code: 'upstream_unavailable', retryable: true });
+  assert.equal(store.getState().banner, null);
+});
+
+test('session: an unexpected close shows Reconnect; Reconnect keeps the quiz and re-sends the answer that did not get through', async () => {
+  const { store, session, voice } = setup();
+  voice.sendText = function sendText(text) { if (this.status !== 'listening') return false; this.sent.push(text); return true; };
+  await session.start('test', 5);
+  session.handleEvent({ type: 'quiz_question', question_id: 9, question: 'Q?', options: ['A. x'], topic: 'Precision', number: 1, total: 3 });
+  session.sendText('B');                                   // sent, but the call drops before it is graded
+  voice.status = 'idle';
+  session.handleEvent({ type: 'connection_lost', code: 1011 });
+  assert.equal(store.getState().session.lost.retryable, true);
+  session.sendText('C');                                   // typed while the call is down: queued, not lost
+  assert.deepEqual(voice.sent, ['B']);
+  await session.reconnect();
+  assert.equal(store.getState().session.lost, null);
+  assert.equal(store.getState().session.question.question_id, 9);             // the quiz stayed on screen
+  assert.equal(voice.started.at(-1).resume, true);
+  assert.deepEqual(voice.sent, ['B', 'C']);                                   // the queued answer went out after reconnecting
+});
+
+test('session: an answer that was already graded is not sent again after Reconnect', async () => {
+  const { session, voice } = setup();
+  voice.sendText = function sendText(text) { if (this.status !== 'listening') return false; this.sent.push(text); return true; };
+  await session.start('test', 5);
+  session.handleEvent({ type: 'quiz_question', question_id: 9, question: 'Q?', options: ['A. x'], topic: 'P', number: 1, total: 3 });
+  session.sendText('B');
+  session.handleEvent({ type: 'mastery', topic: 'P', before: 40, after: 55, is_correct: true, question_id: 9 });
+  voice.status = 'idle';
+  session.handleEvent({ type: 'connection_lost', code: 1011 });
+  await session.reconnect();
+  assert.deepEqual(voice.sent, ['B']);
 });
 
 test('session: unknown event types are ignored', () => {

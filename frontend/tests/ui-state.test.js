@@ -15,6 +15,8 @@ test('the app opens on the Today section with an empty library search, nothing f
 test('sections can be switched, and unknown sections are ignored', () => {
   assert.equal(run(actions.viewChanged(VIEWS.PROGRESS)).ui.view, 'progress');
   assert.equal(run(actions.viewChanged(VIEWS.LIBRARY)).ui.view, 'library');
+  assert.equal(run(actions.viewChanged(VIEWS.ASK)).ui.view, 'ask');
+  assert.equal(run(actions.viewChanged(VIEWS.GROUPS)).ui.view, 'groups');
   const s = run(actions.viewChanged('nonsense'));
   assert.equal(s, initialState);                                              // unchanged object: no re-render
 });

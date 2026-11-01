@@ -1,9 +1,10 @@
 // Service worker: lets the app be installed and open without a network.
 // Same-origin page files: network first (always the newest code when online), the cached copy when offline.
 // The backend API (another origin) and the voice WebSocket are never cached: answers must be live.
-const CACHE = 'eklavya-shell-v3';
+const CACHE = 'eklavya-shell-v4';
 const SHELL = ['./', './index.html', './config.js', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png',
-  './css/tokens.css', './css/base.css', './css/layout.css', './css/components.css', './css/skin.css', './fonts/geist.woff2', './css/print.css', './js/main.js'];
+  './css/tokens.css', './css/base.css', './css/components.css', './css/skin.css', './css/shell.css', './css/print.css',
+  './fonts/dm-sans.woff2', './fonts/dm-mono-400.woff2', './fonts/dm-mono-500.woff2', './fonts/instrument-serif.woff2', './fonts/instrument-serif-italic.woff2', './js/main.js'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -1,6 +1,9 @@
 /* Reset, typography, focus, and accessibility helpers. No layout and no components here. */
-@font-face { font-family: "Geist"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("../fonts/geist.woff2") format("woff2"); }
-@font-face { font-family: "Geist Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/geist-mono.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 400 700; font-display: swap; src: url("../fonts/dm-sans.woff2") format("woff2"); }
+@font-face { font-family: "DM Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/dm-mono-400.woff2") format("woff2"); }
+@font-face { font-family: "DM Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/dm-mono-500.woff2") format("woff2"); }
+@font-face { font-family: "Instrument Serif"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/instrument-serif.woff2") format("woff2"); }
+@font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; font-display: swap; src: url("../fonts/instrument-serif-italic.woff2") format("woff2"); }
 @font-face { font-family: "Kalam"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/kalam-400.woff2") format("woff2"); }
 @font-face { font-family: "Kalam"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/kalam-700.woff2") format("woff2"); }
 *, *::before, *::after { box-sizing: border-box; }
@@ -15,6 +18,8 @@ body {
 h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 h1, h2, h3 { line-height: 1.25; font-weight: 650; letter-spacing: -0.005em; }
+/* page and section headlines are set in the serif, like the design; small headings inside cards keep the sans */
+.serif, .page-title, .section-title { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }

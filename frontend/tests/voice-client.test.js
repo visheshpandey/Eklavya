@@ -40,7 +40,7 @@ class FakeWebSocket {
   close() { this.readyState = FakeWebSocket.CLOSING; }          // the real "close" event arrives later (see fireClose)
   open() { this.readyState = FakeWebSocket.OPEN; this.handlers.open?.(); }
   fail() { this.handlers.error?.(); }
-  fireClose() { this.readyState = FakeWebSocket.CLOSED; this.onclose?.(); }
+  fireClose(code = 1006) { this.readyState = FakeWebSocket.CLOSED; this.onclose?.({ code }); }
 }
 
 function setup() {
@@ -77,7 +77,7 @@ test('a signed-in user is identified by the login token, never by a user id in t
     await settle();
     sockets[0].open();
     await started;
-    assert.match(sockets[0].url, /\/ws\/voice\?token=abc\.def&lang=english$/);
+    assert.match(sockets[0].url, /\/ws\/voice\?token=abc\.def&lang=english&tutor=mentor$/);
     assert.doesNotMatch(sockets[0].url, /user_id/);
   } finally { globalThis.localStorage = saved; }
 });
@@ -90,11 +90,24 @@ test('a normal start reaches "listening" and delivers server events', async () =
   sockets[0].open();
   await started;
   assert.deepEqual(statuses, ['connecting', 'listening']);
-  assert.match(sockets[0].url, /\/ws\/voice\?lang=hinglish&mode=learn&topic_id=7$/);
+  assert.match(sockets[0].url, /\/ws\/voice\?lang=hinglish&tutor=mentor&mode=learn&topic_id=7$/);
   sockets[0].onmessage({ data: JSON.stringify({ type: 'transcript', role: 'tutor', text: 'Hi', final: false }) });
   assert.equal(events[0].text, 'Hi');
   client.sendText('hello');
   assert.deepEqual(JSON.parse(sockets[0].sent.at(-1)), { type: 'user_text', text: 'hello' });
+});
+
+test('the chosen tutor is sent; anything unknown means the calm mentor', async () => {
+  for (const [tutor, expected] of [['senior', 'senior'], ['robot', 'mentor']]) {
+    sockets.length = 0;
+    const { client, allowMic, settle } = setup();
+    const started = client.start({ lang: 'english', tutor });
+    allowMic();
+    await settle();
+    sockets[0].open();
+    await started;
+    assert.match(sockets[0].url, new RegExp(`tutor=${expected}`));
+  }
 });
 
 test('a debate adds the side and the encoded motion to the socket URL; other modes do not', async () => {
@@ -210,4 +223,41 @@ test('tearing a session down twice never leaves an unhandled "Cannot close a clo
     process.off('unhandledRejection', listener);
   }
   assert.deepEqual(unhandled, []);
+});
+
+test('a socket that closes by itself (not by the student) reports a lost connection; a clean close or stop() does not', async () => {
+  for (const [how, expectLost] of [['dropped', true], ['clean', false], ['stopped', false]]) {
+    const { client, events, allowMic, settle } = setup();
+    const started = client.start({ lang: 'english' });
+    allowMic();
+    await settle();
+    sockets[0].open();
+    await started;
+    if (how === 'dropped') sockets[0].fireClose(1011);
+    else if (how === 'clean') sockets[0].fireClose(1000);
+    else { client.stop(); sockets[0].fireClose(1000); }
+    assert.equal(events.some((e) => e.type === 'connection_lost'), expectLost, how);
+    if (how === 'dropped') assert.equal(events.find((e) => e.type === 'connection_lost').code, 1011);
+  }
+});
+
+test('the session id from the server is remembered and sent back to resume a dropped call', async () => {
+  const { client, allowMic, settle } = setup();
+  let started = client.start({ lang: 'english', mode: 'test', topicId: 4 });
+  allowMic();
+  await settle();
+  sockets[0].open();
+  await started;
+  sockets[0].onmessage({ data: JSON.stringify({ type: 'session', id: 'abc123' }) });
+  sockets[0].fireClose(1011);
+  sockets.length = 0;
+  micRequests.length = 0;
+  started = client.start({ lang: 'english', mode: 'test', topicId: 4, resume: true });
+  allowMic();
+  await settle();
+  assert.match(sockets[0].url, /&resume=abc123$/);
+  sockets[0].open();
+  await started;
+  client.stop();
+  assert.equal(client.sendText('x'), false);   // no open call: the caller is told, so it can keep the answer
 });

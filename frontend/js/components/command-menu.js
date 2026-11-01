@@ -5,7 +5,7 @@ import { selectDashboard, selectSelectedTopicId } from '../state/selectors.js';
 
 const isTyping = (target) => target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable]'));
 
-export function mountCommandMenu({ store, dialog, trigger, actions, topics, pages }) {
+export function mountCommandMenu({ store, dialog, trigger, actions, topics, pages, onNoMatch }) {
   const input = el('input', {
     class: 'cmd-input', type: 'search', placeholder: 'Search pages, topics and actions', autocomplete: 'off',
     role: 'combobox', 'aria-expanded': 'true', 'aria-controls': 'cmd-list', 'aria-label': 'Search pages, topics and actions',
@@ -58,7 +58,7 @@ export function mountCommandMenu({ store, dialog, trigger, actions, topics, page
       el('span', { class: 'cmd-text' }, el('span', { class: 'cmd-label' }, item.label), item.hint ? el('span', { class: 'cmd-hint' }, item.hint) : null),
       item.key ? el('kbd', { 'aria-hidden': 'true' }, item.key) : null));
     });
-    if (!items.length) nodes.push(el('p', { class: 'cmd-empty' }, `Nothing matches “${input.value.trim()}”.`));
+    if (!items.length) nodes.push(el('p', { class: 'cmd-empty' }, `Nothing matches “${input.value.trim()}”.${onNoMatch ? ' Press Enter to ask your notes instead.' : ''}`));
     render(list, nodes);
     input.setAttribute('aria-activedescendant', items.length ? `cmd-${active}` : '');
   }
@@ -99,6 +99,12 @@ export function mountCommandMenu({ store, dialog, trigger, actions, topics, page
     if (event.key === 'ArrowDown') { event.preventDefault(); move(1); }
     else if (event.key === 'ArrowUp') { event.preventDefault(); move(-1); }
     else if (event.key === 'Enter' && items[active]) { event.preventDefault(); run(items[active]); }
+    else if (event.key === 'Enter' && !items.length && input.value.trim() && onNoMatch) {   // nothing matched: ask the notes instead
+      event.preventDefault();
+      const question = input.value.trim();
+      dialog.close();
+      onNoMatch(question);
+    }
   });
   dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });   // a click on the scrim closes it
   trigger.addEventListener('click', open);

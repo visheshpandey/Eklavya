@@ -17,11 +17,12 @@ const emptySession = () => ({
   debateScores: [],   // debate: one score per student argument
   verdict: null,      // debate: the final verdict
   mission: null,      // the mission Eklavya gave at the end of this session (shown in Study)
+  lost: null,         // {code, retryable} when the call dropped and can be picked up again
 });
 
 export const MAX_BOARDS = 12;
 
-export const VIEWS = Object.freeze({ TODAY: 'today', LIBRARY: 'library', STUDY: 'study', PROGRESS: 'progress' });
+export const VIEWS = Object.freeze({ TODAY: 'today', LIBRARY: 'library', STUDY: 'study', PROGRESS: 'progress', ASK: 'ask', GROUPS: 'groups', FLASHCARDS: 'flashcards' });
 export const THEMES = Object.freeze({ SYSTEM: 'system', LIGHT: 'light', DARK: 'dark' });
 
 const initialUi = () => ({
@@ -147,6 +148,10 @@ export function reducer(state, action) {
     case A.SESSION_STARTED:
       return withUi({ ...state, banner: null, session: { ...emptySession(), mode: payload.mode, topicId: payload.topicId } }, { view: VIEWS.STUDY });
 
+    case A.CONNECTION_LOST:
+      return withSession(state, { lost: payload });
+    case A.SESSION_RESUMED:
+      return withSession(state, { lost: null });
     case A.TRANSCRIPT_RECEIVED:
       return receiveTranscript(state, payload);
     case A.TURN_INTERRUPTED: {

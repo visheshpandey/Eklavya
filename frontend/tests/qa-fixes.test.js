@@ -12,7 +12,7 @@ import { createFeedbackHold } from '../js/lib/feedback-hold.js';
 import { loadLanguage, saveLanguage, LANGUAGE_KEY } from '../js/lib/language.js';
 import { HINDI_KEYS, KEYS, t } from '../js/lib/strings.js';
 import { currentStep, ORDER } from '../js/components/stepper.js';
-import { MAX_LABELLED } from '../js/components/concept-map.js';
+import { MAX_LABELLED, mapGeometry } from '../js/components/concept-map.js';
 
 const run = (...acts) => acts.reduce((state, action) => reducer(state, action), initialState);
 
@@ -188,6 +188,15 @@ test('the notes library has Hindi text for every label, including the empty stat
 });
 
 // ------------------------------------------------------------------ #21 concept map with many topics
-test('the concept map labels up to 12 topics and drops labels above that', () => {
-  assert.equal(MAX_LABELLED, 12);
+test('the concept map keeps names for up to 30 topics, on a bigger ring with smaller circles', () => {
+  assert.equal(MAX_LABELLED, 30);
+  const small = mapGeometry(8), many = mapGeometry(25);
+  assert.ok(!small.radial && many.radial && many.size > small.size);
+  assert.ok(many.labelled && many.nodeRadius >= 11 && many.nodeRadius < small.nodeRadius);
+  assert.equal(mapGeometry(31).labelled, false);   // beyond that the names live in the tip and the list
+  // neighbouring circles never touch: the gap along the ring is wider than two circles, at every size up to the limit
+  for (let n = 3; n <= 40; n++) {
+    const g = mapGeometry(n), gap = 2 * g.ringRadius * Math.sin(Math.PI / n);
+    assert.ok(gap > 2 * g.nodeRadius, `${n} topics: circles overlap`);
+  }
 });

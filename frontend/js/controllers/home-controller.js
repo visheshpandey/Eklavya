@@ -69,9 +69,27 @@ export function createHomeController({ store, backend, notifier, userId }) {
     dueCards: async () => {
       try { return (await backend.dueCards()).cards; } catch (err) { notifier.error(err); return []; }
     },
+    /** Rate one card (Got it / Hard / Again). Returns the server's answer {box, due_on, due_count}, or null when it could not be saved. */
+    rateCard: async (cardId, knew, hard = false) => {
+      try {
+        const result = await backend.reviewCard(cardId, knew, hard);
+        const today = store.getState().today;
+        if (today) store.dispatch(actions.todayLoaded({ ...today, cards_due: result.due_count }));
+        return result;
+      } catch (err) { notifier.error(err); return null; }
+    },
+    /** Every card the student has, for a practice round (a mock round does not change the schedule). */
+    allCards: async () => {
+      try { return (await backend.flashcards(null, userId)).cards; } catch (err) { notifier.error(err); return []; }
+    },
+    /** "Reset today's deck": every card is due again. */
+    resetDeck: () => guarded(async () => {
+      await backend.resetDeck();
+      await loadToday();
+    }),
     /** Save one review answer; Today's "cards to review" count follows. */
-    reviewCard: (cardId, knew) => quietly(async () => {
-      const result = await backend.reviewCard(cardId, knew);
+    reviewCard: (cardId, knew, hard = false) => quietly(async () => {
+      const result = await backend.reviewCard(cardId, knew, hard);
       const today = store.getState().today;
       if (today) store.dispatch(actions.todayLoaded({ ...today, cards_due: result.due_count }));
     }),

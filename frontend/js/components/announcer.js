@@ -1,7 +1,8 @@
 // Screen-reader announcements. The conversation panel stays silent while text streams in word by word;
 // this region speaks each finished tutor message once, new whiteboard cards, and connection changes.
 import { VOICE_STATUS } from '../lib/protocol.js';
-import { selectBoards, selectMessages, selectVoiceStatus } from '../state/selectors.js';
+import { t } from '../lib/strings.js';
+import { selectBoards, selectConnectionLost, selectLanguage, selectMessages, selectVoiceStatus } from '../state/selectors.js';
 
 const STATUS_TEXT = {
   [VOICE_STATUS.CONNECTING]: 'Connecting to Eklavya.',
@@ -24,5 +25,8 @@ export function mountAnnouncer({ store, root }) {
   store.select(selectVoiceStatus, (status) => {
     if (first) { first = false; return; }                          // nothing to announce at page load
     if (STATUS_TEXT[status]) root.textContent = STATUS_TEXT[status];
+  });
+  store.select(selectConnectionLost, (lost) => {   // a dropped call is announced, and the Reconnect button is reachable
+    if (lost) root.textContent = t('conn.lost', selectLanguage(store.getState()));
   });
 }

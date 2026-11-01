@@ -60,8 +60,11 @@ export class VoiceClient {
    * Open the mic and the WebSocket. Rejects with a readable Error if either fails.
    * Resolves quietly (and releases everything) if stop() is called while it is still starting.
    */
-  async start({ userId = 1, lang = 'hinglish', mode = 'free', topicId = null, side = null, motion = '', style = 'tough' } = {}) {
+  async start({ userId = 1, lang = 'hinglish', mode = 'free', topicId = null, side = null, motion = '', style = 'tough', tutor = 'mentor', resume = false } = {}) {
     if (this.ws) return;
+    this.userStopped = false;
+    const resumeId = resume ? this.resumeId : null;   // pick the dropped call up where it was
+    if (!resume) this.resumeId = null;
     const id = ++this.session;       // starting a new session cancels any start that is still waiting
     const current = () => this.session === id;
     this._setStatus(VOICE_STATUS.CONNECTING);
@@ -101,11 +104,16 @@ export class VoiceClient {
       extra += `&side=${side === 'against' ? 'against' : 'for'}&motion=${encodeURIComponent(motion)}&style=${style === 'friendly' ? 'friendly' : 'tough'}`;
     }
     const token = getToken();   // the server reads who you are from the token; a guest sends none
-    ws = new WebSocket(`${WS_BASE}/ws/voice?${token ? `token=${encodeURIComponent(token)}&` : ''}lang=${encodeURIComponent(lang)}${extra}`);
+    ws = new WebSocket(`${WS_BASE}/ws/voice?${token ? `token=${encodeURIComponent(token)}&` : ''}lang=${encodeURIComponent(lang)}&tutor=${tutor === 'senior' ? 'senior' : 'mentor'}${extra}${resumeId ? `&resume=${encodeURIComponent(resumeId)}` : ''}`);
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
     ws.onmessage = (message) => { if (this.ws === ws) this._onMessage(message); };
-    ws.onclose = () => { if (this.ws === ws) this._cleanup(); };   // an old socket closing late must not end a newer session
+    ws.onclose = (closed) => {
+      if (this.ws !== ws) return;   // an old socket closing late must not end a newer session
+      const lost = !this.userStopped && closed?.code !== 1000;   // closed by the network or the server, not by the student
+      this._cleanup();
+      if (lost) this.onEvent({ type: 'connection_lost', code: closed?.code ?? 1006 });
+    };
 
     try {
       await new Promise((resolve, reject) => {
@@ -141,7 +149,9 @@ export class VoiceClient {
 
   /** Send typed text to the same Gemini session. */
   sendText(text) {
-    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ type: 'user_text', text }));
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;   // the caller keeps it and sends it again after reconnecting
+    this.ws.send(JSON.stringify({ type: 'user_text', text }));
+    return true;
   }
 
   /** Show Eklavya a photo during the call: {mime, data (base64)}. Returns false when no call is open. */
@@ -152,6 +162,7 @@ export class VoiceClient {
   }
 
   stop() {
+    this.userStopped = true;
     if (this.ws?.readyState === WebSocket.OPEN) quiet(() => this.ws.send(JSON.stringify({ type: 'end' })));
     this._cleanup();
   }
@@ -161,6 +172,7 @@ export class VoiceClient {
     let event;
     try { event = JSON.parse(message.data); } catch { return; }
     if (event.type === 'interrupted') this._flushPlayback();
+    if (event.type === 'session') this.resumeId = event.id;   // lets a dropped call be picked up again
     this.onEvent(event);
   }
 

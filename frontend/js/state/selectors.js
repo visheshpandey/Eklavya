@@ -11,6 +11,7 @@ export const selectMission = (s) => s.mission;
 export const selectBanner = (s) => s.banner;
 export const selectToasts = (s) => s.toasts;
 export const selectMessages = (s) => s.session.messages;
+export const selectConnectionLost = (s) => s.session.lost;
 export const selectPhase = (s) => s.session.phase;
 export const selectEmotion = (s) => s.session.emotion;
 export const selectQuestion = (s) => s.session.question;
