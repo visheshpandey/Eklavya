@@ -111,13 +111,6 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
         el('span', { class: 'det', text: `${subject.topics} topic${subject.topics === 1 ? '' : 's'} · ${subject.weak ? `${subject.weak} to revisit` : 'all steady'}` }),
         el('span', { class: 'bar' }, el('i', { style: `width:${subject.mastery}%` })),
         el('span', { class: 'row mono' }, el('span', { text: 'Mastery' }), el('strong', { text: `${subject.mastery}%` })));
-      if (!reduceMotion) {
-        card.addEventListener('pointermove', (event) => {
-          const box = card.getBoundingClientRect(), x = (event.clientX - box.left) / box.width - 0.5, y = (event.clientY - box.top) / box.height - 0.5;
-          card.style.setProperty('--tx', `${(-y * 8).toFixed(1)}deg`); card.style.setProperty('--ty', `${(x * 10).toFixed(1)}deg`);
-        });
-        card.addEventListener('pointerleave', () => { card.style.setProperty('--tx', '0deg'); card.style.setProperty('--ty', '0deg'); });
-      }
       return card;
     }));
   }

@@ -128,7 +128,7 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 
 .subs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 14px; }
 .sub { display: flex; flex-direction: column; gap: 6px; min-height: 170px; padding: 18px; border: 1px solid transparent; border-radius: var(--r-panel); text-align: left; color: var(--ink);
-  transform: perspective(800px) rotateX(var(--tx, 0deg)) rotateY(var(--ty, 0deg)); transition: transform .25s, box-shadow .25s; }
+  transition: box-shadow .25s; }
 .sub:hover { box-shadow: 0 14px 26px var(--drop-shadow); }
 .sub .det { font-size: 12px; color: var(--ink-3); }
 .sub .serif-sm { margin-top: auto; }
@@ -414,3 +414,11 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 #todayHero { min-height: 368px; }
 #route { min-height: 285px; }
 @media (max-width: 700px) { #todayHead, #todayHero, #route { min-height: 0; } }
+
+/* motion layer: the streak flame sits in the corner of the streak card (out of flow, so it never moves anything) */
+.streakcard { position: relative; }
+.flame { position: absolute; top: 8px; right: 10px; width: 44px; height: 44px; pointer-events: none; transform-origin: 50% 100%; }
+.flame.is-out { opacity: .35; filter: grayscale(1); }
+.card, .stat { transition: box-shadow .25s; }
+.card:hover, .stat:hover { box-shadow: 0 14px 26px var(--drop-shadow); }
+.rstep .mk svg { width: 100%; height: 100%; display: block; }

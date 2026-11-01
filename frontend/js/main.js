@@ -34,6 +34,7 @@ import { mountStudyHeader } from './components/study-header.js';
 import { mountStudyLaunch } from './components/study-launch.js';
 import { mountSessionOrb } from './components/session-orb.js';
 import { mountStageTools } from './components/stage-tools.js';
+import { startMotion } from './motion/index.js';
 import { mountCelebration } from './components/celebration.js';
 import { mountStepper } from './components/stepper.js';
 import { mountDebateTag } from './components/debate-tag.js';
@@ -400,3 +401,6 @@ store.select(selectView, (view) => {
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* the app works without it */ });
 }
+
+// motion layer (smooth scroll, reveals, count-ups, tilt, flame, confetti): added once the page is up, skipped for "reduce motion"
+startMotion({ store });
