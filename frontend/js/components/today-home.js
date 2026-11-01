@@ -2,7 +2,8 @@
 // Everything comes from the real data: the plan, the due topics, the cards due and the notes' topics. The older plan list, due list and exam
 // planner stay below ("More for today"); this adds the guided path on top.
 import { el, render } from '../lib/dom.js';
-import { dateLine, firstName, greetingFor } from '../lib/greeting.js';
+import { dateLine, firstName, greetingKey } from '../lib/greeting.js';
+import { t } from '../lib/strings.js';
 import { buildRoute, loadRouteDone, routeProgress, saveRouteDone } from '../lib/route.js';
 import { groupSubjects } from '../lib/subjects.js';
 import { selectDashboard, selectLanguage, selectToday } from '../state/selectors.js';
@@ -29,10 +30,12 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
   };
 
   function drawHead() {
-    const name = firstName(getName()) || 'there';
+    const name = firstName(getName());
+    const greeting = t(greetingKey(new Date()), selectLanguage(store.getState()));
     render(head,
       el('p', { class: 'mono', text: dateLine(new Date()) }),
-      el('h1', { class: 'page-title' }, el('span', { text: greetingFor(new Date()) }), ' ', el('em', { text: `${name}.` })),
+      // with a name: "Good evening, Asha."  without one: just "Good evening." (never a made-up name)
+      el('h1', { class: 'page-title' }, name ? [el('span', { text: `${greeting},` }), ' ', el('em', { text: `${name}.` })] : [el('span', { text: greeting }), el('em', { text: '.' })]),
       el('p', { class: 'lead', text: 'Let\'s make one thing clearer today.' }));
   }
 
@@ -61,7 +64,7 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
     render(hero, el('div', { class: 'hero' },
       el('div', {}, el('span', { class: 'mono', text: '● Your next session' }),
         el('h2', {}, next ? topicName : 'Your notes,', el('br'), el('em', { text: next ? 'one clear step at a time.' : 'explained out loud.' })),
-        el('p', { text: next ? `Continue with ${topicName}. We'll take it one clear step at a time.` : 'Add notes and Eklavya plans your day, talks you through each topic and tests you by voice.' }),
+        el('p', { text: next ? `Continue with ${topicName}: a short voice lesson, then a quick check on what stuck.` : 'Add notes and Eklavya plans your day, talks you through each topic and tests you by voice.' }),
         startButton),
       desk));
     if (!reduceMotion) {   // the desk and book lean toward the pointer

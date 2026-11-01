@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { dateLine, firstName, greetingFor, initialOf } from '../js/lib/greeting.js';
+import { dateLine, dayPart, firstName, greetingFor, greetingKey, initialOf } from '../js/lib/greeting.js';
 import { buildRoute, loadRouteDone, routeProgress, saveRouteDone } from '../js/lib/route.js';
 import { frontIndex, orbitPositions, orbitTag, turnBy } from '../js/lib/orbit.js';
 import { bestSentences, splitByTerms } from '../js/lib/highlight.js';
@@ -12,7 +12,10 @@ import { createSound, loadSound, saveSound } from '../js/lib/sound.js';
 const at = (hour) => new Date(2026, 10, 2, hour, 0, 0);
 
 test('the greeting follows the hour, and the date line is the shouting mono label', () => {
-  assert.deepEqual([2, 8, 13, 19].map((h) => greetingFor(at(h))), ['Up late,', 'Good morning,', 'Good afternoon,', 'Good evening,']);
+  assert.deepEqual([2, 8, 13, 19].map((h) => greetingFor(at(h))), ['Up late', 'Good morning', 'Good afternoon', 'Good evening']);
+  // the boundaries: 1 AM is not morning, 4:59 is still late, 5:00 is morning, noon is afternoon, 5 PM is evening
+  assert.deepEqual([0, 1, 4, 5, 11, 12, 16, 17, 23].map(dayPart), ['late', 'late', 'late', 'morning', 'morning', 'afternoon', 'afternoon', 'evening', 'evening']);
+  assert.equal(greetingKey(at(1)), 'today.late');
   assert.match(dateLine(at(9)), /^MONDAY, NOVEMBER 02 · A LITTLE PROGRESS ADDS UP$/);
   assert.deepEqual([initialOf('asha'), initialOf(''), initialOf(null), firstName('Asha Rao'), firstName('')], ['A', 'E', 'E', 'Asha', '']);
 });

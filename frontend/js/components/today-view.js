@@ -6,12 +6,8 @@ import { SESSION_MODE } from '../lib/protocol.js';
 import { t } from '../lib/strings.js';
 import { selectLanguage, selectToday } from '../state/selectors.js';
 
+const MAX_COUNTDOWN_DAYS = 1100;   // the server already ignores anything further out; this keeps a wrong value from ever being shown
 const MODE_FOR_KIND = { revise: SESSION_MODE.REVISE, learn: SESSION_MODE.LEARN, test: SESSION_MODE.TEST };
-
-function greetingKey(hour) {
-  if (hour < 12) return 'today.morning';
-  return hour < 17 ? 'today.afternoon' : 'today.evening';
-}
 
 export function mountTodayView({ store, root, onStart, onOpenTopic, onAddNotes, onReviewCards, now = () => new Date() }) {
   function planItem(item, language) {
@@ -34,11 +30,10 @@ export function mountTodayView({ store, root, onStart, onOpenTopic, onAddNotes, 
 
     const first = today.plan[0];
     const head = el('div', { class: 'today-head' },
-      el('h2', { class: 'today-greeting', text: t(greetingKey(now().getHours()), language) }),
       el('div', { class: 'today-chips' },
         el('span', { class: `chip-static${today.streak ? ' is-on' : ''}` }, icon('fire', { size: 18 }),
           today.streak ? t('today.streak', language, { n: today.streak }) : t('today.streakNone', language)),
-        today.exam_days_left != null && today.exam_days_left >= 0
+        today.exam_days_left != null && today.exam_days_left >= 0 && today.exam_days_left <= MAX_COUNTDOWN_DAYS
           ? el('span', { class: 'chip-static' }, icon('calendar-blank', { size: 18 }),
             today.exam_days_left === 0 ? t('today.examToday', language) : t('today.exam', language, { n: today.exam_days_left }))
           : null,

@@ -8,6 +8,7 @@ const MINUTE_CHOICES = [15, 30, 45, 60, 90];
 const PREVIEW_DAYS = 7;
 
 const isoDay = (date) => date.toISOString().slice(0, 10);
+const MAX_DAYS_AHEAD = 1100;   // the server's limit too (about three years): a six-digit year typed into a date field is a typo
 
 function dayLabel(iso, language) {
   const date = new Date(`${iso}T12:00:00`);
@@ -33,7 +34,7 @@ export function mountExamPlanner({ store, root, onSave, onClear, onOpenItem }) {
     const plan = selectPlan(state);
     const language = selectLanguage(state);
     const tomorrow = new Date(Date.now() + 86_400_000);
-    const date = el('input', { class: 'field', type: 'date', id: 'exam-date', min: isoDay(tomorrow),
+    const date = el('input', { class: 'field', type: 'date', id: 'exam-date', min: isoDay(tomorrow), max: isoDay(new Date(Date.now() + MAX_DAYS_AHEAD * 86_400_000)),
       value: draft?.date ?? plan?.exam_date ?? '', oninput: () => { draft = { ...draft, date: date.value }; } });
     const minutes = el('select', { class: 'select', id: 'exam-minutes', onchange: () => { draft = { ...draft, minutes: Number(minutes.value) }; } },
       MINUTE_CHOICES.map((m) => el('option', { value: String(m), selected: m === (draft?.minutes ?? plan?.minutes_per_day ?? 30) ? '' : null }, `${m} min`)));

@@ -25,7 +25,7 @@ const EN = {
   'stage.captions': 'Captions', 'stage.photo': 'Show a photo',
   'composer.placeholder': 'Or type a message to Eklavya', 'composer.send': 'Send',
 
-  'today.morning': 'Good morning', 'today.afternoon': 'Good afternoon', 'today.evening': 'Good evening',
+  'today.late': 'Up late', 'today.morning': 'Good morning', 'today.afternoon': 'Good afternoon', 'today.evening': 'Good evening',
   'today.streak': '{n}-day streak', 'today.streakNone': 'Start a streak today',
   'today.exam': '{n} days to your exam', 'today.examToday': 'Your exam is today',
   'today.plan': "Today's plan", 'today.planMinutes': 'about {n} minutes', 'today.start': 'Start',
@@ -103,7 +103,7 @@ const HI = {
   'stage.captions': 'कैप्शन', 'stage.photo': 'फ़ोटो दिखाएँ',
   'composer.placeholder': 'या एकलव्य को संदेश लिखें', 'composer.send': 'भेजें',
 
-  'today.morning': 'सुप्रभात', 'today.afternoon': 'नमस्ते', 'today.evening': 'शुभ संध्या',
+  'today.late': 'देर रात तक जाग रहे हैं', 'today.morning': 'सुप्रभात', 'today.afternoon': 'नमस्ते', 'today.evening': 'शुभ संध्या',
   'today.streak': 'लगातार {n} दिन', 'today.streakNone': 'आज से सिलसिला शुरू करें',
   'today.exam': 'परीक्षा में {n} दिन बाकी', 'today.examToday': 'आज आपकी परीक्षा है',
   'today.plan': 'आज की योजना', 'today.planMinutes': 'लगभग {n} मिनट', 'today.start': 'शुरू करें',
