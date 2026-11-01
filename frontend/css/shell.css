@@ -364,6 +364,7 @@ kbd { margin-left: 6px; color: var(--ink-3); }
   .topacts { width: 100%; flex-wrap: nowrap; gap: 6px; }
   .topacts .select { flex: 1 1 0; min-width: 0; max-width: none; padding-inline: 8px; }
   .topacts .btn, .topacts .icon-btn { flex: none; min-width: 36px; width: 36px; padding: 0; justify-content: center; }
+  .topacts #btnSignIn { width: auto; padding: 0 12px; }
   .topacts .cmd-trigger-text, .topacts #btnCommand kbd { display: none; }
   .sound-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* still read aloud, no longer drawn */
   #soundBtn::before { margin: 0; }

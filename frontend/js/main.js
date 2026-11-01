@@ -345,6 +345,9 @@ const me = getUser();
 byId('accountText').textContent = signedIn ? (me?.name || 'Account') : 'Sign in';
 byId('meAvatar').textContent = initialOf(signedIn ? me?.name : '');
 byId('meSub').textContent = signedIn ? (me?.email ?? 'Signed in') : 'Demo learner';
+byId('btnSignIn').hidden = signedIn;                       // a guest always sees a clear way to sign in or create an account
+byId('btnSignIn').addEventListener('click', () => authDialog.open());
+byId('btnAccountTop').hidden = !signedIn;
 for (const button of [byId('btnAccount'), byId('btnAccountTop')]) {
   button.setAttribute('aria-label', signedIn ? `Your account (${me?.email ?? 'signed in'})` : 'Sign in or create an account');
   button.title = signedIn ? 'Account, reminders, sign out' : 'Sign in';
