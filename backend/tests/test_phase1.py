@@ -98,3 +98,12 @@ def test_imported_video_notes_use_the_title_and_old_ones_are_renamed(student, mo
     assert links.fix_video_names() >= 1
     assert db.one("SELECT file_name AS n FROM documents WHERE id = ?", (old,))["n"] == "Backpropagation in 10 minutes"
     assert db.one("SELECT file_name AS n FROM documents WHERE id = ?", (keep,))["n"] == "My own notes.pdf"
+
+
+def test_today_still_reports_the_last_session(student):
+    """Today's "last session" needs the local-date helper: a missing import once made the whole screen a 500."""
+    user_id, headers = student
+    add_notes(user_id)
+    db.execute("INSERT INTO voice_sessions (user_id, mode, language, study_mode, turns) VALUES (?, 'gemini-live', 'english', 'learn', 4)", (user_id,))
+    today = client.get("/api/today", headers=headers)
+    assert today.status_code == 200 and today.json()["last_session"]["mode"] == "learn"

@@ -5,7 +5,7 @@ from app import db
 from app.domain.planner import build_plan
 from app.domain.revision import due_topics, interval_days
 from app.domain.streak import study_streak
-from app.services.progress_data import active_days, local_today, topics_with_progress
+from app.services.progress_data import active_days, local_date, local_today, topics_with_progress
 from app.services.study_plan import usable_exam
 
 REVISE_MINUTES = 5
