@@ -5,7 +5,8 @@ from app import db
 from app.domain.planner import build_plan
 from app.domain.revision import due_topics, interval_days
 from app.domain.streak import study_streak
-from app.services.progress_data import active_days, local_date, local_today, topics_with_progress
+from app.services.progress_data import active_days, local_today, topics_with_progress
+from app.services.study_plan import usable_exam
 
 REVISE_MINUTES = 5
 LEARN_MINUTES = 10
@@ -42,11 +43,11 @@ def today(user_id: int):
 
 def _exam_plan_today(user: dict, topics, day):
     """With an exam date, Today shows exactly what the exam planner scheduled for today (one plan, one source)."""
-    exam = user.get("target_exam_date")
+    exam = usable_exam(user.get("target_exam_date"), day)
     if not exam or not topics:
         return None
     try:
-        plan = build_plan(topics, day, date.fromisoformat(exam), user.get("daily_study_minutes") or 30)
+        plan = build_plan(topics, day, exam, user.get("daily_study_minutes") or 30)
     except ValueError:
         return None   # the exam date has passed
     items = plan["days"][0]["items"] if plan["days"] and plan["days"][0]["date"] == day.isoformat() else []
@@ -71,8 +72,8 @@ def _default_plan(due, new, mission, topics):
 
 
 def _payload(user_id, user, day, topics, due, plan):
-    exam = user.get("target_exam_date")
-    exam_day = local_date(f"{exam} 12:00:00") if exam else None
+    exam_day = usable_exam(user.get("target_exam_date"), day)   # None for no date or one that cannot be right: the screen then shows no countdown
+    exam = exam_day.isoformat() if exam_day else None
     active = active_days(user_id)
     return {
         "date": day.isoformat(),

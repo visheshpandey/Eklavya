@@ -8,8 +8,40 @@ from app.errors import BadRequestError
 from app.services.progress_data import local_today, topics_with_progress
 
 
+MAX_EXAM_DAYS = 1100   # about three years: anything further out is a typo (a six-digit year typed into a date field)
+
+
+def usable_exam(text, today: date):
+    """The exam date as a ``date`` when it is today or up to MAX_EXAM_DAYS ahead; None for no date, a bad one or an absurd one."""
+    try:
+        exam = date.fromisoformat(text) if text else None
+    except ValueError:
+        return None
+    return exam if exam is not None and 0 <= (exam - today).days <= MAX_EXAM_DAYS else None
+
+
+def _forget_unusable(user_id: int, user: dict):
+    """A saved exam date that is absurdly far away (a typo) is cleared, so Today and the planner stop showing it.
+    A date that has simply passed is kept: the planner already says so."""
+    text = user.get("target_exam_date")
+    if _is_iso(text) and (date.fromisoformat(text) - local_today()).days > MAX_EXAM_DAYS:
+        db.execute("UPDATE users SET target_exam_date = NULL WHERE id = ?", (user_id,))
+        user["target_exam_date"] = None
+
+
+def _is_iso(text) -> bool:
+    try:
+        date.fromisoformat(text)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def get_plan(user_id: int):
     user = db.one("SELECT target_exam_date, daily_study_minutes FROM users WHERE id = ?", (user_id,))
+    if user:
+        user = dict(user)
+        _forget_unusable(user_id, user)
     if not user or not user["target_exam_date"]:
         return {"exam_date": None, "minutes_per_day": (user or {}).get("daily_study_minutes") or 30, "plan": None}
     exam = date.fromisoformat(user["target_exam_date"])
@@ -29,6 +61,8 @@ def set_plan(user_id: int, exam_date: str, minutes_per_day: int):
         raise BadRequestError("Exam date must look like 2026-12-15.") from exc
     if exam <= local_today():
         raise BadRequestError("Pick an exam date after today.")
+    if (exam - local_today()).days > MAX_EXAM_DAYS:
+        raise BadRequestError("Pick an exam date within the next three years. Check the year you typed.")
     db.ensure_user(user_id)
     db.execute("UPDATE users SET target_exam_date = ?, daily_study_minutes = ? WHERE id = ?",
                (exam.isoformat(), minutes_per_day, user_id))

@@ -118,6 +118,37 @@ def _fetch_page(url: str) -> tuple[str, str]:
     raise BadRequestError("That link redirects too many times.")
 
 
+def youtube_title(video_id: str) -> str | None:
+    """The video's own title from YouTube's oEmbed endpoint (a fixed address, so no private network can be reached through it);
+    None when it cannot be fetched, and the caller falls back to the id."""
+    try:
+        response = requests.get("https://www.youtube.com/oembed", params={"url": f"https://www.youtube.com/watch?v={video_id}", "format": "json"},
+                                headers=HEADERS, timeout=6)
+        if response.status_code != 200:
+            return None
+        title = " ".join(str(response.json().get("title", "")).split())
+        return title[:120] or None
+    except (requests.RequestException, ValueError):
+        return None
+
+
+def video_name(video_id: str) -> str:
+    return youtube_title(video_id) or f"YouTube video {video_id}"
+
+
+def fix_video_names(limit: int = 20) -> int:
+    """Notes saved earlier under "YouTube video <id>" get the real title (best effort, run in the background once at startup)."""
+    from app import db
+    fixed = 0
+    for row in db.query("SELECT id, file_name FROM documents WHERE file_name LIKE 'YouTube video %' ORDER BY id DESC LIMIT ?", (limit,)):
+        match = re.fullmatch(r"YouTube video ([\w-]{11})", row["file_name"])
+        title = youtube_title(match.group(1)) if match else None
+        if title:
+            db.execute("UPDATE documents SET file_name = ? WHERE id = ?", (title, row["id"]))
+            fixed += 1
+    return fixed
+
+
 def notes_from_link(url: str) -> tuple[str, str]:
     """(a name for the notes, the notes text). Raises BadRequestError or LLMError with a message for the student."""
     url = url.strip()
@@ -130,7 +161,7 @@ def notes_from_link(url: str) -> tuple[str, str]:
         notes = read_video(f"https://www.youtube.com/watch?v={video}")
         if not notes:
             raise BadRequestError("Could not find study content in that video. Is it public, and does it teach something?")
-        result = (f"YouTube video {video}", notes)
+        result = (video_name(video), notes)
     else:
         title, text = _fetch_page(url)
         if len(text) < 200:

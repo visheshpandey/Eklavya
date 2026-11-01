@@ -13,16 +13,29 @@ from app import db, lag_monitor
 from app.api import router as api_router
 from app.config import settings
 from app.errors import register_error_handlers
+from app.services import links
 from app.services.progress_data import use_timezone
+
+
+async def _name_old_videos() -> None:
+    """Notes imported from YouTube before titles were fetched are renamed to the real title (best effort, never blocks startup)."""
+    try:
+        fixed = await asyncio.to_thread(links.fix_video_names)
+        if fixed:
+            logging.getLogger(__name__).info("Gave %d imported videos their real titles", fixed)
+    except Exception:  # noqa: BLE001 - a cosmetic job: any failure just leaves the old name
+        logging.getLogger(__name__).warning("Could not rename old video notes", exc_info=True)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     watcher = asyncio.create_task(lag_monitor.watch())
+    renamer = asyncio.create_task(_name_old_videos())
     try:
         yield
     finally:
         watcher.cancel()
+        renamer.cancel()
 
 
 def create_app() -> FastAPI:
