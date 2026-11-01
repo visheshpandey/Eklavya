@@ -428,3 +428,19 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .desk.waiting .scene-canvas { opacity: 0; }
 .desk.is-3d .float, .desk.is-3d .sticky { opacity: 0; animation: none; }
 .desk.is-3d { perspective: none; }
+
+/* Study room 3D: the mentor's canvas sits over the drawn face; the orb's sphere sits behind its button */
+.avatar { position: relative; }
+.avatar.is-3d .avatar-svg { opacity: 0; }
+.avatar .scene-canvas { z-index: 1; }
+.orb-wrap { position: relative; display: inline-grid; place-items: center; width: 96px; height: 96px; }
+.orb3d { position: absolute; left: -27px; top: -27px; width: 150px; height: 150px; pointer-events: none; }
+.orb3d .scene-canvas { z-index: 0; }
+.orb-wrap .orb { position: relative; z-index: 1; }
+.orb-wrap.is-3d .orb, .orb-wrap.is-3d .orb:hover { background: transparent; box-shadow: none; border-color: transparent; }
+.orb-wrap.is-3d .orb svg { filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .45)); }
+/* the topic ring: each card casts a soft shadow, and the ring has a floor shadow */
+.onode { box-shadow: 0 16px 22px -12px var(--drop-shadow); }
+.orbit::after { content: ""; position: absolute; left: 50%; bottom: 14%; width: min(70%, 520px); height: 26px; transform: translateX(-50%); background: radial-gradient(closest-side, var(--drop-shadow), transparent); pointer-events: none; }
+
+.flip-ghost { position: fixed; z-index: 40; pointer-events: none; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 24px 50px var(--drop-shadow); }

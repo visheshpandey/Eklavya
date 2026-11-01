@@ -8,7 +8,7 @@ import { CHECK, FLAME } from './lottie-data.js';
 const REVEAL = '.hero, .section, .card, .stat, .sub, .rstep, .plan-group, .map-frame, .doc, .badge, .lb-row, .group-card, .block';
 const COUNT = '.stat strong, #streakDays, .sub .row strong';
 const BARS = '.bar > i, .meter > span';
-const TILT = '.card, .stat, .sub';
+const TILT = '.card, .stat, .sub, .mode';
 const NO_TILT = 'textarea, input, select, .card3, .call, dialog';
 const seen = new Set();          // things already animated once: a re-draw with the same content must not play again
 const once = (key) => (seen.has(key) ? false : (seen.add(key), true));
@@ -137,6 +137,23 @@ export async function initMotion({ store }) {
     }, { passive: true });
     document.addEventListener('pointerleave', () => { if (current) { rest(current); current = null; } });
   }
+
+  // ---- a mode card grows into the session: a ghost of the card flies to the stage, then fades as the session shows through
+  document.addEventListener('click', (event) => {
+    const card = event.target.closest?.('.mode');
+    if (!card) return;
+    const from = card.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    ghost.className = 'flip-ghost';
+    Object.assign(ghost.style, { left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`, height: `${from.height}px` });
+    document.body.append(ghost);
+    setTimeout(() => {   // by now the session has started and the stage is on screen
+      const to = document.querySelector('.stage')?.getBoundingClientRect();
+      if (!to || !to.width || document.getElementById('panel-study')?.offsetParent === null) { ghost.remove(); return; }
+      gsap.to(ghost, { left: to.left, top: to.top, width: to.width, height: to.height, duration: 0.45, ease: 'power3.inOut',
+        onComplete: () => gsap.to(ghost, { opacity: 0, duration: 0.3, onComplete: () => ghost.remove() }) });
+    }, 140);
+  }, true);
 
   // ---- the streak flame in the sidebar: lit and bigger the longer the streak
   const flame = document.createElement('span');

@@ -3,6 +3,7 @@
 // All motion is CSS, driven by data attributes and the --level variable (0-1 loudness), so this file only sets those.
 import { svgEl, el } from '../lib/dom.js';
 import { avatarLook } from '../lib/avatar-mood.js';
+import { mountMentor } from '../motion/index.js';
 import { selectEmotion, selectResult, selectVoiceStatus } from '../state/selectors.js';
 
 function face() {
@@ -34,6 +35,7 @@ function face() {
 export function mountAvatar({ store, root, getTutor = () => 'mentor' }) {
   const wrap = el('div', { class: 'avatar', 'data-state': 'idle', 'data-mood': 'calm', 'data-tutor': getTutor() }, face());
   root.append(wrap);
+  const mentor = mountMentor(wrap, getTutor());   // the 3D bust over the drawn face, where WebGL and motion are available
 
   function draw() {
     const state = store.getState();
@@ -42,6 +44,7 @@ export function mountAvatar({ store, root, getTutor = () => 'mentor' }) {
     wrap.dataset.mood = mood;
     wrap.dataset.tutor = getTutor();
     if (voice === 'idle') wrap.style.setProperty('--level', '0');
+    mentor.set({ state: voice, mood, tutor: getTutor() });
   }
   store.select(selectVoiceStatus, draw);
   store.select(selectEmotion, draw);
@@ -52,7 +55,8 @@ export function mountAvatar({ store, root, getTutor = () => 'mentor' }) {
     setLevel(level) {
       shown = shown * 0.6 + Math.max(0, Math.min(1, level)) * 0.4;
       wrap.style.setProperty('--level', shown.toFixed(3));
+      mentor.setLevel(level);
     },
-    setTutor(tutor) { wrap.dataset.tutor = tutor === 'senior' ? 'senior' : 'mentor'; },
+    setTutor(tutor) { wrap.dataset.tutor = tutor === 'senior' ? 'senior' : 'mentor'; mentor.set({ tutor: wrap.dataset.tutor }); },
   };
 }

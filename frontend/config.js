@@ -6,4 +6,5 @@ const local = ['localhost', '127.0.0.1', ''].includes(location.hostname);
 window.APP_CONFIG = {
   apiBase: local ? 'http://localhost:5002' : 'https://eklavya-api-1bhf.onrender.com',
   userId: 1,
+  mentorModel: '',   // optional rigged avatar for the Study room mentor, e.g. 'assets/mentor.glb' (ARKit or Oculus blendshape names); empty = the built-in 3D mentor
 };

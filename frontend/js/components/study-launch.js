@@ -14,6 +14,8 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
   let moved = false;
   let frame = null;
   let last = 0;
+  let velocity = 0;   // degrees per millisecond left over from a flick; it fades out by itself
+  let lastDragX = 0, lastDragAt = 0;
   let nodes = [];
   let topics = [];
 
@@ -34,7 +36,8 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
   function tick(time) {
     const dt = last ? Math.min(64, time - last) : 16;
     last = time;
-    if (!paused && !drag && !reduceMotion) angle -= dt * 0.012;
+    if (!drag && Math.abs(velocity) > 0.0004) { angle += velocity * dt; velocity *= 0.94 ** (dt / 16); }
+    else if (!paused && !drag && !reduceMotion) angle -= dt * 0.012;
     layout();
     frame = requestAnimationFrame(tick);
   }
@@ -83,14 +86,17 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
   orbit.addEventListener('pointerleave', (event) => { if (event.pointerType === 'mouse') paused = false; });
   orbit.addEventListener('focusin', () => { paused = true; });
   orbit.addEventListener('focusout', () => { paused = false; });
-  orbit.addEventListener('pointerdown', (event) => { drag = { x: event.clientX, from: angle }; moved = false; });
+  orbit.addEventListener('pointerdown', (event) => { drag = { x: event.clientX, from: angle }; moved = false; velocity = 0; lastDragX = event.clientX; lastDragAt = performance.now(); });
   globalThis.addEventListener('pointermove', (event) => {
     if (!drag) return;
     const dx = event.clientX - drag.x;
     if (Math.abs(dx) > 6) { moved = true; orbit.classList.add('dragging'); }
     angle = drag.from + dx * 0.35;
+    const at = performance.now();
+    if (at > lastDragAt) velocity = (0.35 * (event.clientX - lastDragX)) / Math.max(8, at - lastDragAt);   // the flick's speed
+    lastDragX = event.clientX; lastDragAt = at;
   });
-  globalThis.addEventListener('pointerup', () => { if (drag) { drag = null; orbit.classList.remove('dragging'); } });
+  globalThis.addEventListener('pointerup', () => { if (drag) { drag = null; orbit.classList.remove('dragging'); if (performance.now() - lastDragAt > 90 || reduceMotion) velocity = 0; } });
   orbit.addEventListener('click', (event) => { if (moved) { event.stopPropagation(); event.preventDefault(); moved = false; } }, true);   // a drag is not a click
   orbit.addEventListener('keydown', (event) => {
     const step = turnBy(nodes.length, event.key);
