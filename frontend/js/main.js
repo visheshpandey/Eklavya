@@ -182,7 +182,7 @@ store.select(selectVoiceStatus, (status, previous) => {   // finishing a session
   launch = null;
 });
 store.select(selectToday, (today) => { if (today && (today.cards_total ?? 0) > 0 && today.cards_due === 0) todayHome.markDone('cards'); });
-mountTodayView({ store, root: byId('today'), onStart: startMode, onOpenTopic: notes.openTopic, onAddNotes: openNotes, onReviewCards: reviewCards });
+mountTodayView({ store, root: byId('todayMore'), onStart: startMode, onOpenTopic: notes.openTopic, onAddNotes: openNotes, onReviewCards: reviewCards });
 mountExamPlanner({
   store, root: byId('planner'), onSave: home.savePlan, onClear: home.clearPlan,
   onOpenItem: (item) => notes.openTopic(item.topic_id),   // a day chip opens the topic; the Start buttons on Today's plan start a session
