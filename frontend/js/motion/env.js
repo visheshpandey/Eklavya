@@ -2,7 +2,16 @@
 export const PALETTE = { paper: '#f2efe7', green: '#29483e', greenSoft: '#5f8a69', terracotta: '#b8604a', gold: '#b9853f', ink: '#24302d' };
 
 /** A machine that cannot keep up with the 3D (measured once, remembered): the drawn versions are used instead. `eklavya.noguard` switches the check off. */
-export const isLite = () => { try { return localStorage.getItem('eklavya.lite') === '1'; } catch { return false; } };
+/** Lite mode: no 3D, the drawn mentor, no extra motion. The student's own choice ('1' / '0') wins; with no choice a 2G/3G connection or Data Saver turns it on. */
+export const isLite = () => {
+  let choice = null;
+  try { choice = localStorage.getItem('eklavya.lite'); } catch { /* no storage */ }
+  if (choice === '1') return true;
+  if (choice === '0') return false;
+  const link = globalThis.navigator?.connection;
+  return Boolean(link && (link.saveData || /(^|-)2g$|3g/.test(link.effectiveType ?? '')));
+};
+export const setLite = (on) => { try { localStorage.setItem('eklavya.lite', on ? '1' : '0'); } catch { /* not remembered */ } };
 
 /** Frames per second the page actually manages over `ms`, only counting while it is visible; resolves null if it was hidden. */
 export function measureFps(ms = 4000) {

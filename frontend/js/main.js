@@ -71,6 +71,10 @@ import { mountBadges } from './components/badges-view.js';
 import { mountMockExam } from './components/mock-exam.js';
 import { mountGroups } from './components/groups-view.js';
 import { mountDemoCircle } from './components/demo-circle.js';
+import { mountWelcome } from './components/welcome.js';
+import { createTour } from './components/tour.js';
+import { mountImpact } from './components/impact-view.js';
+import { isLite, setLite } from './motion/env.js';
 import { mountAvatar } from './components/avatar.js';
 import { mountMentorFrame } from './avatar/system.js';
 import { mountCallScreen } from './components/call-screen.js';
@@ -438,3 +442,42 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 
 // motion layer (smooth scroll, reveals, count-ups, tilt, flame, confetti): added once the page is up, skipped for "reduce motion"
 startMotion({ store });
+
+// --- first impression: the welcome line, the guided tour, the Demo pill, the help menu (tour, about, lite mode) and the impact section
+const tour = createTour({
+  showView: (view) => store.dispatch(actions.viewChanged(view)),
+  steps: [
+    { view: VIEWS.TODAY, target: '#desk', fallback: '#todayHero', title: 'Your next topic, as a 3D book', text: 'Eklavya reads your notes and picks what to study next. The book shows that topic and how well you know it.' },
+    { view: VIEWS.STUDY, target: '#mentorFrame', title: 'Talk to your mentor', text: 'Tap the microphone and speak in English, Hindi or Hinglish. As it explains, a whiteboard draws the idea, and you can interrupt any time.' },
+    { view: VIEWS.ASK, target: '#askForm', fallback: '#askChat', title: 'Ask your notes', text: 'Type a question. The answer comes only from your own notes, with the exact passages it used cited underneath.' },
+    { view: VIEWS.FLASHCARDS, target: '.fcstage', fallback: '#fcReview', title: 'Flip, rate, watch mastery move', text: 'Press Space to flip a card, then 1, 2 or 3. A message tells you how that topic\'s mastery changed, and the card drops into its box on the shelf.' },
+    { view: VIEWS.PROGRESS, target: '#graph3d', fallback: '#conceptMap', title: 'See how your ideas connect', text: 'Every topic is a sphere: green is strong, gold is growing, terracotta needs a look. Click one to fly to it and study it.' },
+  ],
+  onEnd: (finished) => { welcome.done(); showView(VIEWS.TODAY); if (finished) notifier.success('That was the tour. Replay it any time from the ? menu.'); },
+});
+const welcome = mountWelcome({
+  root: byId('welcome'), isGuest: !signedIn,
+  onDemo: async () => { notifier.info('Loading the demo notes…'); tour.start(); if (!(selectDashboard(store.getState())?.mastery?.length)) { await notes.loadDemo(); await home.refresh(); } },   // already has notes: nothing to reload   // the tour starts at once; the demo data arrives while it runs
+  onUpload: openNotes, onTour: () => tour.start(),
+});
+byId('demoPill').hidden = signedIn;
+byId('demoPill').addEventListener('click', () => authDialog.open());
+const helpMenu = byId('helpMenu');
+const setHelp = (open) => { helpMenu.hidden = !open; byId('btnHelp').setAttribute('aria-expanded', String(open)); };
+byId('btnHelp').addEventListener('click', (event) => { event.stopPropagation(); setHelp(helpMenu.hidden); });
+document.addEventListener('click', (event) => { if (!event.target.closest('.help-wrap')) setHelp(false); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !helpMenu.hidden) { setHelp(false); byId('btnHelp').focus(); } });
+byId('helpTour').addEventListener('click', () => { setHelp(false); tour.start(); });
+byId('helpLite').textContent = isLite() ? 'Lite mode: on (turn off)' : 'Lite mode: off (turn on)';
+byId('helpLite').addEventListener('click', () => { setLite(!isLite()); location.reload(); });
+byId('helpExit').hidden = signedIn;
+byId('helpExit').addEventListener('click', () => { setHelp(false); authDialog.open(); });
+const aboutDialog = byId('about');
+let aboutShown = false;
+byId('helpAbout').addEventListener('click', () => {
+  setHelp(false);
+  if (!aboutShown) { aboutShown = true; mountImpact({ root: byId('aboutBody'), loadImpact: () => backend.impact() }); }
+  aboutDialog.showModal();
+});
+byId('aboutClose').addEventListener('click', () => aboutDialog.close());
+mountImpact({ root: byId('impactBody'), loadImpact: () => backend.impact() });

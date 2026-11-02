@@ -3,7 +3,7 @@
 import { afterLoad, guardPerformance, hasWebGL, idle, isLite, loadScript, reducedMotion, whenVisible } from './env.js';
 
 export function startMotion(deps) {
-  if (reducedMotion()) return;
+  if (reducedMotion() || isLite()) return;
   idle(() => import('./motion.js').then((module) => module.initMotion(deps)).catch((error) => console.warn('motion layer not started', error)));
 }
 

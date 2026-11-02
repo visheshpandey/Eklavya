@@ -93,6 +93,14 @@
               <span class="menu-label">Display</span>
               <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
             </div>
+            <button id="demoPill" class="demo-pill" type="button" hidden aria-label="You are in demo mode. Sign in to leave it."><i aria-hidden="true"></i>Demo</button>
+            <span class="help-wrap"><button id="btnHelp" class="icon-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="helpMenu" aria-label="Help: tour, about, lite mode"><span aria-hidden="true" style="font:600 18px var(--font-sans)">?</span></button>
+              <div id="helpMenu" class="help-menu" role="menu" hidden>
+                <button role="menuitem" type="button" id="helpTour">Replay the tour</button>
+                <button role="menuitem" type="button" id="helpAbout">About Eklavya and its impact</button>
+                <button role="menuitem" type="button" id="helpLite">Lite mode</button>
+                <button role="menuitem" type="button" id="helpExit" hidden>Exit demo (sign in)</button>
+              </div></span>
             <button id="btnStreak" class="streak-chip" type="button" aria-expanded="false" aria-controls="streakSheet" aria-label="Learning streak: 0 days"><span data-icon="fire" data-size="18"></span><b id="streakChipN" class="tnum">0</b></button>
             <button id="btnMore" class="icon-btn" type="button" aria-expanded="false" aria-controls="topMenu" aria-label="Settings: sound, tutor, language, display"><span aria-hidden="true" style="font-size:22px;line-height:1">⋯</span></button>
             <button id="btnSignIn" class="btn btn-primary" type="button" hidden>Sign in</button>   <!-- guests only: the way in is always in view -->
@@ -114,6 +122,7 @@
 
           <!-- TODAY -->
           <section id="panel-today" class="panel" role="tabpanel" aria-labelledby="tab-today">
+            <div id="welcome" class="welcome-wrap" hidden></div>
             <div id="todayHead"></div>
             <div id="todayHero"></div>
             <div class="section"><div><span class="mono">Today's route</span><h2 class="section-title">One step at a time.</h2></div></div>
@@ -132,6 +141,7 @@
               <div id="todayMore" class="today"></div>
               <section id="planner" class="block planner" aria-label="Exam planner"></section>
             </div>
+            <section id="impact" class="block impact" aria-labelledby="h-impact"><div class="section"><div><span class="mono">Why Eklavya</span><h2 id="h-impact" class="section-title">Built for how Indian students study.</h2></div></div><div id="impactBody"></div></section>
           </section>
 
           <!-- MY NOTES -->
@@ -321,6 +331,7 @@
     </nav>
   </div>
 
+  <dialog id="about" class="auth about" aria-labelledby="about-title"><div class="about-head"><h2 id="about-title" class="serif-sm">About Eklavya</h2><button id="aboutClose" class="icon-btn" type="button" aria-label="Close">×</button></div><div id="aboutBody"></div></dialog>
   <dialog id="auth" class="auth"></dialog>
   <dialog id="account" class="auth account"></dialog>
   <dialog id="command" class="command" aria-label="Command menu"></dialog>
