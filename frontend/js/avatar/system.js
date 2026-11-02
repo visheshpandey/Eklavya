@@ -5,7 +5,7 @@
 //   2. 3d         TalkingHead.js with a realistic GLB; built while the Study room is on screen, freed when it is left
 //   3. static     the drawn / built-in 3D bust (always there underneath, it is what shows until something better is ready)
 import { avatarLook } from '../lib/avatar-mood.js';
-import { afterLoad, guardPerformance, isLite, whenEngaged } from '../motion/env.js';
+import { afterLoad, whenEngaged } from '../motion/env.js';
 import { VOICE_STATUS } from '../lib/protocol.js';
 import { selectEmotion, selectResult, selectView, selectVoiceStatus } from '../state/selectors.js';
 import { SimliProvider } from './simli-provider.js';
@@ -32,10 +32,7 @@ export function mountMentorFrame({ store, frame, base, config = {}, setPlaybackM
   frame.append(shimmer, pill);
   frame.dataset.mode = 'static';
 
-  // 'auto' | 'photoreal' | '3d' | 'static'; the address can override it for one visit (?avatar=3d forces the 3D mentor and clears the slow-device flag)
-  const asked = new URLSearchParams(globalThis.location?.search ?? '').get('avatar');
-  if (asked === '3d') { try { localStorage.removeItem('eklavya.lite'); } catch { /* fine */ } }
-  const wanted = ['auto', 'photoreal', '3d', 'static'].includes(asked) ? asked : (config.avatarMode ?? 'auto');
+  const wanted = config.avatarMode ?? 'auto';   // 'auto' | 'photoreal' | '3d' | 'static'
   let three = null, photo = null, threeBuilding = false, photoBuilding = false, simliBlockedUntil = 0, level = 0, derived = 'idle';
   const metrics = { mode: 'static', lipLatencyMs: null, modeLog: [], simli: 'off' };
   const publish = () => { frame.dataset.mode = metrics.mode; globalThis.eklavyaAvatar = metrics; };
@@ -46,19 +43,18 @@ export function mountMentorFrame({ store, frame, base, config = {}, setPlaybackM
 
   // ---- the 3D provider: while the Study room is on screen
   async function build3d() {
-    if (three || threeBuilding || !hasWebGL || wanted === 'static' || (isLite() && wanted !== '3d')) return;
+    if (three || threeBuilding || !hasWebGL || wanted === 'static') return;
     threeBuilding = true;
     const provider = new TalkingHeadProvider({ url: config.mentorModel || SAMPLE_MODEL, reduceMotion });
     try {
       await afterLoad(1500); await whenEngaged();   // the 2 MB model and its shaders wait until a person is there (or 8 s have passed)
       if (selectView(store.getState()) !== 'study') { threeBuilding = false; return; }
       await provider.init(layer3d);
-      if (selectView(store.getState()) !== 'study' || (isLite() && wanted !== '3d')) { await provider.destroy(); threeBuilding = false; return; }
+      if (selectView(store.getState()) !== 'study') { await provider.destroy(); return; }
       three = provider;
       if (metrics.mode === 'static') metrics.mode = '3d';
       note(`3d avatar ready (${config.mentorModel ? 'your model' : 'sample model'})`);
       apply(); publish();
-      guardPerformance().then((fine) => { if (!fine && wanted !== '3d') note('this device cannot keep up with the 3d avatar: using the built-in one'); });
     } catch (error) { note(`3d avatar unavailable, staying with the built-in one: ${error.message ?? error}`); await provider.destroy().catch(() => {}); }
     threeBuilding = false;
   }
@@ -116,21 +112,20 @@ export function mountMentorFrame({ store, frame, base, config = {}, setPlaybackM
   store.select(selectView, (view) => {
     if (view === 'study') build3d(); else { free3d(); stopPhoto(false); }
   });
-  document.addEventListener('eklavya:lite', () => { if (wanted !== '3d') free3d(); });
   if (selectView(store.getState()) === 'study') build3d();
   publish();
 
   return {
     get mode() { return metrics.mode; },
     metrics,
-    setLevel(next, bands) {
-      level = next; metrics.level = next; if (three) { metrics.jaw = three.metrics.jaw; metrics.pstate = three.metrics.state; }
+    setLevel(next) {
+      level = next;
       base.setLevel?.(next);
-      three?.setLevel(next, bands);
+      three?.setLevel(next);
     },
     setTutor: (tutor) => base.setTutor?.(tutor),
     /** A chunk of Eklavya's voice arrived (PCM16 mono, 24 kHz). */
-    feedAudio(chunk) { for (const provider of [photo, three]) provider?.speak(chunk); metrics.lipLatencyMs = three?.metrics.firstMouthMs ?? null; metrics.chunks = (metrics.chunks ?? 0) + 1; metrics.lipSamples = three?.metrics.samples.slice(-20) ?? []; },
+    feedAudio(chunk) { for (const provider of [photo, three]) provider?.speak(chunk); metrics.lipLatencyMs = three?.metrics.firstMouthMs ?? null; metrics.lipSamples = three?.metrics.samples.slice(-20) ?? []; },
     /** The student started talking over Eklavya: stop at once. */
     interrupt() { metrics.interrupts = (metrics.interrupts ?? 0) + 1; for (const provider of [photo, three, base]) provider?.interrupt?.(); },
     destroy() { free3d(); stopPhoto(false); },

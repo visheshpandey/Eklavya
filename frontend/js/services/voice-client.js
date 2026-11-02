@@ -18,19 +18,12 @@ function meter(ctx, node) {
   analyser.fftSize = 512;
   node.connect(analyser);
   const samples = new Float32Array(analyser.fftSize);
-  const spectrum = new Uint8Array(analyser.frequencyBinCount);
-  const band = (from, to) => { let sum = 0; for (let i = from; i < to; i += 1) sum += spectrum[i]; return sum / ((to - from) * 255); };
-  const read = () => {
+  return () => {
     analyser.getFloatTimeDomainData(samples);
     let sum = 0;
     for (const v of samples) sum += v * v;
-    // where the energy sits (about 47 Hz per bin): low = round vowels (o, u), mid = open vowels (a), high = e, i and s, f: what the mouth shape follows
-    analyser.getByteFrequencyData(spectrum);
-    read.bands = { low: band(1, 11), mid: band(11, 43), high: band(43, 128) };
     return Math.min(1, Math.sqrt(sum / samples.length) * 4);   // speech RMS is small; x4 fills the 0-1 range
   };
-  read.bands = { low: 0, mid: 0, high: 0 };
-  return read;
 }
 
 /** Best-effort teardown: ignore errors, including a rejected promise (closing an already closed AudioContext rejects). */
@@ -160,8 +153,7 @@ export class VoiceClient {
     const tick = () => {
       if (this.session !== id) { this.onLevel(0); return; }
       const speaking = this.status === VOICE_STATUS.SPEAKING;
-      const active = speaking ? this.playMeter : this.micMeter;
-      this.onLevel(active?.() ?? 0, active?.bands);
+      this.onLevel((speaking ? this.playMeter : this.micMeter)?.() ?? 0);
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
