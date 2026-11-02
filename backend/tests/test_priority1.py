@@ -144,15 +144,6 @@ def test_the_demo_circle_is_served_from_the_fixture():
     assert [f["name"] for f in circle["friends"]] == ["Aarav", "Riya", "Meera"] and circle["shared_notes"]
 
 
-# ---- the impact estimate
-def test_the_monthly_cost_is_computed_from_the_configured_models_and_shows_its_formula():
-    from app.config import settings
-    data = client.get("/api/impact").json()
-    assert data["models"] == {"text": settings.gemini_model, "live": settings.gemini_live_model, "embedding": settings.gemini_embed_model, "voice": settings.live_voice}
-    assert abs(sum(line["usd"] for line in data["lines"]) - data["total_usd"]) < 0.02
-    assert all("=" in line["formula"] or "x" in line["formula"] for line in data["lines"]) and data["voice_is_the_bulk"] and "assumptions" in data["verify"]
-
-
 # ---- Ask: only relevant citations
 def test_citations_drop_passages_that_are_far_off_or_off_topic():
     from app.domain import retrieval

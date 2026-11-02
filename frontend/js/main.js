@@ -476,8 +476,8 @@ const aboutDialog = byId('about');
 let aboutShown = false;
 byId('helpAbout').addEventListener('click', () => {
   setHelp(false);
-  if (!aboutShown) { aboutShown = true; mountImpact({ root: byId('aboutBody'), loadImpact: () => backend.impact() }); }
+  if (!aboutShown) { aboutShown = true; mountImpact({ root: byId('aboutBody') }); }
   aboutDialog.showModal();
 });
 byId('aboutClose').addEventListener('click', () => aboutDialog.close());
-mountImpact({ root: byId('impactBody'), loadImpact: () => backend.impact() });
+mountImpact({ root: byId('impactBody') });
