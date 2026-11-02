@@ -222,7 +222,13 @@ export async function initMotion({ store }) {
       if (!members.length) continue;
       let host = detail.querySelector('.orbit3d');
       if (!host) { host = document.createElement('div'); host.className = 'orbit3d'; detail.prepend(host); }
-      mountOnScreen(host, async (element) => (await import('./group-orbit.js')).createGroupOrbit(element, members));
+      mountOnScreen(host, async (element) => {
+        const scene = (await import('./group-orbit.js')).createGroupOrbit(element, members);
+        host.classList.add('has-canvas');   // the animated 2D version fades out
+        const dispose = scene.dispose;
+        scene.dispose = () => { host.classList.remove('has-canvas'); dispose(); };
+        return scene;
+      }, () => {}, { wait: 500, onFail: () => host.classList.remove('has-canvas') });
     }
   }
 

@@ -123,7 +123,7 @@ export function mountGraph(host, onPick) {
 export const canScene = () => !reducedMotion() && hasWebGL();
 
 /** A scene hosted in `host` for as long as it is on screen: `create(host)` resolves to it, `apply(scene)` replays what it missed. Returns { scene() }. */
-export function mountOnScreen(host, create, apply = () => {}) {
+export function mountOnScreen(host, create, apply = () => {}, options = {}) {
   if (!canScene()) return { scene: () => null };
-  return { scene: whileVisible(host, async (element) => { await loadScript('vendor/gsap.min.js').catch(() => {}); return create(element); }, apply) };
+  return { scene: whileVisible(host, async (element) => { await loadScript('vendor/gsap.min.js').catch(() => {}); return create(element); }, apply, options) };
 }

@@ -22,7 +22,7 @@ test('weeklyGain averages latest minus first over topics with at least two point
 
 test('the leaderboard ranks by mastery gained, then mastery, and marks you', () => {
   const friends = [{ name: 'Aarav', gain: 14, mastery: 71, streak: 6 }, { name: 'Riya', gain: 21, mastery: 78, streak: 9 }];
-  const rows = leaderboard(friends, 19, 59);
+  const rows = leaderboard(friends, 19, 59, 9);
   assert.deepEqual(rows.map((r) => r.name), ['Riya', 'You', 'Aarav']);
   assert.deepEqual(rows.map((r) => r.rank), [1, 2, 3]);
   assert.equal(rows.find((r) => r.you).name, 'You');

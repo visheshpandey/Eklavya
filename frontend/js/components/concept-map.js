@@ -105,12 +105,9 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
     const hideTip = () => { tip.hidden = true; };
 
     function drawDetail() {
-      const node = nodes.find((n) => n.id === selected);
-      if (!node) {
-        replaceContent(detail, el('div', {}, el('span', { class: 'mono', text: 'Select a topic' }), el('h3', { class: 'serif-sm', text: 'Tap any topic on the map' }),
-          el('p', { text: 'You\'ll see its mastery and what it links to.' })));
-        return;
-      }
+      // with nothing selected the panel shows the weakest topic that has started (else the first), so it is never an empty box
+      const weakest = [...nodes].filter((n) => n.started !== false).sort((x, y) => x.mastery - y.mastery)[0] ?? nodes[0];
+      const node = nodes.find((n) => n.id === selected) ?? weakest;
       const status = statusOf(node);
       const linked = neighbours(node.id).map((id) => names.get(id));
       const trend = sparkline(masteryHistory.values(node.id), { width: 120, height: 32 });

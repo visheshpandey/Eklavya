@@ -5,7 +5,7 @@
 import { el, render } from '../lib/dom.js';
 import { masteryHistory } from '../lib/mastery-history.js';
 import { canScene } from '../motion/index.js';
-import { selectDashboard } from '../state/selectors.js';
+import { selectDashboard, selectToday } from '../state/selectors.js';
 
 /** The student's mastery gained this week, from the sparkline history (pure): average of (latest - first) over topics with at least two points. */
 export function weeklyGain(seriesList) {
@@ -14,9 +14,9 @@ export function weeklyGain(seriesList) {
 }
 
 /** Leaderboard rows (pure): you and the friends, ranked by mastery gained this week. */
-export function leaderboard(friends, yourGain, yourMastery, yourName = 'You') {
+export function leaderboard(friends, yourGain, yourMastery, yourStreak = 0, yourName = 'You') {
   const rows = [...friends.map((f) => ({ name: f.name, gain: f.gain, mastery: f.mastery, streak: f.streak, you: false })),
-    { name: yourName, gain: yourGain, mastery: yourMastery, streak: 4, you: true }];
+    { name: yourName, gain: yourGain, mastery: yourMastery, streak: yourStreak, you: true }];
   return rows.sort((a, b) => b.gain - a.gain || b.mastery - a.mastery).map((row, i) => ({ ...row, rank: i + 1 }));
 }
 
@@ -82,13 +82,15 @@ export function mountDemoCircle({ store, root, api, onSignIn, onNotes }) {
   function draw() {
     if (error) { render(root, el('p', { class: 'auth-error', role: 'alert', text: error })); return; }
     if (!circle) { render(root, el('div', { class: 'skeleton sk-today', role: 'status', 'aria-label': 'Loading your study circle' })); return; }
-    const rows = leaderboard(circle.friends, yourGain(), yourMastery());
+    const rows = leaderboard(circle.friends, yourGain(), yourMastery(), selectToday(store.getState())?.streak ?? 0);   // you: the same streak and mastery as the sidebar
     render(root,
       el('div', { class: 'demo-note' }, el('span', { class: 'chip-static' }, 'Demo circle'),
         el('span', { class: 'hint', text: 'Aarav, Riya and Meera are sample friends. Sign in to study with your real friends.' }),
         el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: onSignIn }, 'Sign in or create an account')),
       el('div', { class: 'group-detail' },
-        canScene() ? el('div', { class: 'orbit3d', 'aria-hidden': 'true' }) : null,   // the space for the 3D scene is held from the start, so nothing jumps when it loads
+        // the space for the 3D scene is held from the start; until it is ready (or if it cannot start) an animated 2D version of the same picture shows
+        el('div', { class: 'orbit3d', 'aria-hidden': 'true' }, el('div', { class: 'orbit2d' }, el('span', { class: 'o2-book' }),
+          rows.slice(0, 4).map((r, i) => el('span', { class: `o2-friend${r.you ? ' you' : ''}`, style: `--i:${i};--n:${Math.min(rows.length, 4)}`, text: r.name.slice(0, 1) })))),
         el('div', { class: 'group-code-row' }, el('strong', { text: circle.name }), el('span', { class: 'hint', text: 'Invite code' }), el('strong', { class: 'group-code', text: circle.code })),
         el('h4', { text: 'This week: mastery gained' }),
         el('ol', { class: 'leaderboard' }, rows.map((r) => el('li', { class: r.you ? 'is-you' : '' },
@@ -107,6 +109,7 @@ export function mountDemoCircle({ store, root, api, onSignIn, onNotes }) {
 
   document.addEventListener('eklavya:mastery-history', draw);
   store.select(selectDashboard, draw);
+  store.select(selectToday, draw);
   load();
   return { refresh: load };
 }
