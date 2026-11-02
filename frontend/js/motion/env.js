@@ -35,4 +35,10 @@ export function whenVisible(element, onShow, margin = '80px') {
   return () => observer.disconnect();
 }
 
+/** Resolves once the page has finished loading and a moment has passed, so heavy 3D work never competes with the first paint. */
+export const afterLoad = (ms = 1600) => new Promise((resolve) => {
+  const go = () => setTimeout(resolve, ms);
+  if (document.readyState === 'complete') go(); else addEventListener('load', go, { once: true });
+});
+
 export const idle = (callback) => (globalThis.requestIdleCallback ? requestIdleCallback(callback, { timeout: 1500 }) : setTimeout(callback, 200));

@@ -7,7 +7,7 @@ import { whenVisible } from './env.js';
 
 export { THREE };
 
-export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target = [0, 0.15, 0.1], shadows = true, floor = true } = {}) {
+export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target = [0, 0.15, 0.1], shadows = true, floor = true, onDemand = false } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
   renderer.setClearColor(0x000000, 0);
@@ -28,7 +28,7 @@ export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target =
   const key = new THREE.DirectionalLight(0xfff0dc, 1.7);   // warm, from the upper left, like a desk lamp
   key.position.set(-2.6, 4.2, 2.8);
   key.castShadow = shadows;
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.set(512, 512);
   key.shadow.radius = 6;
   key.shadow.bias = -0.0004;
   Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 0.5, far: 14 });
@@ -54,8 +54,11 @@ export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target =
     camera.updateProjectionMatrix();
     for (const tick of ticks) tick.resize?.(width, height, camera);
   };
+  let wakeUntil = performance.now() + 1500;
   const frame = () => {
     const now = performance.now();
+    if (now - last < 30) return;   // about 30 frames a second is plenty for ambient scenes and keeps the main thread free
+    if (onDemand && now > wakeUntil) { last = now; return; }   // a still scene draws only while something is changing
     const delta = Math.min((now - last) / 1000, 0.1);
     last = now; elapsed += delta;
     const time = elapsed;
@@ -80,6 +83,7 @@ export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target =
     /** Something that runs every frame ({ run(delta, time), resize(w, h, camera) }). */
     add(tick) { ticks.add(tick); tick.resize?.(host.clientWidth, host.clientHeight, camera); return tick; },
     isRunning: () => running,
+    wake(ms = 1800) { wakeUntil = performance.now() + ms; },
     dispose() {
       running = false;
       renderer.setAnimationLoop(null);
