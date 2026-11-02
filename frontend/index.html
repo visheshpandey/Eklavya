@@ -276,17 +276,18 @@
 
           <!-- FLASHCARDS -->
           <section id="panel-flashcards" class="panel" role="tabpanel" aria-labelledby="tab-flashcards">
-            <div><p class="mono">Small repetitions. Long memory.</p><h1 class="page-title">Flashcards<em>.</em></h1></div>
-            <div class="fcwrap">
-              <div class="fcmain" id="fcReview"></div>
-              <aside class="card" style="align-self:start">
-                <span class="mono">Spaced repetition</span>
-                <h3 class="serif-sm" style="margin:6px 0 10px">Memory needs a revisit.</h3>
-                <p style="color:var(--ink-3);font-size:13px">“Got it” moves a card to a longer gap. “Hard” steps it back one box. “Again” brings it back today. Your schedule is saved with your account.</p>
-                <div class="lb"><div><b>0</b><small>NOW</small></div><div><b>1</b><small>1 DAY</small></div><div><b>2</b><small>3 DAYS</small></div><div><b>3</b><small>7 DAYS</small></div><div><b>4</b><small>14 DAYS</small></div><div><b>5</b><small>30 DAYS</small></div></div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" id="resetDeck" type="button">Reset today's deck</button><button class="btn btn-secondary" id="mockRoundBtn2" type="button">Mock round</button></div>
-              </aside>
+            <div class="fc-top">
+              <div><p class="mono">Small repetitions. Long memory.</p><h1 class="page-title">Flashcards<em>.</em></h1></div>
+              <div class="fc-actions">
+                <span class="fc-info"><button id="fcInfo" class="icon-btn" type="button" aria-describedby="fcTip" aria-label="How spaced repetition works">?</button>
+                  <span id="fcTip" role="tooltip" class="fc-tip">Got it moves a card to a longer gap. Hard steps it back one box. Again brings it back today. Your schedule is saved with your account.</span></span>
+                <span class="fc-menu"><button id="fcMore" class="icon-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="fcMenu" aria-label="More: reset today's deck, mock round">⋯</button>
+                  <span id="fcMenu" class="fc-menu-pop" hidden><button class="btn btn-secondary" id="resetDeck" type="button">Reset today's deck</button><button class="btn btn-secondary" id="mockRoundBtn2" type="button">Mock round</button></span></span>
+              </div>
             </div>
+            <div class="fcmain" id="fcReview"></div>
+            <div id="fcShelf" class="fc-shelf" aria-hidden="true"></div>
+            <div class="lb lb-sr" role="list" aria-label="Cards by box"><div role="listitem"><b>0</b><small>NEW</small></div><div role="listitem"><b>1</b><small>1 DAY</small></div><div role="listitem"><b>2</b><small>3 DAYS</small></div><div role="listitem"><b>3</b><small>7 DAYS</small></div><div role="listitem"><b>4</b><small>14 DAYS</small></div><div role="listitem"><b>5</b><small>30 DAYS</small></div></div>
             <section class="block fc-decks" aria-labelledby="h-cards"><h3 id="h-cards" data-i18n="progress.cards">Your decks</h3><div id="flashcards" class="flashcards"></div></section>
           </section>
 

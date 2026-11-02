@@ -265,7 +265,7 @@ avatar.setTutor(getTutor());
 callScreen.setTutor(getTutor());
 session.attach(new VoiceClient({
   onEvent: session.handleEvent, onStatus: session.handleStatus,
-  onLevel: (level) => { orb.setLevel(level); avatar.setLevel(level); callScreen.setLevel(level); },   // one voice level moves the orb and both faces
+  onLevel: (level) => { globalThis.eklavyaLevel = level; orb.setLevel(level); avatar.setLevel(level); callScreen.setLevel(level); },   // one voice level moves the orb and both faces
 }));
 mountStageTools({
   store, root: byId('stageTools'), captionRoot: byId('caption'),
@@ -317,8 +317,16 @@ flashReview = mountFlashcardReview({
   onLoadDue: home.dueCards, onLoadAll: home.allCards,
   onRate: (card, value) => home.rateCard(card.id, value === 'known', value === 'hard'),
   today: () => selectToday(store.getState())?.date ?? new Date().toISOString().slice(0, 10),
+  onSpeak: (text) => sound.speak(text, byId('lang').value === 'hindi' ? 'hi-IN' : 'en-IN'),
 });
-mountFlashcards({ store, root: byId('flashcards'), onLoad: home.loadFlashcards, onMake: home.makeFlashcards, onLoadDue: home.dueCards, onReview: home.reviewCard });
+// the ⋯ menu on Flashcards: reset today's deck, mock round
+const fcMenu = byId('fcMenu');
+const setFcMenu = (open) => { fcMenu.hidden = !open; byId('fcMore').setAttribute('aria-expanded', String(open)); };
+byId('fcMore').addEventListener('click', (event) => { event.stopPropagation(); setFcMenu(fcMenu.hidden); });
+document.addEventListener('click', (event) => { if (!event.target.closest('.fc-menu')) setFcMenu(false); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !fcMenu.hidden) { setFcMenu(false); byId('fcMore').focus(); } });
+fcMenu.addEventListener('click', () => setFcMenu(false));
+mountFlashcards({ store, root: byId('flashcards'), onLoad: home.loadFlashcards, onMake: home.makeFlashcards });
 const mockRound = () => { showView(VIEWS.FLASHCARDS); flashReview.startMock(); };
 byId('mockRoundBtn').addEventListener('click', mockRound);
 byId('mockRoundBtn2').addEventListener('click', mockRound);

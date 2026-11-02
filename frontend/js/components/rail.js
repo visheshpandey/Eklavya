@@ -1,5 +1,6 @@
 // The left rail's live parts: the streak card with the last seven days, the number of cards due next to Flashcards, and the page name in
 // the top bar. The account chip (name and avatar) is set once from the login in main.js.
+import { dueCount } from '../lib/cards.js';
 import { selectLanguage, selectToday, selectView } from '../state/selectors.js';
 import { t } from '../lib/strings.js';
 
@@ -21,7 +22,7 @@ export function mountRail({ store, streakDays, streakUnit, streakText, weekDots,
     const week = today?.week ?? Array(7).fill(false);
     [...weekDots.children].forEach((dot, index) => dot.classList.toggle('on', Boolean(week[index])));
     weekDots.setAttribute('aria-label', `Active ${week.filter(Boolean).length} of the last 7 days`);
-    const due = today?.cards_due ?? 0;
+    const due = dueCount(store.getState());
     dueBadge.textContent = String(due);
     dueBadge.hidden = !due;
   });

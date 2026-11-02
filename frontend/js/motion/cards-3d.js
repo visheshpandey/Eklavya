@@ -41,56 +41,54 @@ export function createStack(host) {
   return { dispose() { face.texture.dispose(); stage.dispose(); } };
 }
 
+const SHELF_WIDTH = 8.9;   // world units the six boxes span; the camera is placed so this always fits the canvas
+
 export function createBoxes(host, { gsap = globalThis.gsap } = {}) {
-  const stage = createStage(host, { fov: 28, position: [0, 3.5, 4.9], target: [0, 0.15, 0.1], onDemand: true });
+  const stage = createStage(host, { fov: 28, position: [0, 1.9, 3.2], target: [0, 0.22, 0], onDemand: true });
   stage.key.position.set(-2.4, 4.4, 3);
   const slots = [];
   const counts = [0, 0, 0, 0, 0, 0];
+  const NAMES = ['NEW', '1D', '3D', '7D', '14D', '30D'];
 
   const drawLabel = (index) => (ctx, w, h) => {
     ctx.fillStyle = '#faf8f2'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#8a7f69'; ctx.font = `500 30px ${MONO}`; ctx.letterSpacing = '3px'; ctx.textAlign = 'left'; ctx.fillText(BOX_DAYS[index], 24, 46);
-    ctx.fillStyle = PALETTE.ink; ctx.font = `76px ${SERIF}`; ctx.textAlign = 'right'; ctx.fillText(String(counts[index]), w - 24, h - 28);
+    ctx.fillStyle = '#8a7f69'; ctx.font = `500 44px ${MONO}`; ctx.letterSpacing = '4px'; ctx.textAlign = 'left'; ctx.fillText(NAMES[index], 30, 64);
+    ctx.fillStyle = PALETTE.ink; ctx.font = `120px ${SERIF}`; ctx.textAlign = 'right'; ctx.fillText(String(counts[index]), w - 30, h - 30);
   };
   for (let i = 0; i < 6; i += 1) {
     const color = mix(PALETTE.terracotta, PALETTE.greenSoft, i / 5);
     const material = new THREE.MeshStandardMaterial({ color, roughness: 0.75 });
     const box = new THREE.Group();
     const part = (w, h, d, x, y, z) => { const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material); mesh.position.set(x, y, z); mesh.castShadow = mesh.receiveShadow = true; box.add(mesh); };
-    part(0.95, 0.05, 0.72, 0, 0.025, 0);                    // floor
-    part(0.95, 0.42, 0.05, 0, 0.21, 0.335);                  // front
-    part(0.95, 0.42, 0.05, 0, 0.21, -0.335);                 // back
-    part(0.05, 0.42, 0.72, -0.45, 0.21, 0);                  // sides
-    part(0.05, 0.42, 0.72, 0.45, 0.21, 0);
-    const label = canvasTexture(256, 128, drawLabel(i));
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.31), new THREE.MeshStandardMaterial({ map: label.texture, roughness: 0.9 }));
-    plate.position.set(0, 0.2, 0.362); box.add(plate);
-    box.position.set((i % 3 - 1) * 1.2, 0, (Math.floor(i / 3) - 0.5) * 1.15);
+    part(1.05, 0.05, 0.8, 0, 0.025, 0);
+    part(1.05, 0.5, 0.05, 0, 0.25, 0.375);
+    part(1.05, 0.5, 0.05, 0, 0.25, -0.375);
+    part(0.05, 0.5, 0.8, -0.5, 0.25, 0);
+    part(0.05, 0.5, 0.8, 0.5, 0.25, 0);
+    const label = canvasTexture(384, 192, drawLabel(i));
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.43), new THREE.MeshStandardMaterial({ map: label.texture, roughness: 0.9 }));
+    plate.position.set(0, 0.25, 0.402); box.add(plate);
+    box.position.set((i - 2.5) * 1.28, 0, 0);
     stage.scene.add(box);
     slots.push({ box, label, drawLabel: () => label.redraw(drawLabel(i)) });
   }
-
-  const sheet = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.012, 0.34), new THREE.MeshStandardMaterial({ color: 0xfaf8f2, roughness: 0.9 }));
-  sheet.castShadow = true; sheet.visible = false;
-  stage.scene.add(sheet);
+  stage.add({ resize(width, height, cam) {   // always show the whole shelf, whatever the width
+    const distance = (SHELF_WIDTH / 2) / (Math.tan((cam.fov * Math.PI) / 360) * (width / height));
+    cam.position.set(0, 0.5 * distance * 0.7 + 0.2, Math.max(2.4, distance * 0.95));
+    stage.wake();
+  } });
 
   return {
     setCounts(next) { stage.wake(); next.forEach((n, i) => { if (counts[i] !== n) { counts[i] = n; slots[i].drawLabel(); } }); },
-    /** A card moves from box `from` to box `to`: it lifts out, arcs over and drops in, and the box gives a little. */
-    drop(from, to) {
-      if (!gsap || !slots[from] || !slots[to]) return;
-      stage.wake(2400);
-      const a = slots[from].box.position, b = slots[to].box.position;
-      const path = { t: 0 };
-      sheet.visible = true;
-      gsap.timeline({ onComplete: () => { sheet.visible = false; } })
-        .to(path, { t: 1, duration: 0.9, ease: 'power2.inOut', onUpdate: () => {
-          sheet.position.set(a.x + (b.x - a.x) * path.t, 0.35 + Math.sin(path.t * Math.PI) * 0.9, a.z + (b.z - a.z) * path.t);
-          sheet.rotation.set(path.t * 0.4, path.t * 3.1, 0);
-        } })
-        .to(sheet.position, { y: 0.12, duration: 0.18, ease: 'power2.in' })
-        .to(slots[to].box.scale, { y: 0.9, duration: 0.09, yoyo: true, repeat: 1 }, '<');
+    /** Where box `i` is on screen (a fraction of the canvas width), so a card can fly to it. */
+    xFraction: (i) => 0.5 + ((i - 2.5) * 1.28) / SHELF_WIDTH,
+    /** A card has landed in box `to`: it gives a little. */
+    land(to) {
+      if (!gsap || !slots[to]) return;
+      stage.wake(1200);
+      gsap.fromTo(slots[to].box.scale, { y: 1 }, { y: 0.84, duration: 0.1, yoyo: true, repeat: 1, ease: 'power1.out' });
+      gsap.fromTo(slots[to].box.position, { y: 0 }, { y: 0.06, duration: 0.14, yoyo: true, repeat: 1 });
     },
-    dispose() { for (const slot of slots) slot.label.texture.dispose(); gsap?.killTweensOf(sheet); stage.dispose(); },
+    dispose() { for (const slot of slots) slot.label.texture.dispose(); stage.dispose(); },
   };
 }
