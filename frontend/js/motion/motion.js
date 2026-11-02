@@ -3,6 +3,7 @@
 // components already drew: it watches the page for new elements instead of changing how they are made.
 import { selectToday, selectView } from '../state/selectors.js';
 import { PALETTE, finePointer, loadScript } from './env.js';
+import { canScene, mountOnScreen } from './index.js';
 import { CHECK, DOWNLOAD, FLAME } from './lottie-data.js';
 
 const REVEAL = '.hero, .section, .card, .stat, .sub, .rstep, .plan-group, .map-frame, .doc, .badge, .lb-row, .group-card, .block';
@@ -12,7 +13,9 @@ const TILT = '.card, .stat, .sub, .mode';
 const NO_TILT = 'textarea, input, select, .card3, .call, dialog';
 const seen = new Set();          // things already animated once: a re-draw with the same content must not play again
 const once = (key) => (seen.has(key) ? false : (seen.add(key), true));
-const visible = (node) => node.isConnected && node.offsetParent !== null;
+let booting = true;   // the first pass: what is already on screen when the layer starts is left alone (hiding it now would only make it flash)
+const inView = (node) => node.getBoundingClientRect().top < innerHeight;
+const visible = (node) => node.isConnected && node.offsetParent !== null && !(booting && inView(node));
 const keyOf = (node, tag) => `${tag}|${node.className}|${(node.textContent || '').trim().slice(0, 40)}|${[...node.parentElement.children].indexOf(node)}`;
 
 export async function initMotion({ store }) {
@@ -127,9 +130,141 @@ export async function initMotion({ store }) {
     confetti({ particleCount: 90, spread: 70, startVelocity: 38, origin, colors: [PALETTE.terracotta, PALETTE.gold, PALETTE.green, PALETTE.greenSoft], disableForReducedMotion: true, ticks: 160 });
   }
 
+  // ---- flashcards: the card flips with a spring, can be thrown (right = Got it, left = Again, up = Hard), and the Leitner boxes are 3D
+  const review = document.getElementById('fcReview');
+  const spring = (card) => gsap.fromTo(card, { rotationY: card.classList.contains('flipped') ? 0 : 180 }, { rotationY: card.classList.contains('flipped') ? 180 : 0, duration: 1.15, ease: 'elastic.out(1, 0.5)', overwrite: true });
+  if (review) {
+    new MutationObserver((records) => { for (const record of records) if (record.target.classList?.contains('card3')) spring(record.target); })
+      .observe(review, { attributes: true, attributeFilter: ['class'], subtree: true });
+    let drag = null, suppress = false;
+    review.addEventListener('pointerdown', (event) => {
+      const card = event.target.closest('.card3');
+      if (!card || event.button > 0) return;
+      drag = { wrap: card.closest('.flip'), x: event.clientX, y: event.clientY, dx: 0, dy: 0, moved: false };
+    });
+    review.addEventListener('pointermove', (event) => {
+      if (!drag) return;
+      drag.dx = event.clientX - drag.x; drag.dy = event.clientY - drag.y;
+      if (!drag.moved && Math.hypot(drag.dx, drag.dy) > 8) drag.moved = true;
+      if (!drag.moved) return;
+      gsap.set(drag.wrap, { x: drag.dx, y: drag.dy, rotation: drag.dx * 0.05 });
+      drag.wrap.dataset.throw = drag.dy < -70 && Math.abs(drag.dy) > Math.abs(drag.dx) ? 'hard' : drag.dx > 70 ? 'known' : drag.dx < -70 ? 'again' : '';
+    });
+    const release = () => {
+      if (!drag) return;
+      const { wrap, dx, dy, moved } = drag;
+      drag = null;
+      if (!moved) return;
+      suppress = true;   // the click that follows a drag must not flip the card
+      const choice = wrap.dataset.throw;
+      delete wrap.dataset.throw;
+      const button = choice && review.querySelector(`[data-rate="${choice}"]`);
+      if (!button) { gsap.to(wrap, { x: 0, y: 0, rotation: 0, duration: 0.7, ease: 'elastic.out(1, 0.6)' }); return; }
+      gsap.to(wrap, { x: choice === 'known' ? 700 : choice === 'again' ? -700 : dx, y: choice === 'hard' ? -420 : dy, rotation: choice === 'known' ? 25 : choice === 'again' ? -25 : 0, opacity: 0, duration: 0.32, ease: 'power2.in',
+        onComplete: () => { gsap.set(wrap, { clearProps: 'all' }); button.click(); } });
+    };
+    review.addEventListener('pointerup', release);
+    review.addEventListener('pointercancel', release);
+    review.addEventListener('click', (event) => { if (suppress) { suppress = false; event.stopPropagation(); event.preventDefault(); } }, true);
+
+    // the Leitner boxes in 3D, in place of the six plain tiles (which stay for screen readers)
+    const tiles = document.querySelector('#panel-flashcards .lb');
+    if (tiles && canScene()) {
+      const host = document.createElement('div');
+      host.className = 'boxes3d';
+      tiles.before(host);
+      tiles.classList.add('lb-sr');
+      let counts = [0, 0, 0, 0, 0, 0];
+      const boxes = mountOnScreen(host, async (element) => (await import('./cards-3d.js')).createBoxes(element), (scene) => scene.setCounts(counts));
+      document.addEventListener('eklavya:cards', (event) => {
+        const { type, boxes: next, from, to } = event.detail;
+        if (type === 'counts') { counts = next; boxes.scene()?.setCounts(next); }
+        if (type === 'rate') boxes.scene()?.drop(from, to);
+      });
+    }
+  }
+  // the empty deck gets a floating stack of cards
+  function stacks(root) {
+    for (const empty of root.querySelectorAll('#fcReview .card3-empty:not([data-stack])')) {
+      empty.dataset.stack = '1';
+      if (!canScene()) continue;
+      const host = document.createElement('div');
+      host.className = 'stack3d';
+      empty.prepend(host);
+      mountOnScreen(host, async (element) => (await import('./cards-3d.js')).createStack(element));
+    }
+  }
+
+  // ---- study groups: members orbit the shared book
+  function groups(root) {
+    for (const detail of root.querySelectorAll('#groups .group-detail:not([data-orbit])')) {
+      detail.dataset.orbit = '1';
+      if (!canScene()) continue;
+      const members = [...detail.querySelectorAll('.leaderboard li')].map((li) => ({ rank: Number(li.querySelector('.lb-rank')?.textContent) || 1,
+        name: (li.querySelector('.lb-name')?.textContent ?? '').replace(/ \(you\)$/, ''), you: li.classList.contains('is-you') }));
+      if (!members.length) continue;
+      const host = document.createElement('div');
+      host.className = 'orbit3d';
+      detail.prepend(host);
+      mountOnScreen(host, async (element) => (await import('./group-orbit.js')).createGroupOrbit(element, members));
+    }
+  }
+
+  // ---- my notes: the dropped page flies into the 3D book, then the topics pop in
+  let popUntil = 0;
+  const drop = document.getElementById('drop');
+  let playing = false;
+  async function uploadFx() {
+    popUntil = Date.now() + 25000;
+    if (!drop || playing || !canScene()) return;
+    playing = true;
+    const host = document.createElement('div');
+    host.className = 'dropfx';
+    drop.append(host);
+    try {
+      const { createUploadFx } = await import('./notes-fx.js');
+      const fx = createUploadFx(host);
+      fx.play();
+      setTimeout(() => { fx.dispose(); host.remove(); playing = false; }, 2600);
+    } catch { host.remove(); playing = false; }
+  }
+  document.getElementById('file')?.addEventListener('change', uploadFx);
+  drop?.addEventListener('drop', uploadFx);
+  function pops(root) {
+    if (Date.now() > popUntil) return;
+    const fresh = [...root.querySelectorAll('#panel-library .topic-row:not([data-pop])')];
+    fresh.forEach((row) => { row.dataset.pop = '1'; });
+    if (fresh.length) gsap.fromTo(fresh, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out(2.2)', stagger: 0.045, clearProps: 'transform,opacity' });
+  }
+
+  // ---- ask: pages fan out while it searches, the answer arrives word by word, the cited words are underlined
+  function ask(root) {
+    for (const wait of root.querySelectorAll('#answer .ask-wait:not([data-fan])')) {
+      wait.dataset.fan = '1';
+      const fan = document.createElement('span');
+      fan.className = 'fan'; fan.setAttribute('aria-hidden', 'true');
+      fan.innerHTML = '<i></i><i></i><i></i><i></i><i></i>';
+      wait.before(fan);
+      const sheets = [...fan.children];
+      gsap.set(sheets, { transformOrigin: '50% 100%', rotation: 0 });
+      gsap.to(sheets, { rotation: (i) => (i - 2) * 17, duration: 0.9, ease: 'back.out(1.6)', stagger: 0.05, repeat: -1, yoyo: true, repeatDelay: 0.2 });
+    }
+    for (const paragraph of root.querySelectorAll('#answer .answer > p:not([class]):not([data-words])')) {
+      paragraph.dataset.words = '1';
+      if (!once(`words|${paragraph.textContent}`)) continue;
+      const words = paragraph.textContent.split(/(\s+)/);
+      paragraph.replaceChildren(...words.map((word) => { if (/^\s+$/.test(word)) return document.createTextNode(word); const span = document.createElement('span'); span.textContent = word; return span; }));
+      gsap.fromTo(paragraph.querySelectorAll('span'), { opacity: 0 }, { opacity: 1, duration: 0.18, stagger: 0.03, ease: 'none' });
+    }
+    for (const mark of root.querySelectorAll('#answer .passage mark:not([data-uline])')) {
+      mark.dataset.uline = '1';
+      ScrollTrigger.create({ trigger: mark, start: 'top 92%', once: true, onEnter: () => mark.classList.add('uline') });
+    }
+  }
+
   // one pass over what is on screen now, and again whenever the components draw something new
   const main = document.getElementById('main') ?? document.body;
-  const pass = (root) => { reveal(root); counts(root); bars(root); rings(root); checks(root); watchRoute(); };
+  const pass = (root) => { reveal(root); counts(root); bars(root); rings(root); checks(root); stacks(root); groups(root); pops(root); ask(root); watchRoute(); };
   let queued = false;
   new MutationObserver(() => {
     if (queued) return;
@@ -137,6 +272,7 @@ export async function initMotion({ store }) {
     queueMicrotask(() => { queued = false; pass(main); });   // before the next paint, so nothing flashes
   }).observe(main, { childList: true, subtree: true });
   pass(main);
+  booting = false;
 
   // ---- changing tab: a short crossfade with a 12px slide
   let first = true;

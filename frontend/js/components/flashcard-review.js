@@ -17,6 +17,8 @@ export function mountFlashcardReview({ store, root, onLoadDue, onLoadAll, onRate
   let mock = false;
   let total = 0;
   let loading = false;
+  let boxes = [0, 0, 0, 0, 0, 0];   // how many cards sit in each Leitner box: the 3D boxes show it
+  const announce = (detail) => document.dispatchEvent(new CustomEvent('eklavya:cards', { detail }));
 
   const current = () => queue[pos] ?? null;
 
@@ -78,6 +80,11 @@ export function mountFlashcardReview({ store, root, onLoadDue, onLoadAll, onRate
     if (!card) return;
     let leaves = value === 'known';   // a card that is not done for today goes to the back of the deck
     if (!mock) {
+      const from = Math.min(5, card.box ?? 0), to = value === 'known' ? Math.min(from + 1, 5) : value === 'hard' ? Math.max(from - 1, 0) : 0;
+      announce({ type: 'rate', from, to });
+      boxes = boxes.map((n, i) => n - (i === from ? 1 : 0) + (i === to ? 1 : 0));
+      setTimeout(() => announce({ type: 'counts', boxes }), 1000);
+      card.box = to;
       const result = await onRate(card, value);
       if (result?.due_on && result.due_on > today()) leaves = true;   // the server pushed it to a later day (Hard from a high box)
     }
@@ -103,9 +110,11 @@ export function mountFlashcardReview({ store, root, onLoadDue, onLoadAll, onRate
   async function refresh() {
     if (mock) return;
     loading = true; draw();
-    queue = await onLoadDue();
-    total = queue.length || total;
-    if (!queue.length) total = (await onLoadAll()).length;
+    const [due, all] = await Promise.all([onLoadDue(), onLoadAll()]);   // together, so the extra request costs no waiting
+    queue = due;
+    total = all.length;
+    boxes = [0, 1, 2, 3, 4, 5].map((box) => all.filter((c) => Math.min(5, c.box ?? 0) === box).length);
+    announce({ type: 'counts', boxes });
     pos = 0; flipped = false; loading = false;
     draw();
   }

@@ -206,6 +206,7 @@ export async function createHeroBook(desk, initial, { gsap = globalThis.gsap } =
     },
   });
 
+  try { await stage.renderer.compileAsync(scene, camera); } catch { /* the first frame compiles instead */ }   // shaders compile off the main thread where the browser allows
   desk.classList.add('is-3d');
   return {
     /** New numbers for the pages and cards. */

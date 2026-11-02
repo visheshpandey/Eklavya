@@ -300,3 +300,19 @@ cd eklavya\frontend && npm test
   fast and free. They prove our logic, not Gemini's behaviour: use `check_gemini.py` for that.
 * Frontend: the reducer, store, controllers and API client are unit tested with fakes.
   UI rendering is checked in a real browser (see LOG.md).
+
+## Motion and 3D layer (frontend/js/motion, frontend/vendor)
+
+Everything here only decorates what the components draw; each piece is skipped for `prefers-reduced-motion` or without WebGL, and the
+drawn (CSS/SVG) version underneath stays as the fallback.
+
+- `vendor/`: pinned builds, loaded without a bundler. gsap 3.12.5 + ScrollTrigger, lenis 1.1.18, lottie-web 5.12.2 (light), canvas-confetti 1.9.3,
+  three 0.179.1 (ES modules through the import map in `index.html`; `three/addons/` holds GLTFLoader), and `force-graph.js` (3d-force-graph 1.73.4 +
+  three-spritetext, bundled with esbuild, `three` kept external).
+- `motion/index.js`: `startMotion`, `mountHeroScene`, `mountMentor`, `mountOrb`, `mountGraph`, `mountOnScreen`. 3D scenes are built when their host is on
+  screen (and 3.5 s after load), and freed when it leaves.
+- `motion/motion.js`: Lenis, scroll reveals, count-ups, bar and ring fills, tab crossfade, card tilt, streak flame, route checkmark, confetti,
+  flashcard spring flip and throw, mode card to session transition, Ask effects, notes upload effect.
+- `motion/scene-kit.js`: the one renderer setup (pixel ratio <= 2, warm key light + ambient, contact shadow, about 30 fps, pauses off-screen, `dispose()`).
+- Scenes: `hero-book.js` (Today), `mentor-3d.js` (Study room; set `mentorModel` in `config.js` to use a rigged GLB with ARKit/Oculus blendshapes),
+  `orb-3d.js` (noise-shader mic orb), `graph-3d.js` (Progress), `cards-3d.js` (empty-deck stack, Leitner boxes), `notes-fx.js`, `group-orbit.js`.

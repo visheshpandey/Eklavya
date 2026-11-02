@@ -459,3 +459,26 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .dl-bubble { position: fixed; z-index: 60; width: 44px; height: 44px; margin: -44px 0 0 -22px; border-radius: 50%; background: var(--paper-hi); box-shadow: 0 8px 22px var(--drop-shadow); border: 1px solid var(--line); pointer-events: none; display: grid; place-items: center; }
 .dl-bubble svg { width: 30px !important; height: 30px !important; }
 @media (max-width: 700px) { .graph3d { height: 360px; } .mring { width: 92px; height: 92px; } }
+
+/* Phase 6: notes, ask, flashcards, groups */
+.drop { position: relative; }
+.drop.dragging { box-shadow: 0 0 0 4px color-mix(in srgb, var(--terracotta) 22%, transparent), 0 0 38px color-mix(in srgb, var(--terracotta) 38%, transparent); animation: dropglow 1.2s ease-in-out infinite; }
+@keyframes dropglow { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--terracotta) 14%, transparent), 0 0 56px color-mix(in srgb, var(--terracotta) 46%, transparent); } }
+.dropfx { position: absolute; inset: -60px 0 -10px 30%; pointer-events: none; z-index: 2; }
+.fan { position: relative; display: block; width: 110px; height: 72px; margin: 6px 0 2px; }
+.fan i { position: absolute; left: 50%; bottom: 0; width: 38px; height: 54px; margin-left: -19px; background: var(--paper-hi); border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: 0 4px 10px var(--drop-shadow); }
+.fan i:nth-child(odd) { background: var(--sage); }
+#answer .answer mark { background: none; color: inherit; background-image: linear-gradient(var(--terracotta), var(--terracotta)); background-repeat: no-repeat; background-position: 0 100%; background-size: 0 2px; padding-bottom: 1px; transition: background-size .7s cubic-bezier(.2, .7, .2, 1); }
+#answer .answer mark.uline { background-size: 100% 2px; }
+html[data-motion="on"] .card3 { transition: none; }
+.card3 { touch-action: none; cursor: grab; }
+.flip { position: relative; }
+.flip[data-throw]::after { position: absolute; top: 12px; right: 12px; z-index: 3; padding: 4px 10px; border-radius: 99px; font: 500 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; background: var(--paper-hi); border: 1px solid var(--line-strong); }
+.flip[data-throw="known"]::after { content: "Got it"; color: var(--ok-text); border-color: var(--ok-fill); }
+.flip[data-throw="again"]::after { content: "Again"; color: var(--accent-text); border-color: var(--terracotta); left: 12px; right: auto; }
+.flip[data-throw="hard"]::after { content: "Hard"; color: var(--ochre); border-color: var(--ochre); }
+.stack3d { width: min(340px, 100%); height: 210px; margin: -10px auto -4px; position: relative; }
+.boxes3d { position: relative; height: 190px; margin: 6px 0 8px; }
+.lb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.orbit3d { position: relative; height: 270px; margin: 0 0 6px; border-radius: var(--r-panel); background: var(--paper-hi); border: 1px solid var(--line); overflow: hidden; }
+@media (max-width: 700px) { .orbit3d { height: 230px; } .dropfx { inset: -40px 0 -10px 10%; } }

@@ -1,6 +1,6 @@
 // Entry for the motion layer. It is loaded after the app is on screen and does nothing for "reduce motion"; if a library fails to load the
 // app simply stays as it was (every effect is an addition, none is needed to use the page).
-import { hasWebGL, idle, loadScript, reducedMotion, whenVisible } from './env.js';
+import { afterLoad, hasWebGL, idle, loadScript, reducedMotion, whenVisible } from './env.js';
 
 export function startMotion(deps) {
   if (reducedMotion()) return;
@@ -18,7 +18,7 @@ export function mountHeroScene(desk, info) {
     visible = now;
     if (now && !scene && !building) {
       building = true;
-      loadScript('vendor/gsap.min.js').catch(() => {})
+      afterLoad(3500).then(() => loadScript('vendor/gsap.min.js')).catch(() => {})
         .then(() => import('./hero-book.js'))
         .then((module) => module.createHeroBook(desk, latest, { gsap: globalThis.gsap }))
         .then((created) => { building = false; if (visible) scene = created; else created.dispose(); })
@@ -38,8 +38,8 @@ function whileVisible(host, create, apply) {
     visible = now;
     if (now && !scene && !building) {
       building = true;
-      create(host).then((created) => { building = false; if (visible) { scene = created; apply(scene); } else created.dispose(); })
-        .catch((error) => { building = false; console.warn('3D scene not started', error); });
+      afterLoad(3500).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); } else created.dispose(); })
+        .catch((error) => { building = false; if (visible) console.warn('3D scene not started', error); });
     } else if (!now && scene) { scene.dispose(); scene = null; }
   }, '0px');
   return () => scene;
@@ -105,4 +105,13 @@ export function mountGraph(host, onPick) {
     update(next) { map = next; sync(); current()?.update(next); },
     focus(id) { current()?.focus(id); },
   };
+}
+
+/** Whether a 3D scene may be drawn at all (WebGL present, no "reduce motion"). */
+export const canScene = () => !reducedMotion() && hasWebGL();
+
+/** A scene hosted in `host` for as long as it is on screen: `create(host)` resolves to it, `apply(scene)` replays what it missed. Returns { scene() }. */
+export function mountOnScreen(host, create, apply = () => {}) {
+  if (!canScene()) return { scene: () => null };
+  return { scene: whileVisible(host, async (element) => { await loadScript('vendor/gsap.min.js').catch(() => {}); return create(element); }, apply) };
 }
