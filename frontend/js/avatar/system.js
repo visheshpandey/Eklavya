@@ -9,7 +9,6 @@ import { afterLoad, guardPerformance, isLite, whenEngaged } from '../motion/env.
 import { VOICE_STATUS } from '../lib/protocol.js';
 import { selectEmotion, selectResult, selectView, selectVoiceStatus } from '../state/selectors.js';
 import { SimliProvider } from './simli-provider.js';
-import { TalkingHeadProvider } from './talkinghead-provider.js';
 
 const SAMPLE_MODEL = 'assets/avatar/mentor-sample.glb';
 const LABELS = { speaking: '● Live', listening: 'Listening…', thinking: 'Thinking…', concerned: 'Listening…' };
@@ -45,23 +44,7 @@ export function mountMentorFrame({ store, frame, base, config = {}, setPlaybackM
   const apply = () => { const state = derived; for (const provider of providers()) provider.setState?.(state); pill.hidden = !LABELS[state]; pill.textContent = LABELS[state] ?? ''; pill.dataset.state = state; };
 
   // ---- the 3D provider: while the Study room is on screen
-  async function build3d() {
-    if (three || threeBuilding || !hasWebGL || wanted === 'static' || (isLite() && wanted !== '3d')) return;
-    threeBuilding = true;
-    const provider = new TalkingHeadProvider({ url: config.mentorModel || SAMPLE_MODEL, reduceMotion });
-    try {
-      await afterLoad(1500); await whenEngaged();   // the 2 MB model and its shaders wait until a person is there (or 8 s have passed)
-      if (selectView(store.getState()) !== 'study') { threeBuilding = false; return; }
-      await provider.init(layer3d);
-      if (selectView(store.getState()) !== 'study' || (isLite() && wanted !== '3d')) { await provider.destroy(); threeBuilding = false; return; }
-      three = provider;
-      if (metrics.mode === 'static') metrics.mode = '3d';
-      note(`3d avatar ready (${config.mentorModel ? 'your model' : 'sample model'})`);
-      apply(); publish();
-      guardPerformance().then((fine) => { if (!fine && wanted !== '3d') note('this device cannot keep up with the 3d avatar: using the built-in one'); });
-    } catch (error) { note(`3d avatar unavailable, staying with the built-in one: ${error.message ?? error}`); await provider.destroy().catch(() => {}); }
-    threeBuilding = false;
-  }
+  async function build3d() { /* the 3D face was removed: the drawn mentor is the avatar */ }
   async function free3d() {
     if (!three) return;
     const old = three; three = null;

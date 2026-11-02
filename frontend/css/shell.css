@@ -727,3 +727,7 @@ html.wave-gsap .wave i { animation: none; }
 @media (max-width: 700px) { .demo-pill { display: none; } .cost-table { display: block; overflow-x: auto; } }
 .impact .md-list { font-size: 14px; color: var(--ink-3); line-height: 1.6; margin: 6px 0 0; }
 @media (max-width: 700px) { .stage { padding-inline: 10px; } .mentor-frame { width: 100%; min-width: 0; } }
+/* the drawn mentor in the big frame: normal size, centred above the orb, never behind it */
+.mentor-frame .mf-static { inset: 14px 0 118px 0; }
+.mentor-frame .avatar { width: min(100%, 250px); height: 100%; max-height: 270px; margin-inline: auto; aspect-ratio: 120 / 130; }
+.mentor-frame .avatar-svg { height: 100%; width: 100%; }

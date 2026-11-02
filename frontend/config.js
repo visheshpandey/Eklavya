@@ -7,7 +7,7 @@ window.APP_CONFIG = {
   apiBase: local ? 'http://localhost:5002' : 'https://eklavya-api-1bhf.onrender.com',
   userId: 1,
   mentorModel: '',   // your MetaPerson/ARKit GLB (e.g. 'assets/avatar/mentor.glb'); empty = the compressed sample in assets/avatar
-  avatarMode: 'auto',   // 'auto' (photoreal, then 3d, then static) | 'photoreal' | '3d' | 'static'
+  avatarMode: 'static',   // 'auto' (photoreal, then 3d, then static) | 'photoreal' | '3d' | 'static'
   simliFaceId: '',   // the Simli face to use for the photoreal mentor; empty = photoreal is off
   simliSessionUrl: '/api/simli-session',   // the serverless endpoint that holds SIMLI_API_KEY
 };
