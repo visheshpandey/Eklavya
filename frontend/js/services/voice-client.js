@@ -42,10 +42,13 @@ export class VoiceClient {
    * @param {{onEvent: (event: object) => void, onStatus: (status: string) => void, onLevel?: (level: number) => void}} handlers
    *   onLevel gets the loudness (0-1) of whoever is talking, about 60 times a second, for the orb animation.
    */
-  constructor({ onEvent, onStatus, onLevel = () => {} }) {
+  constructor({ onEvent, onStatus, onLevel = () => {}, onAudio = () => {}, onInterrupt = () => {} }) {
     this.onEvent = onEvent;
     this.onStatus = onStatus;
     this.onLevel = onLevel;
+    this.onAudio = onAudio;           // each chunk of Eklavya's voice (PCM16 mono 24 kHz), for an avatar that speaks it
+    this.onInterrupt = onInterrupt;   // the student barged in
+    this.muted = false;
     this.status = VOICE_STATUS.IDLE;
     this.ws = null;
     this.session = 0;           // bumped by every cleanup; a start that sees a different number was cancelled
@@ -181,13 +184,20 @@ export class VoiceClient {
     let event;
     try { event = JSON.parse(message.data); } catch { return; }
     if (event.type === 'turn_complete') this.micOpen = true;   // the greeting (or any first turn) is finished: the student can speak
-    if (event.type === 'interrupted') this._flushPlayback();
+    if (event.type === 'interrupted') { this._flushPlayback(); this.onInterrupt(); }
     if (event.type === 'session') this.resumeId = event.id;   // lets a dropped call be picked up again
     this.onEvent(event);
   }
 
+  /** Silence the speakers (another player, such as the photoreal avatar, is voicing the same audio). The level meter keeps working. */
+  setPlaybackMuted(muted) {
+    this.muted = muted;
+    if (this.speaker) this.speaker.gain.value = muted ? 0 : 1;
+  }
+
   _play(buffer) {
     if (!this.playCtx) return;
+    this.onAudio(buffer);
     const int16 = new Int16Array(buffer, 0, Math.floor(buffer.byteLength / 2));
     const float32 = Float32Array.from(int16, (v) => v / 32768);
     const audio = this.playCtx.createBuffer(1, float32.length, PLAYBACK_RATE);
@@ -196,7 +206,11 @@ export class VoiceClient {
     source.buffer = audio;
     if (!this.playOut) {   // one meter in front of the speakers measures Eklavya's voice for the orb
       this.playOut = this.playCtx.createGain ? this.playCtx.createGain() : this.playCtx.destination;
-      if (this.playOut !== this.playCtx.destination) this.playOut.connect(this.playCtx.destination);
+      if (this.playOut !== this.playCtx.destination) {
+        this.speaker = this.playCtx.createGain();   // after the meter, so muting never flattens the level
+        this.speaker.gain.value = this.muted ? 0 : 1;
+        this.playOut.connect(this.speaker); this.speaker.connect(this.playCtx.destination);
+      }
       this.playMeter = meter(this.playCtx, this.playOut);
     }
     source.connect(this.playOut);
@@ -231,7 +245,7 @@ export class VoiceClient {
     quiet(() => this.micCtx?.close());
     quiet(() => this.playCtx?.close());
     this.sources.clear();
-    this.ws = this.node = this.stream = this.micCtx = this.playCtx = this.playOut = this.micMeter = this.playMeter = null;
+    this.ws = this.node = this.stream = this.micCtx = this.playCtx = this.playOut = this.speaker = this.micMeter = this.playMeter = null;
     this._setStatus(VOICE_STATUS.IDLE);
   }
 }

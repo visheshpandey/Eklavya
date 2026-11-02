@@ -6,5 +6,8 @@ const local = ['localhost', '127.0.0.1', ''].includes(location.hostname);
 window.APP_CONFIG = {
   apiBase: local ? 'http://localhost:5002' : 'https://eklavya-api-1bhf.onrender.com',
   userId: 1,
-  mentorModel: '',   // optional rigged avatar for the Study room mentor, e.g. 'assets/mentor.glb' (ARKit or Oculus blendshape names); empty = the built-in 3D mentor
+  mentorModel: '',   // your MetaPerson/ARKit GLB (e.g. 'assets/avatar/mentor.glb'); empty = the compressed sample in assets/avatar
+  avatarMode: 'auto',   // 'auto' (photoreal, then 3d, then static) | 'photoreal' | '3d' | 'static'
+  simliFaceId: '',   // the Simli face to use for the photoreal mentor; empty = photoreal is off
+  simliSessionUrl: '/api/simli-session',   // the serverless endpoint that holds SIMLI_API_KEY
 };

@@ -22,6 +22,7 @@ export function mountSessionOrb({ store, orb, status, onToggle }) {
   function draw() {
     const voiceStatus = selectVoiceStatus(store.getState());
     orb.dataset.state = voiceStatus;
+    orb.setAttribute('aria-pressed', String(voiceStatus !== VOICE_STATUS.IDLE));   // pressed while a conversation is open
     sphere.setState(voiceStatus);
     if (voiceStatus === VOICE_STATUS.SPEAKING) orb.replaceChildren(el('span', { class: 'orb-bars', 'aria-hidden': 'true' }, ...[0, 1, 2, 3, 4].map(() => el('span'))));
     else orb.replaceChildren(icon(voiceStatus === VOICE_STATUS.IDLE || voiceStatus === VOICE_STATUS.CONNECTING ? 'microphone' : 'stop', { size: 36 }));

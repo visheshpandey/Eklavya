@@ -316,3 +316,14 @@ drawn (CSS/SVG) version underneath stays as the fallback.
 - `motion/scene-kit.js`: the one renderer setup (pixel ratio <= 2, warm key light + ambient, contact shadow, about 30 fps, pauses off-screen, `dispose()`).
 - Scenes: `hero-book.js` (Today), `mentor-3d.js` (Study room; set `mentorModel` in `config.js` to use a rigged GLB with ARKit/Oculus blendshapes),
   `orb-3d.js` (noise-shader mic orb), `graph-3d.js` (Progress), `cards-3d.js` (empty-deck stack, Leitner boxes), `notes-fx.js`, `group-orbit.js`.
+
+## The mentor avatar (frontend/js/avatar)
+
+`system.js` mounts the **mentor frame** (16:10, head and shoulders, status pill, captions, full screen) and picks the best of three providers that share
+one interface (`init, speak, setState, interrupt, destroy`; states idle/listening/thinking/speaking/happy/concerned):
+1. **photoreal** (`simli-provider.js`): Simli WebRTC video. Only during a call, only with `simliFaceId` in `config.js`; the session token comes from
+   `api/simli-session.js` (Vercel serverless, needs `SIMLI_API_KEY`; optional `SIMLI_FACE_ID`). Eklavya's own voice is resampled 24 to 16 kHz and sent to
+   Simli; local playback is muted while it is live. 5 s budget (token + start), then silent fallback; closed on call end, tab leave and after 60 s idle.
+2. **3d** (`talkinghead-provider.js`): TalkingHead.js with a GLB (`mentorModel` in `config.js`, else `assets/avatar/mentor-sample.glb`). Mouth follows voice level.
+3. **static**: the drawn face and the built-in three.js bust, always underneath.
+`window.eklavyaAvatar` reports the mode, the log of fallbacks and the chunk-to-mouth latency.
