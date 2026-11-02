@@ -276,7 +276,7 @@ byId('tutor').addEventListener('change', (event) => mentor.setTutor(event.target
 mentor.setTutor(getTutor());
 voiceClient = new VoiceClient({
   onEvent: session.handleEvent, onStatus: session.handleStatus,
-  onLevel: (level) => { globalThis.eklavyaLevel = level; orb.setLevel(level); mentor.setLevel(level); },   // one voice level moves the orb and the mentor
+  onLevel: (level, bands) => { globalThis.eklavyaLevel = level; orb.setLevel(level); mentor.setLevel(level, bands); },   // one voice level moves the orb and the mentor
   onAudio: (chunk) => mentor.feedAudio(chunk),
   onInterrupt: () => mentor.interrupt(),
 });

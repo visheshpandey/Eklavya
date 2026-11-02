@@ -1,6 +1,35 @@
 // Small helpers shared by every motion and 3D module: capability checks, one-time script loading, "run when visible".
 export const PALETTE = { paper: '#f2efe7', green: '#29483e', greenSoft: '#5f8a69', terracotta: '#b8604a', gold: '#b9853f', ink: '#24302d' };
 
+/** A machine that cannot keep up with the 3D (measured once, remembered): the drawn versions are used instead. `eklavya.noguard` switches the check off. */
+export const isLite = () => { try { return localStorage.getItem('eklavya.lite') === '1'; } catch { return false; } };
+
+/** Frames per second the page actually manages over `ms`, only counting while it is visible; resolves null if it was hidden. */
+export function measureFps(ms = 4000) {
+  return new Promise((resolve) => {
+    let frames = 0, start = null, seenHidden = false;
+    const tick = (time) => {
+      if (document.hidden) seenHidden = true;
+      if (start === null) start = time;
+      frames += 1;
+      if (time - start >= ms) resolve(seenHidden ? null : (frames * 1000) / (time - start)); else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+/** After the 3D has had a few seconds to run: if the page manages fewer than `floor` frames a second, switch the 3D off for this machine. */
+export async function guardPerformance(floor = 20) {
+  try { if (localStorage.getItem('eklavya.noguard') === '1') return true; } catch { /* no storage: still guard */ }
+  const fps = await measureFps(4000);
+  if (fps !== null && fps < floor) {
+    try { localStorage.setItem('eklavya.lite', '1'); } catch { /* not remembered */ }
+    document.dispatchEvent(new CustomEvent('eklavya:lite', { detail: { fps: Math.round(fps) } }));
+    return false;
+  }
+  return true;
+}
+
 export const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 export const finePointer = () => globalThis.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? false;
 
