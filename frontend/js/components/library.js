@@ -6,6 +6,8 @@ import { t } from '../lib/strings.js';
 import { selectCollapsedDocs, selectDashboard, selectLanguage, selectLibrarySearch, selectSelectedTopicId } from '../state/selectors.js';
 
 const CONFIRM_TIMEOUT_MS = 8000;
+const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
+const KIND_LABEL = { pdf: 'PDF', text: 'Text notes', photo: 'Photo of a page', link: 'Web page', youtube: 'YouTube video' };
 const RING_R = 11;
 const RING_C = 2 * Math.PI * RING_R;
 
@@ -34,11 +36,12 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
   }
 
   function createGroup(documentId) {
+    const kindIcon = el('span', { class: 'kind-icon', 'aria-hidden': 'true' });
     const title = el('span', { class: 'doc-name' });
     const count = el('span', { class: 'doc-count' });
     const listId = `topics-${documentId}`;
     const toggle = el('button', { class: 'doc-toggle', type: 'button', 'aria-controls': listId, onclick: () => onToggleDocument(documentId) },
-      icon('caret-down', { size: 18 }), el('span', { class: 'doc-text' }, title, count));
+      icon('caret-down', { size: 18 }), kindIcon, el('span', { class: 'doc-text' }, title, count));
     const remove = el('button', { class: 'btn btn-danger-quiet doc-remove', type: 'button' }, 'Remove');
     const confirmText = el('p');
     const yes = el('button', { class: 'btn btn-danger', type: 'button' }, 'Yes, remove');
@@ -59,7 +62,7 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
     yes.addEventListener('click', () => { yes.disabled = no.disabled = true; onRemoveDocument(documentId); });
 
     const node = el('div', { class: 'doc' }, el('div', { class: 'doc-head' }, toggle, remove), confirmBox, list);
-    return { node, title, count, toggle, list, remove, confirmText, yes, no };
+    return { node, title, count, toggle, list, remove, confirmText, yes, no, kindIcon };
   }
 
   function draw() {
@@ -79,7 +82,7 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
     const weakestId = dashboard.weak_topics[0]?.topic_id;
     const byDocument = new Map();
     for (const topic of dashboard.mastery) {
-      if (!byDocument.has(topic.document_id)) byDocument.set(topic.document_id, { id: topic.document_id, name: topic.document, topics: [] });
+      if (!byDocument.has(topic.document_id)) byDocument.set(topic.document_id, { id: topic.document_id, name: topic.document, kind: topic.source_kind ?? 'text', topics: [] });
       byDocument.get(topic.document_id).topics.push(topic);
     }
     for (const id of [...rows.keys()]) if (!dashboard.mastery.some((t) => t.topic_id === id)) rows.delete(id);
@@ -93,6 +96,8 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
       groups.set(doc.id, group);
       const collapsed = !query && Boolean(ui.collapsedDocs[doc.id]);       // a search opens every group that has a match
       group.title.textContent = doc.name;
+      group.kindIcon.replaceChildren(icon(KIND_ICON[doc.kind] ?? 'file-text', { size: 18 }));
+      group.kindIcon.setAttribute('title', KIND_LABEL[doc.kind] ?? 'Notes');
       group.count.textContent = query ? t('lib.matches', language, { n: matches.length, total: doc.topics.length }) : t('lib.topics', language, { n: doc.topics.length });
       group.toggle.setAttribute('aria-expanded', String(!collapsed));
       group.list.hidden = collapsed;
@@ -107,12 +112,13 @@ export function mountLibrary({ store, root, searchInput, onOpenTopic, onToggleDo
         rows.set(topic.topic_id, row);
         const percent = Math.round(topic.mastery_score);
         row.label.textContent = topic.topic_name;
-        row.tag.hidden = topic.topic_id !== weakestId;
+        row.tag.hidden = topic.topic_id !== weakestId || topic.started === false;
         row.tag.textContent = t('lib.weakest', language);
-        row.pct.textContent = `${percent}%`;
+        row.pct.textContent = topic.started === false ? 'New' : `${percent}%`;
         row.node.setAttribute('aria-current', topic.topic_id === selectedTopicId ? 'true' : 'false');
-        if (row.fresh) { row.fresh = false; requestAnimationFrame(() => setRing(row.fill, percent)); }
-        else setRing(row.fill, percent);
+        const shown = topic.started === false ? 0 : percent;
+        if (row.fresh) { row.fresh = false; requestAnimationFrame(() => setRing(row.fill, shown)); }
+        else setRing(row.fill, shown);
         return row.node;
       }));
       nodes.push(group.node);

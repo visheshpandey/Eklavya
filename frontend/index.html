@@ -93,6 +93,7 @@
               <span class="menu-label">Display</span>
               <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
             </div>
+            <button id="btnStreak" class="streak-chip" type="button" aria-expanded="false" aria-controls="streakSheet" aria-label="Learning streak: 0 days"><span data-icon="fire" data-size="18"></span><b id="streakChipN" class="tnum">0</b></button>
             <button id="btnMore" class="icon-btn" type="button" aria-expanded="false" aria-controls="topMenu" aria-label="Settings: sound, tutor, language, display"><span aria-hidden="true" style="font-size:22px;line-height:1">⋯</span></button>
             <button id="btnSignIn" class="btn btn-primary" type="button" hidden>Sign in</button>   <!-- guests only: the way in is always in view -->
             <button id="btnAccountTop" class="icon-btn top-account" type="button" aria-label="Account"><span data-icon="user" data-size="18"></span></button>
@@ -103,6 +104,13 @@
         <div id="banner" class="banner" role="alert" hidden></div>
 
         <main id="main" class="workspace" tabindex="-1">
+
+          <div id="streakSheet" class="streak-sheet" role="dialog" aria-label="Learning streak" hidden>
+            <span class="mono">Learning streak</span>
+            <strong class="tnum"><span id="streakSheetDays">0</span> <small id="streakSheetUnit">days</small></strong>
+            <p id="streakSheetNote">Study today to start a streak.</p>
+            <div class="week" id="streakSheetWeek" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
 
           <!-- TODAY -->
           <section id="panel-today" class="panel" role="tabpanel" aria-labelledby="tab-today">

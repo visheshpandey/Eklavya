@@ -22,6 +22,16 @@ export function mountRail({ store, streakDays, streakUnit, streakText, weekDots,
     const week = today?.week ?? Array(7).fill(false);
     [...weekDots.children].forEach((dot, index) => dot.classList.toggle('on', Boolean(week[index])));
     weekDots.setAttribute('aria-label', `Active ${week.filter(Boolean).length} of the last 7 days`);
+    const chip = document.getElementById('streakChipN');   // the phone's version of the streak card: a chip in the top bar and a sheet
+    if (chip) {
+      chip.textContent = String(days);
+      document.getElementById('btnStreak').setAttribute('aria-label', `Learning streak: ${days} day${days === 1 ? '' : 's'}`);
+      document.getElementById('btnStreak').classList.toggle('is-on', days > 0);
+      document.getElementById('streakSheetDays').textContent = String(days);
+      document.getElementById('streakSheetUnit').textContent = days === 1 ? 'day' : 'days';
+      document.getElementById('streakSheetNote').textContent = streakNote(days);
+      [...document.getElementById('streakSheetWeek').children].forEach((dot, index) => dot.classList.toggle('on', Boolean(week[index])));
+    }
     const due = dueCount(store.getState());
     dueBadge.textContent = String(due);
     dueBadge.hidden = !due;

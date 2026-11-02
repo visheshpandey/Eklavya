@@ -11,7 +11,9 @@ export function mountMasteryRows({ store, root }) {
     if (!subjects.length) { render(root, el('p', { class: 'hint', text: 'Your subjects and their mastery appear here once you add notes.' })); return; }
     render(root, subjects.map((s) => el('div', { class: 'mrow' },
       el('div', {}, el('b', { text: s.name }), el('small', { text: `${s.topics} topic${s.topics === 1 ? '' : 's'}` })),
-      el('span', { class: 'bar', role: 'img', 'aria-label': `${s.mastery}% mastery, ${masteryStatus(s.mastery).label}` }, el('i', { style: `width:${s.mastery}%;background:${FILL[masteryStatus(s.mastery).key]}` })),
-      el('strong', { text: `${s.mastery}%` }))));
+      s.mastery === null
+        ? el('span', { class: 'bar', role: 'img', 'aria-label': 'Not started' }, el('i', { style: 'width:0%' }))
+        : el('span', { class: 'bar', role: 'img', 'aria-label': `${s.mastery}% mastery, ${masteryStatus(s.mastery).label}` }, el('i', { style: `width:${s.mastery}%;background:${FILL[masteryStatus(s.mastery).key]}` })),
+      el('strong', { text: s.mastery === null ? 'Not started' : `${s.mastery}%` }))));
   });
 }

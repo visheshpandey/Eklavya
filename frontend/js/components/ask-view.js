@@ -5,6 +5,10 @@
 import { el, render } from '../lib/dom.js';
 import { bestSentences, splitByTerms } from '../lib/highlight.js';
 import { coverLetters, groupSubjects } from '../lib/subjects.js';
+import { renderMarkdown } from '../lib/markdown.js';
+import { icon } from '../lib/icons.js';
+
+const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
 
 const when = (stamp) => {
   const date = new Date(`${String(stamp).replace(' ', 'T')}Z`);
@@ -21,9 +25,10 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   let draft = '';
   let error = '';
 
+  /** A cited passage: its markdown is drawn (no "###" or "**" on screen) with the question's words highlighted. */
   function highlighted(text, terms) {
-    const paragraph = el('p');
-    splitByTerms(text, terms).forEach((piece) => paragraph.append(piece.hit ? el('mark', { text: piece.text }) : document.createTextNode(piece.text)));
+    const paragraph = el('p', { class: 'md-passage' });
+    paragraph.append(renderMarkdown(text, { terms, inline: true }));
     return paragraph;
   }
 
@@ -35,7 +40,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
       el('div', { class: 'ahead' }, el('span', { class: `strength${tone}`, text: word }),
         el('span', { class: 'mono', text: `Searched ${item.searched ?? 0} passage${item.searched === 1 ? '' : 's'} in ${item.ms ?? 0} ms` })),
       el('p', { class: 'mono', text: item.question }),
-      el('p', { text: item.answer }),
+      el('div', { class: 'md' }, renderMarkdown(item.answer)),
       item.follow_up_question ? el('button', { class: 'chip-action', type: 'button', onclick: () => fill(item.follow_up_question) }, item.follow_up_question) : null,
       ...(item.sources ?? []).map((source) => el('div', { class: 'passage' }, highlighted(bestSentences(source.text, item.terms, 3), item.terms),
         el('span', { class: 'mono', text: `${source.document} · ${source.heading || source.topic}` }))),
@@ -99,7 +104,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   function drawSide() {
     const all = groupSubjects(subjects());
     const subs = all.slice(0, 6);   // the longest lists are cut: the notes page has them all
-    render(sourcesRoot, subs.length ? [...subs.map((s) => el('div', { class: 'src' }, el('span', { class: 'srcbadge', text: coverLetters(s.name) }),
+    render(sourcesRoot, subs.length ? [...subs.map((s) => el('div', { class: 'src' }, el('span', { class: 'srcbadge', title: s.kind }, icon(KIND_ICON[s.kind] ?? 'file-text', { size: 18 })),
       el('span', {}, el('b', { text: s.name }), el('small', { text: `${s.topics} topic${s.topics === 1 ? '' : 's'}` })))),
       all.length > subs.length ? el('p', { class: 'hint', text: `and ${all.length - subs.length} more in My notes` }) : null]
       : el('p', { class: 'hint', text: 'Add notes and they are listed here.' }));
@@ -113,7 +118,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
     search.addEventListener('input', () => { query = search.value; clearTimeout(timer); timer = setTimeout(loadList, 250); });
     const rows = doubts.doubts.map((d) => el('details', { class: 'doubt' },
       el('summary', {}, el('span', { class: 'doubt-q', text: d.question }), el('span', { class: 'hint', text: when(d.created_at) })),
-      el('p', { text: d.answer }),
+      el('div', { class: 'md' }, renderMarkdown(d.answer)),
       d.topic && d.grounded ? el('span', { class: 'meta-chip', text: d.topic }) : null,
       el('button', { class: 'btn btn-danger-quiet btn-sm', type: 'button', 'aria-label': `Delete the doubt: ${d.question}`,
         onclick: async () => { await onDelete(d.id); loadList(); } }, 'Delete')));

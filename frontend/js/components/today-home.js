@@ -128,8 +128,8 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
       const card = el('button', { class: `sub s-${subject.tone}`, type: 'button', onclick: () => onSubject(subject.weakestTopicId) },
         el('span', { class: 'mono', text: subject.label }), el('span', { class: 'serif-sm', text: subject.name }),
         el('span', { class: 'det', text: `${subject.topics} topic${subject.topics === 1 ? '' : 's'} · ${subject.weak ? `${subject.weak} to revisit` : 'all steady'}` }),
-        el('span', { class: 'bar' }, el('i', { style: `width:${subject.mastery}%` })),
-        el('span', { class: 'row mono' }, el('span', { text: 'Mastery' }), el('strong', { text: `${subject.mastery}%` })));
+        el('span', { class: 'bar' }, el('i', { style: `width:${subject.mastery ?? 0}%` })),
+        el('span', { class: 'row mono' }, el('span', { text: 'Mastery' }), el('strong', { text: subject.mastery === null ? 'Not started' : `${subject.mastery}%` })));
       return card;
     }));
   }

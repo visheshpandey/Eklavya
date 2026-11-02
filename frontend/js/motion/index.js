@@ -32,14 +32,14 @@ export function mountHeroScene(desk, info) {
 }
 
 /** Builds `create(host)` (a promise of { dispose, ... }) while `host` is on screen and frees it when it is not; `apply(scene)` replays the latest settings. */
-function whileVisible(host, create, apply) {
+function whileVisible(host, create, apply, { onFail = null, wait = 3500 } = {}) {
   let scene = null, building = false, visible = false;
   whenVisible(host, (now) => {
     visible = now;
     if (now && !scene && !building) {
       building = true;
-      afterLoad(3500).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); } else created.dispose(); })
-        .catch((error) => { building = false; if (visible) console.warn('3D scene not started', error); });
+      afterLoad(wait).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); } else created.dispose(); })
+        .catch((error) => { building = false; if (visible) { console.error('3D scene not started', error); onFail?.(error); } });
     } else if (!now && scene) { scene.dispose(); scene = null; }
   }, '0px');
   return () => scene;
@@ -95,14 +95,26 @@ export function mountOrb(button) {
 export function mountGraph(host, onPick) {
   if (reducedMotion() || !hasWebGL()) return { update() {}, focus() {} };
   const section = host.closest('section');
-  let map = null;
-  const sync = () => { const has = Boolean(map?.nodes?.length); host.hidden = !has; section?.classList.toggle('is-3d', has); };
+  let map = null, failed = false;
+  // The 2D map stays visible until the 3D one is really on screen: a failed or slow 3D scene must never leave the box empty.
+  const show3d = (on) => section?.classList.toggle('is-3d', on);
+  const sync = () => {
+    const has = Boolean(map?.nodes?.length) && !failed;
+    host.hidden = !has;
+    host.classList.toggle('is-loading', has && !host.querySelector('canvas'));
+    if (!has) show3d(false);
+  };
+  const fail = (error) => { failed = true; console.error('3D concept map unavailable, showing the 2D map', error); show3d(false); sync(); };
   const current = whileVisible(host, async (element) => {
     const { createGraph } = await import('./graph-3d.js');
-    return createGraph(element, map, { onPick });
-  }, () => {});
+    const created = await Promise.race([createGraph(element, map, { onPick }), new Promise((_, reject) => setTimeout(() => reject(new Error('the 3D map took over 20 s to start')), 20000))]);
+    show3d(true); host.classList.remove('is-loading');
+    const dispose = created.dispose;
+    created.dispose = () => { show3d(false); dispose(); sync(); };
+    return created;
+  }, () => {}, { onFail: fail, wait: 800 });
   return {
-    update(next) { map = next; sync(); current()?.update(next); },
+    update(next) { map = next; failed = false; sync(); current()?.update(next); },
     focus(id) { current()?.focus(id); },
   };
 }

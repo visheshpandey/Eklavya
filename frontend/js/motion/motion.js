@@ -220,9 +220,8 @@ export async function initMotion({ store }) {
       const members = [...detail.querySelectorAll('.leaderboard li')].map((li) => ({ rank: Number(li.querySelector('.lb-rank')?.textContent) || 1,
         name: (li.querySelector('.lb-name')?.textContent ?? '').replace(/ \(you\)$/, ''), you: li.classList.contains('is-you') }));
       if (!members.length) continue;
-      const host = document.createElement('div');
-      host.className = 'orbit3d';
-      detail.prepend(host);
+      let host = detail.querySelector('.orbit3d');
+      if (!host) { host = document.createElement('div'); host.className = 'orbit3d'; detail.prepend(host); }
       mountOnScreen(host, async (element) => (await import('./group-orbit.js')).createGroupOrbit(element, members));
     }
   }
@@ -266,12 +265,17 @@ export async function initMotion({ store }) {
       gsap.set(sheets, { transformOrigin: '50% 100%', rotation: 0 });
       gsap.to(sheets, { rotation: (i) => (i - 2) * 17, duration: 0.9, ease: 'back.out(1.6)', stagger: 0.05, repeat: -1, yoyo: true, repeatDelay: 0.2 });
     }
-    for (const paragraph of root.querySelectorAll('#answer .answer > p:not([class]):not([data-words])')) {
-      paragraph.dataset.words = '1';
-      if (!once(`words|${paragraph.textContent}`)) continue;
-      const words = paragraph.textContent.split(/(\s+)/);
-      paragraph.replaceChildren(...words.map((word) => { if (/^\s+$/.test(word)) return document.createTextNode(word); const span = document.createElement('span'); span.textContent = word; return span; }));
-      gsap.fromTo(paragraph.querySelectorAll('span'), { opacity: 0 }, { opacity: 1, duration: 0.18, stagger: 0.03, ease: 'none' });
+    for (const block of root.querySelectorAll('#answer .answer > .md:not([data-words])')) {   // the answer's text arrives word by word (its markup is kept)
+      block.dataset.words = '1';
+      if (!once(`words|${block.textContent}`)) continue;
+      const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement.closest('.frac, mark') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+      const texts = []; while (walker.nextNode()) texts.push(walker.currentNode);
+      const spans = [];
+      for (const node of texts) {
+        const parts = node.textContent.split(/(\s+)/).map((word) => { if (/^\s+$/.test(word) || !word) return document.createTextNode(word); const span = document.createElement('span'); span.textContent = word; spans.push(span); return span; });
+        node.replaceWith(...parts);
+      }
+      gsap.fromTo(spans, { opacity: 0 }, { opacity: 1, duration: 0.18, stagger: 0.03, ease: 'none' });
     }
     for (const mark of root.querySelectorAll('#answer .passage mark:not([data-uline])')) {
       mark.dataset.uline = '1';

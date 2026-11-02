@@ -70,6 +70,7 @@ import { mountAsk } from './components/ask-view.js';
 import { mountBadges } from './components/badges-view.js';
 import { mountMockExam } from './components/mock-exam.js';
 import { mountGroups } from './components/groups-view.js';
+import { mountDemoCircle } from './components/demo-circle.js';
 import { mountAvatar } from './components/avatar.js';
 import { mountCallScreen } from './components/call-screen.js';
 import { mountReconnectPrompt } from './components/reconnect-prompt.js';
@@ -90,7 +91,7 @@ store.dispatch(actions.languageChanged(loadLanguage()));
 byId('lang').value = selectLanguage(store.getState());            // the selector shows the remembered language
 store.select(selectLanguage, (language) => { saveLanguage(language); byId('lang').value = language; });
 const notifier = createNotifier(store);
-const home = createHomeController({ store, backend, notifier, userId: USER_ID });
+const home = createHomeController({ store, backend, notifier, userId: USER_ID, onMastery: () => notes?.refresh() });   // a rating changes mastery: reload it everywhere
 
 let session;   // the notes controller needs to end a session; the session controller needs the notes controller
 const notes = createNotesController({ store, backend, notifier, userId: USER_ID, endSession: () => session.stop() });
@@ -124,6 +125,13 @@ byId('btnMore').addEventListener('click', (event) => { event.stopPropagation(); 
 document.addEventListener('click', (event) => { if (!event.target.closest('#topMenu')) setMenu(false); });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && topMenu.classList.contains('open')) { setMenu(false); byId('btnMore').focus(); } });
 store.select(selectView, () => setMenu(false));
+// phones: the streak chip opens the streak card as a sheet
+const streakSheet = byId('streakSheet');
+const setStreak = (open) => { streakSheet.hidden = !open; byId('btnStreak').setAttribute('aria-expanded', String(open)); };
+byId('btnStreak').addEventListener('click', (event) => { event.stopPropagation(); setStreak(streakSheet.hidden); });
+document.addEventListener('click', (event) => { if (!event.target.closest('#streakSheet')) setStreak(false); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !streakSheet.hidden) { setStreak(false); byId('btnStreak').focus(); } });
+store.select(selectView, () => setStreak(false));
 
 // sound: a soft page turn when things flip or open, and "Listen" on an answer
 const sound = createSound({ on: loadSound() });
@@ -293,7 +301,7 @@ mountMasteryRows({ store, root: byId('masteryRows') });
 mountMasteryRing({ store, root: byId('masteryRing') });
 const graph3d = mountGraph(byId('graph3d'), (id) => conceptMap.select(id));   // the 3D version of the map; the page's own cards and list stay
 const conceptMap = mountConceptMap({
-  store, root: byId('conceptMap'), onSelected: (id) => graph3d.focus(id),
+  store, root: byId('conceptMap'), onSelected: (id) => graph3d.focus(id), onAddNotes: openNotes,
   onTest: (topicId) => { showView(VIEWS.STUDY); startMode(SESSION_MODE.TEST, topicId); },
   onStudy: (topicId) => { showView(VIEWS.STUDY); startMode(SESSION_MODE.LEARN, topicId); },
   onAsk: (topicName) => { showView(VIEWS.ASK); ask.askNow(`Explain ${topicName} in simple words.`); },
@@ -394,8 +402,11 @@ const documentsOf = () => {
   return [...seen].map(([id, name]) => ({ id, name }));
 };
 const openSignIn = () => authDialog.open();
+const guestCircleRoot = document.createElement('div');
+guestCircleRoot.className = 'guest-circle';
+mountDemoCircle({ store, root: guestCircleRoot, api: backend, onSignIn: openSignIn, onNotes: () => showView(VIEWS.LIBRARY) });
 const groupsView = mountGroups({
-  root: byId('groups'), api: backend, signedIn: () => signedIn, onSignIn: openSignIn, myDocuments: documentsOf,
+  root: byId('groups'), api: backend, signedIn: () => signedIn, onSignIn: openSignIn, myDocuments: documentsOf, guestRoot: guestCircleRoot,
   onNotesAdded: () => notes.refresh(), notify: notifier.success,
 });
 byId('challenge').closest('section').hidden = !signedIn;   // guests see the study-circle card above instead of a second sign-in prompt

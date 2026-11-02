@@ -2,7 +2,7 @@
 // Needs a real account; a guest sees a sign-in prompt. Data comes through `api`, this file only draws.
 import { el, render } from '../lib/dom.js';
 
-export function mountGroups({ root, api, signedIn, onSignIn, myDocuments, onNotesAdded, notify }) {
+export function mountGroups({ root, api, signedIn, onSignIn, myDocuments, onNotesAdded, notify, guestRoot = null }) {
   let list = [];
   let current = null;     // the open group's detail
   let message = '';
@@ -79,6 +79,7 @@ export function mountGroups({ root, api, signedIn, onSignIn, myDocuments, onNote
   }
 
   function draw() {
+    if (!signedIn() && guestRoot) { render(root, guestRoot); return; }   // demo mode: the seeded study circle (demo-circle.js)
     if (!signedIn()) {
       const how = el('ol', { class: 'how', id: 'howList', hidden: '' },
         ['Create a group and invite friends with a short code.', 'Share a set of notes so everyone studies from the same material.',

@@ -8,6 +8,10 @@ import { el, render as replaceContent, svgEl } from '../lib/dom.js';
 import { masteryStatus } from '../lib/subjects.js';
 import { t } from '../lib/strings.js';
 import { selectConceptMap, selectLanguage } from '../state/selectors.js';
+import { sparkline } from '../lib/sparkline.js';
+import { masteryHistory } from '../lib/mastery-history.js';
+
+const statusOf = (node) => (node.started === false ? { key: 'new', label: 'Not started' } : masteryStatus(node.mastery));
 
 const STEPS = 5;                  // colour steps used by older code and tests
 export const MAX_LABELLED = 30;   // above this many topics the names are left to the tip and the list
@@ -52,14 +56,18 @@ export function wrapLabel(text, perLine = 22, maxLines = 2) {
   return kept;
 }
 
-export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, onSelected = null }) {
+export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, onSelected = null, onAddNotes = null }) {
   let selected = null;   // the circle whose card is showing; kept when the map redraws
 
   function draw() {
     const state = store.getState();
     const map = selectConceptMap(state);
     const language = selectLanguage(state);
-    if (!map?.nodes?.length) { replaceContent(root, el('p', { class: 'empty', text: t('map.empty', language) })); return; }
+    if (!map?.nodes?.length) {
+      replaceContent(root, el('div', { class: 'empty-state' }, el('p', { text: 'Add notes to see how your ideas connect.' }),
+        onAddNotes ? el('button', { class: 'btn btn-primary', type: 'button', onclick: onAddNotes }, 'Add notes ↗') : null));
+      return;
+    }
 
     const nodes = map.nodes;
     if (!nodes.some((n) => n.id === selected)) selected = null;
@@ -89,7 +97,7 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
       edges.forEach((line) => line.classList.toggle('hot', id != null && (line.dataset.a === String(id) || line.dataset.b === String(id))));
     };
     const showTip = (node, p) => {
-      tip.textContent = `${node.topic}, ${Math.round(node.mastery)}%`;
+      tip.textContent = node.started === false ? `${node.topic}, not started` : `${node.topic}, ${Math.round(node.mastery)}%`;
       tip.style.left = `${(p.x / geo.size) * 100}%`;
       tip.style.top = `${((p.y - geo.nodeRadius) / geo.size) * 100}%`;
       tip.hidden = false;
@@ -103,10 +111,11 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
           el('p', { text: 'You\'ll see its mastery and what it links to.' })));
         return;
       }
-      const status = masteryStatus(node.mastery);
+      const status = statusOf(node);
       const linked = neighbours(node.id).map((id) => names.get(id));
+      const trend = sparkline(masteryHistory.values(node.id), { width: 120, height: 32 });
       replaceContent(detail,
-        el('div', {}, el('span', { class: 'mono', text: `${status.label} · ${Math.round(node.mastery)}% mastery` }), el('h3', { class: 'serif-sm', text: node.topic }),
+        el('div', {}, el('span', { class: 'mono', text: node.started === false ? 'Not started' : `${status.label} · ${Math.round(node.mastery)}% mastery` }), el('h3', { class: 'serif-sm', text: node.topic }), trend,
           el('p', { text: linked.length ? `Connects to ${linked.join(', ')}.` : 'No links found in your notes yet.' })),
         el('div', { class: 'acts' },
           el('button', { class: 'btn btn-primary', type: 'button', onclick: () => onStudy(node.id) }, 'Learn this ↗'),
@@ -125,7 +134,7 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
     nodes.forEach((node) => {
       const p = at.get(node.id);
       const percent = Math.round(node.mastery);
-      const status = masteryStatus(node.mastery);
+      const status = statusOf(node);
       const pctSize = geo.nodeRadius >= 16 ? 12 : geo.nodeRadius >= 13 ? 10 : 9;
       let label = null;
       if (geo.labelled) {
@@ -145,9 +154,9 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
             lines.map((line, i) => svgEl('tspan', { x: lx, dy: i ? '1.15em' : '0' }, line)));
         }
       }
-      const group = svgEl('g', { class: 'map-node', role: 'button', tabindex: '0', 'aria-pressed': String(node.id === selected), 'aria-label': `${node.topic}, ${percent}%, ${status.label}` },
-        svgEl('circle', { cx: p.x, cy: p.y, r: geo.nodeRadius, class: `map-dot st-${status.key === 'strong' ? 'strong' : status.key === 'grow' ? 'grow' : 'low'}` }),
-        svgEl('text', { x: p.x, y: p.y, 'text-anchor': 'middle', 'dominant-baseline': 'central', class: 'map-pct', style: `font-size:${pctSize}px` }, String(percent)),
+      const group = svgEl('g', { class: 'map-node', role: 'button', tabindex: '0', 'aria-pressed': String(node.id === selected), 'aria-label': node.started === false ? `${node.topic}, not started` : `${node.topic}, ${percent}%, ${status.label}` },
+        svgEl('circle', { cx: p.x, cy: p.y, r: geo.nodeRadius, class: `map-dot st-${status.key === 'strong' ? 'strong' : status.key === 'grow' ? 'grow' : status.key === 'new' ? 'new' : 'low'}` }),
+        svgEl('text', { x: p.x, y: p.y, 'text-anchor': 'middle', 'dominant-baseline': 'central', class: 'map-pct', style: `font-size:${pctSize}px` }, node.started === false ? '·' : String(percent)),
         label);
       groups.set(node.id, group);
       group.addEventListener('pointerenter', (event) => { if (event.pointerType !== 'touch') { showTip(node, p); spotlight(node.id); } });
@@ -163,12 +172,12 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
     replaceContent(root,
       frame,
       el('div', { class: 'maplegend' }, el('span', {}, el('i', { class: 'st-strong' }), 'Strong · 80%+'), el('span', {}, el('i', { class: 'st-grow' }), 'Growing · 60–79%'),
-        el('span', {}, el('i', { class: 'st-low' }), 'Revisit · below 60%')),
+        el('span', {}, el('i', { class: 'st-low' }), 'Revisit · below 60%'), el('span', {}, el('i', { class: 'st-new' }), 'Not started')),
       detail,
       el('ul', { class: 'map-list' }, nodes.map((n) => {
         const linked = neighbourNames(n.id);
         return el('li', {},
-          el('button', { class: 'link-btn', type: 'button', onclick: () => select(n.id) }, `${n.topic} · ${Math.round(n.mastery)}%`),
+          el('button', { class: 'link-btn', type: 'button', onclick: () => select(n.id) }, `${n.topic} · ${n.started === false ? 'not started' : `${Math.round(n.mastery)}%`}`), sparkline(masteryHistory.values(n.id)),
           el('span', { class: 'hint', text: linked.length ? t('map.links', language, { list: linked.join(', ') }) : t('map.alone', language) }));
       })));
     spotlight(selected);
@@ -177,6 +186,7 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
     requestAnimationFrame(() => frame.classList.add('drawn'));   // the links draw themselves in
   }
 
+  document.addEventListener('eklavya:mastery-history', draw);   // the sparklines arrive after the map
   store.select(selectConceptMap, draw);
   store.select(selectLanguage, draw);
   return { select: (id) => { selected = id; draw(); } };

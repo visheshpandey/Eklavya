@@ -2,6 +2,7 @@
 // Like the notes controller: talks to the backend, dispatches what came back, reports failures through the notifier.
 import { actions } from '../state/actions.js';
 import { t } from '../lib/strings.js';
+import { masteryHistory } from '../lib/mastery-history.js';
 
 /**
  * @param {object} deps
@@ -10,7 +11,7 @@ import { t } from '../lib/strings.js';
  * @param {ReturnType<typeof import('./notifier.js').createNotifier>} deps.notifier
  * @param {number} deps.userId
  */
-export function createHomeController({ store, backend, notifier, userId }) {
+export function createHomeController({ store, backend, notifier, userId, onMastery = () => {} }) {
   let celebrationId = 0;
   const language = () => store.getState().ui.language;
 
@@ -41,10 +42,11 @@ export function createHomeController({ store, backend, notifier, userId }) {
   const loadPlan = async () => store.dispatch(actions.planLoaded(await backend.plan(userId)));
   const loadMap = async () => store.dispatch(actions.conceptMapLoaded(await backend.conceptMap(userId)));
   const loadHistory = async () => store.dispatch(actions.historyLoaded(await backend.history(userId)));
+  const loadMasteryHistory = async () => masteryHistory.set((await backend.masteryHistory(userId)).topics);
 
   return {
     /** Everything on the Today and Progress screens that depends on answers and notes. */
-    refresh: () => quietly(() => Promise.all([loadToday(), loadPlan(), loadMap(), loadHistory()])),
+    refresh: () => quietly(() => Promise.all([loadToday(), loadPlan(), loadMap(), loadHistory(), loadMasteryHistory()])),
     refreshToday: () => quietly(loadToday),
 
     savePlan: (examDate, minutesPerDay) => guarded(async () => {
@@ -75,6 +77,12 @@ export function createHomeController({ store, backend, notifier, userId }) {
         const result = await backend.reviewCard(cardId, knew, hard);
         const today = store.getState().today;
         if (today) store.dispatch(actions.todayLoaded({ ...today, cards_due: result.due_count }));
+        if (result.mastery) {   // the rating is evidence: say what it did, and refresh every screen that shows mastery
+          const { topic, before, after, delta } = result.mastery;
+          notifier.toast(delta >= 0 ? 'ok' : 'bad', `${topic}: ${Math.round(before)}% \u2192 ${Math.round(after)}% ${delta >= 0 ? '\u2191' : '\u2193'}`);
+          document.dispatchEvent(new CustomEvent('eklavya:mastery', { detail: result.mastery }));
+          onMastery();
+        }
         return result;
       } catch (err) { notifier.error(err); return null; }
     },

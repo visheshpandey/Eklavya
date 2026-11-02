@@ -100,6 +100,8 @@ export const backend = {
   savePlan: (examDate, minutesPerDay, userId) => request('/api/plan', { method: 'PUT', json: { user_id: userId, exam_date: examDate, minutes_per_day: minutesPerDay } }),
   clearPlan: (userId) => request(`/api/plan?user_id=${userId}`, { method: 'DELETE' }),
   conceptMap: (userId) => request(`/api/concept-map?user_id=${userId}`),
+  demoCircle: () => request('/api/demo/circle'),
+  masteryHistory: (userId) => request(`/api/mastery-history?user_id=${userId}`),
   flashcards: (topicId, userId) => request(`/api/flashcards?user_id=${userId}${topicId ? `&topic_id=${topicId}` : ''}`),
   makeFlashcards: (topicId, userId) => request('/api/flashcards/generate', { method: 'POST', json: { user_id: userId, topic_id: topicId } }),
   /** A PDF, a text file, or a photo of a page (the backend has Gemini read the photo). */
