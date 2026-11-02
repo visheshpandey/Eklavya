@@ -6,6 +6,7 @@ import { icon } from '../lib/icons.js';
 import { t } from '../lib/strings.js';
 import { VOICE_STATUS } from '../lib/protocol.js';
 import { selectLanguage, selectMessages, selectSessionActive, selectVoiceStatus } from '../state/selectors.js';
+import { mountAvatar } from './avatar.js';
 
 const STATUS_KEY = {
   [VOICE_STATUS.IDLE]: 'stage.idle', [VOICE_STATUS.CONNECTING]: 'stage.connecting',
@@ -13,10 +14,10 @@ const STATUS_KEY = {
 };
 const PHONE = '(max-width: 48rem)';
 
-export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto }) {
+export function mountCallScreen({ store, root, openButton, getTutor, onEnd, onPhoto }) {
   let open = false;
   const stage = el('div', { class: 'call-avatar' });
-  const home = frame.parentElement;   // where the frame lives on the Study screen
+  const avatar = mountAvatar({ store, root: stage, getTutor });
   const status = el('p', { class: 'call-status', role: 'status' });
   const caption = el('p', { class: 'call-caption', 'aria-live': 'off' });
   const file = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true,
@@ -33,7 +34,6 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
   function set(next) {
     open = next && selectSessionActive(store.getState());
     root.hidden = !open;
-    if (open) stage.append(frame); else if (frame.parentElement !== home) home.prepend(frame);   // the same frame, full screen, with the controls over it
     document.documentElement.classList.toggle('in-call', open);
     if (open) end.focus();
   }
@@ -60,5 +60,5 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
   openButton.addEventListener('click', () => set(true));
   root.addEventListener('keydown', (event) => { if (event.key === 'Escape') set(false); });
   root.hidden = true;
-  return {};
+  return { setLevel: avatar.setLevel, setTutor: avatar.setTutor };
 }

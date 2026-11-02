@@ -41,12 +41,4 @@ export const afterLoad = (ms = 1600) => new Promise((resolve) => {
   if (document.readyState === 'complete') go(); else addEventListener('load', go, { once: true });
 });
 
-/** Resolves at the first sign of a person (a move, a key, a touch, a scroll) or after `maxWait`, whichever is first: the heaviest 3D work waits for someone to be there. */
-export const whenEngaged = (maxWait = 8000) => new Promise((resolve) => {
-  const events = ['pointermove', 'pointerdown', 'keydown', 'touchstart', 'wheel', 'scroll'];
-  const done = () => { events.forEach((name) => removeEventListener(name, done)); clearTimeout(timer); setTimeout(resolve, 600); };
-  const timer = setTimeout(done, maxWait);
-  events.forEach((name) => addEventListener(name, done, { passive: true, once: true }));
-});
-
 export const idle = (callback) => (globalThis.requestIdleCallback ? requestIdleCallback(callback, { timeout: 1500 }) : setTimeout(callback, 200));
