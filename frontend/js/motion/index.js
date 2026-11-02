@@ -1,6 +1,6 @@
 // Entry for the motion layer. It is loaded after the app is on screen and does nothing for "reduce motion"; if a library fails to load the
 // app simply stays as it was (every effect is an addition, none is needed to use the page).
-import { afterLoad, hasWebGL, idle, loadScript, reducedMotion, whenVisible } from './env.js';
+import { afterLoad, guardPerformance, hasWebGL, idle, isLite, loadScript, reducedMotion, whenVisible } from './env.js';
 
 export function startMotion(deps) {
   if (reducedMotion()) return;
@@ -34,11 +34,12 @@ export function mountHeroScene(desk, info) {
 /** Builds `create(host)` (a promise of { dispose, ... }) while `host` is on screen and frees it when it is not; `apply(scene)` replays the latest settings. */
 function whileVisible(host, create, apply) {
   let scene = null, building = false, visible = false;
+  document.addEventListener('eklavya:lite', () => { if (scene) { scene.dispose(); scene = null; } });   // too slow here: the drawn version stays
   whenVisible(host, (now) => {
     visible = now;
     if (now && !scene && !building) {
       building = true;
-      afterLoad(3500).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); } else created.dispose(); })
+      afterLoad(3500).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); guardPerformance(); } else created.dispose(); })
         .catch((error) => { building = false; if (visible) console.warn('3D scene not started', error); });
     } else if (!now && scene) { scene.dispose(); scene = null; }
   }, '0px');
@@ -108,7 +109,7 @@ export function mountGraph(host, onPick) {
 }
 
 /** Whether a 3D scene may be drawn at all (WebGL present, no "reduce motion"). */
-export const canScene = () => !reducedMotion() && hasWebGL();
+export const canScene = () => !reducedMotion() && hasWebGL() && !isLite();
 
 /** A scene hosted in `host` for as long as it is on screen: `create(host)` resolves to it, `apply(scene)` replays what it missed. Returns { scene() }. */
 export function mountOnScreen(host, create, apply = () => {}) {
