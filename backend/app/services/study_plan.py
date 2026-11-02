@@ -75,10 +75,22 @@ def clear_plan(user_id: int):
 
 
 def concept_map(user_id: int):
-    topics = topics_with_progress(user_id)
+    from app.domain import titles
+    from app.services import mastery_log
+
+    rows = db.query("SELECT t.id AS topic_id, t.topic_name, t.document_id, d.file_name AS document, m.mastery_score, m.last_updated "
+                    "FROM topics t JOIN documents d ON d.id = t.document_id "
+                    "LEFT JOIN learner_mastery m ON m.topic_id = t.id AND m.user_id = d.user_id WHERE d.user_id = ? ORDER BY d.id, t.id", (user_id,))
+    for r in rows:
+        r["mastery_score"] = 50.0 if r["mastery_score"] is None else r["mastery_score"]
+    rows = mastery_log.faded_rows(user_id, rows, local_today())
     chunks = db.query("SELECT c.topic_id, c.heading, c.text FROM chunks c JOIN documents d ON d.id = c.document_id "
                       "WHERE d.user_id = ?", (user_id,))
-    links = build_links([{"id": t["topic_id"], "topic_name": t["topic_name"]} for t in topics], chunks)
-    return {"nodes": [{"id": t["topic_id"], "topic": t["topic_name"], "document_id": t["document_id"],
-                       "mastery": t["mastery"]} for t in topics],
+    notes = {}
+    for c in chunks:
+        notes[c["topic_id"]] = notes.get(c["topic_id"], 0) + 1
+    links = build_links([{"id": t["topic_id"], "topic_name": t["topic_name"]} for t in rows], chunks)
+    return {"nodes": [{"id": t["topic_id"], "topic": t["topic_name"], "document_id": t["document_id"], "mastery": t["mastery_score"],
+                       "started": t["started"], "notes": notes.get(t["topic_id"], 0),
+                       "subject": titles.subject_of(t["topic_name"], t["document"])} for t in rows],
             "links": links}

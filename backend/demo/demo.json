@@ -1,0 +1,85 @@
+{
+  "_about": "Everything the demo student starts with. Loaded by app.services.demo_seed.seed_demo (one function). history is [days ago, mastery] oldest first; flashcard box 0 = due now.",
+  "documents": [
+    {
+      "title": "Operating Systems Notes", "file": "notes/os.txt", "kind": "pdf", "marker": "demo:os",
+      "topics": {
+        "OS: Processes and Threads": {"history": [[6, 22], [4, 28], [2, 33], [0, 36]]},
+        "OS: CPU Scheduling": {"history": [[5, 45], [3, 54], [1, 61], [0, 63]]},
+        "OS: Deadlocks": {"history": [[6, 40], [4, 38], [2, 47], [0, 52]]},
+        "OS: Paging and Virtual Memory": {"history": [[6, 60], [4, 72], [2, 81], [0, 86]]}
+      }
+    },
+    {
+      "title": "DBMS Notes", "file": "notes/dbms.txt", "kind": "text", "marker": "demo:dbms",
+      "topics": {
+        "DBMS: Normalisation": {"history": [[6, 55], [3, 70], [1, 84], [0, 88]]},
+        "DBMS: Transactions and ACID": {"history": [[5, 30], [3, 35], [1, 41], [0, 44]]}
+      }
+    },
+    {
+      "title": "Machine Learning Notes", "file": "../../samples/ml_notes.txt", "kind": "text", "marker": "demo:ml",
+      "topics": {
+        "Classification in Machine Learning": {"history": [[6, 55], [3, 64], [0, 70]]},
+        "Confusion Matrix": {"history": [[6, 50], [3, 58], [0, 65]]},
+        "Precision": {"history": [[6, 24], [4, 29], [2, 34], [0, 38]]},
+        "Recall": {"history": [[6, 30], [4, 33], [2, 39], [0, 42]]},
+        "F1 Score": {"history": [[5, 40], [3, 47], [0, 55]]}
+      }
+    }
+  ],
+  "active_days_ago": [0, 1, 2, 3],
+  "flashcards": [
+    {"topic": "OS: Deadlocks", "front": "Name the four conditions needed for a deadlock.", "back": "Mutual exclusion, hold and wait, no preemption and circular wait. All four must hold together.", "box": 0},
+    {"topic": "OS: Deadlocks", "front": "What does the Banker's algorithm do?", "back": "It grants a resource request only if the system stays in a safe state, so deadlock is avoided.", "box": 1},
+    {"topic": "OS: CPU Scheduling", "front": "Why can Round Robin with a very small time quantum be slow?", "back": "Most of the time goes into context switches instead of useful work.", "box": 0},
+    {"topic": "OS: CPU Scheduling", "front": "What problem does aging solve?", "back": "Starvation: it slowly raises the priority of processes that have waited long.", "box": 2},
+    {"topic": "OS: Processes and Threads", "front": "What do the threads of one process share, and what is private?", "back": "They share code, data and heap; each thread has its own stack and program counter.", "box": 0},
+    {"topic": "OS: Paging and Virtual Memory", "front": "What is thrashing?", "back": "A process spends more time swapping pages in and out than executing.", "box": 3},
+    {"topic": "DBMS: Normalisation", "front": "What does Second Normal Form remove?", "back": "Partial dependency: every non key attribute must depend on the whole primary key.", "box": 4},
+    {"topic": "DBMS: Transactions and ACID", "front": "What does the D in ACID guarantee?", "back": "Durability: once a transaction commits, its changes survive a crash.", "box": 0},
+    {"topic": "DBMS: Transactions and ACID", "front": "What does Atomicity mean?", "back": "All operations of the transaction happen, or none of them do.", "box": 0},
+    {"topic": "Precision", "front": "What is the formula for precision?", "back": "Precision = TP / (TP + FP): of everything predicted positive, how much really was.", "box": 0},
+    {"topic": "Recall", "front": "When does recall matter most?", "back": "When missing a real positive is costly, for example in disease screening.", "box": 0},
+    {"topic": "Confusion Matrix", "front": "What is a False Positive?", "back": "The model predicted positive but the real condition is negative.", "box": 1}
+  ],
+  "questions": {
+    "OS: Deadlocks": [
+      {"question": "Which of these is NOT one of the four conditions for a deadlock?", "options": ["A. Mutual exclusion", "B. Hold and wait", "C. Preemption", "D. Circular wait"], "correct": "C",
+       "explanation": "The condition is NO preemption: a resource cannot be taken away from a process. Preemption would break the deadlock.",
+       "misconceptions": {"A": {"label": "definition_mixup", "text": "Thinks mutual exclusion is not needed for a deadlock, but it is one of the four required conditions."}}},
+      {"question": "A system grants a resource request only if it stays in a safe state. Which method is this?", "options": ["A. Deadlock detection", "B. The Banker's algorithm", "C. Round Robin", "D. Paging"], "correct": "B",
+       "explanation": "The Banker's algorithm avoids deadlock by checking safety before it grants a request.",
+       "misconceptions": {"A": {"label": "definition_mixup", "text": "Confuses avoidance (checking before granting) with detection (finding a deadlock after it happens)."}}}
+    ],
+    "OS: CPU Scheduling": [
+      {"question": "Which scheduling policy gives the minimum average waiting time when burst lengths are known?", "options": ["A. First Come First Served", "B. Round Robin", "C. Shortest Job First", "D. Priority scheduling"], "correct": "C",
+       "explanation": "Shortest Job First is optimal for average waiting time, but it needs the burst length in advance.",
+       "misconceptions": {"A": {"label": "definition_mixup", "text": "Picks FCFS, which can make short jobs wait behind a long one (the convoy effect)."}}}
+    ],
+    "DBMS: Normalisation": [
+      {"question": "A table has a non key attribute that depends on another non key attribute. Which normal form does it break?", "options": ["A. First Normal Form", "B. Second Normal Form", "C. Third Normal Form", "D. None"], "correct": "C",
+       "explanation": "A non key attribute depending on another non key attribute is a transitive dependency, which Third Normal Form removes.",
+       "misconceptions": {"B": {"label": "definition_mixup", "text": "Confuses transitive dependency (3NF) with partial dependency (2NF)."}}}
+    ],
+    "DBMS: Transactions and ACID": [
+      {"question": "A bank transfer fails halfway and every step is undone. Which ACID property is this?", "options": ["A. Atomicity", "B. Consistency", "C. Isolation", "D. Durability"], "correct": "A",
+       "explanation": "Atomicity means all or nothing: a half finished transfer is rolled back.",
+       "misconceptions": {"D": {"label": "definition_mixup", "text": "Durability is about surviving a crash after a commit, not about undoing a half finished transaction."}}}
+    ]
+  },
+  "circle": {
+    "name": "Exam squad",
+    "code": "DEMO-4821",
+    "friends": [
+      {"name": "Aarav", "streak": 6, "gain": 14, "mastery": 71, "challenge_score": 4},
+      {"name": "Riya", "streak": 9, "gain": 21, "mastery": 78, "challenge_score": 5},
+      {"name": "Meera", "streak": 3, "gain": 8, "mastery": 64, "challenge_score": 3}
+    ],
+    "shared_notes": [
+      {"title": "Operating Systems Notes", "by": "Riya", "topics": 4},
+      {"title": "DBMS Notes", "by": "Aarav", "topics": 2},
+      {"title": "Machine Learning Notes", "by": "Meera", "topics": 5}
+    ]
+  }
+}

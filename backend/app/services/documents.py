@@ -3,7 +3,7 @@ from app import db
 from app.errors import NotFoundError
 
 # tables that hold per-student progress keyed by topic
-_PROGRESS_TABLES = ("quiz_attempts", "misconceptions", "study_missions", "learner_mastery", "learner_state",
+_PROGRESS_TABLES = ("quiz_attempts", "misconceptions", "study_missions", "learner_mastery", "learner_state", "mastery_events",
                     "flashcards", "vivas", "debates", "boards")
 
 

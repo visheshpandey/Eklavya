@@ -1,0 +1,7 @@
+DBMS: Normalisation
+
+Normalisation organises tables to reduce redundancy and avoid insert, update and delete anomalies. First Normal Form requires atomic values in every column. Second Normal Form removes partial dependency: every non key attribute must depend on the whole primary key. Third Normal Form removes transitive dependency: a non key attribute must not depend on another non key attribute. Boyce Codd Normal Form is stricter: for every functional dependency X to Y, X must be a superkey. Normalising too far can force extra joins, so some systems denormalise on purpose for speed.
+
+DBMS: Transactions and ACID
+
+A transaction is a group of operations that must succeed or fail as one unit, such as transferring money between two accounts. ACID describes its guarantees. Atomicity means all or nothing. Consistency means the database moves from one valid state to another. Isolation means concurrent transactions do not see each other's half finished work. Durability means a committed change survives a crash. Locks and timestamps provide isolation, and a write ahead log provides atomicity and durability. Isolation levels such as read committed and serializable trade strictness for speed.

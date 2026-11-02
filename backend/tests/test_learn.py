@@ -80,7 +80,7 @@ def test_learn_mode_plan_and_full_teach_then_test_flow(monkeypatch):
     assert by_id["g3"]["test_complete"] is True and "get_mission" in by_id["g3"]["instruction"]
     assert "test_complete" not in by_id["g2"]
     assert by_id["q4"]["available"] is False and by_id["q4"]["test_complete"] is True
-    assert db.one("SELECT COUNT(*) AS n FROM quiz_attempts")["n"] == 3
+    assert db.one("SELECT COUNT(*) AS n FROM quiz_attempts WHERE question <> 'Demo practice'")["n"] == 3   # the demo's own streak rows are not answers
 
 
 def test_test_mode_skips_teaching(monkeypatch):

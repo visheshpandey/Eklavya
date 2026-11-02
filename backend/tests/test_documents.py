@@ -29,7 +29,7 @@ def two_documents(monkeypatch):
         delete_document(1, leftover["id"])
     client.post("/api/demo/seed")
     bio = client.post("/api/upload-document", files={"file": ("bio.txt", BIO.encode())}).json()
-    demo_id = db.one("SELECT id FROM documents WHERE file_name = 'ml_notes.txt' ORDER BY id DESC")["id"]
+    demo_id = db.one("SELECT id FROM documents WHERE file_name = 'Machine Learning Notes' ORDER BY id DESC")["id"]
     return {"demo": demo_id, "bio": bio["document_id"]}
 
 
@@ -40,8 +40,8 @@ def topic_id(name):
 def test_dashboard_groups_topics_by_document_newest_first(two_documents):
     mastery = client.get("/api/dashboard").json()["mastery"]
     docs_in_order = list(dict.fromkeys(m["document"] for m in mastery))
-    assert docs_in_order == ["Photosynthesis", "ml_notes.txt"]
-    assert {m["document_id"] for m in mastery} == set(two_documents.values())
+    assert docs_in_order == ["Photosynthesis", "Machine Learning Notes", "DBMS Notes", "Operating Systems Notes"]
+    assert set(two_documents.values()) <= {m["document_id"] for m in mastery}
     assert [m["topic_name"] for m in mastery if m["document"] == "Photosynthesis"] == ["Photosynthesis", "Respiration"]
 
 
@@ -51,7 +51,7 @@ def test_search_scopes_to_one_document_or_all_notes(two_documents):
     everywhere = retrieval.retrieve_for_user(1, "chloroplasts glucose")
     assert everywhere and everywhere[0]["document"] == "Photosynthesis"
     ml = retrieval.retrieve_for_user(1, "precision false positives")
-    assert ml and ml[0]["document"] == "ml_notes.txt" and ml[0]["topic"] == "Precision"
+    assert ml and ml[0]["document"] == "Machine Learning Notes" and ml[0]["topic"] == "Precision"
 
 
 def test_text_tutor_answers_from_any_of_the_notes(two_documents, monkeypatch):
@@ -74,7 +74,7 @@ def test_learning_an_older_topic_uses_that_topics_own_notes(two_documents, monke
     assert not any(e["type"] == "error" for e in ev)
     assert 'Topic: "Precision"' in fake.system_prompt
     results = fake.tool_responses[0].response["results"]
-    assert {r["document"] for r in results} == {"ml_notes.txt"}
+    assert {r["document"] for r in results} == {"Machine Learning Notes"}
 
 
 def test_free_conversation_knows_topics_from_every_document(two_documents, monkeypatch):
@@ -97,7 +97,7 @@ def test_removing_a_document_removes_its_topics_and_progress_only(two_documents)
     assert client.delete(f"/api/documents/{two_documents['bio']}").json() == {"deleted": two_documents["bio"]}
 
     d = client.get("/api/dashboard").json()
-    assert {m["document"] for m in d["mastery"]} == {"ml_notes.txt"}               # biology is gone, ML stays
+    assert {m["document"] for m in d["mastery"]} == {"Machine Learning Notes", "DBMS Notes", "Operating Systems Notes"}               # biology is gone, the demo notes stay
     assert not db.one("SELECT 1 AS x FROM chunks WHERE document_id = ?", (two_documents["bio"],))
     assert not db.one("SELECT 1 AS x FROM topics WHERE document_id = ?", (two_documents["bio"],))
     assert not db.one("SELECT 1 AS x FROM quiz_attempts a JOIN topics t ON t.id = a.topic_id WHERE t.document_id = ?", (two_documents["bio"],))
@@ -114,8 +114,8 @@ def test_removing_unknown_or_foreign_documents_is_a_404(two_documents):
 def test_loading_the_demo_again_keeps_the_students_own_uploads(two_documents):
     client.post("/api/demo/seed")
     names = {m["document"] for m in client.get("/api/dashboard").json()["mastery"]}
-    assert names == {"ml_notes.txt", "Photosynthesis"}
-    assert db.one("SELECT COUNT(*) AS n FROM documents WHERE file_name = 'ml_notes.txt'")["n"] == 1   # replaced, not duplicated
+    assert names == {"Machine Learning Notes", "DBMS Notes", "Operating Systems Notes", "Photosynthesis"}
+    assert db.one("SELECT COUNT(*) AS n FROM documents WHERE file_name = 'Machine Learning Notes'")["n"] == 1   # replaced, not duplicated
 
 
 def test_dashboard_progress_rows_carry_what_the_chart_needs(two_documents):

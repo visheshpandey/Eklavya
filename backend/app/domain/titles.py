@@ -59,6 +59,12 @@ def best_title(file_name: str, text: str = "", metadata_title: str | None = None
     return name or "Study notes"
 
 
+def subject_of(topic_name: str, document_title: str = "") -> str:
+    """The subject a topic belongs to: the part before a colon ("OS: Paging" -> "OS"), else the notes' own title."""
+    match = re.match(r"^([^:]{2,28}):\s+\S", str(topic_name or ""))
+    return match.group(1).strip() if match else (stem(document_title) or "Notes")
+
+
 def kind_for(file_name: str, url: str | None = None) -> str:
     """'pdf' | 'text' | 'photo' | 'youtube' | 'link'."""
     if url:

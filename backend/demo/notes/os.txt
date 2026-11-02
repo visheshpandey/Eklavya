@@ -1,0 +1,15 @@
+OS: Processes and Threads
+
+A process is a program in execution with its own address space, registers and open files. A thread is a lighter unit of execution inside a process: threads of one process share the code, data and heap but each has its own stack and program counter. Creating a thread is cheaper than creating a process, and threads communicate through shared memory, while processes need inter-process communication such as pipes or message queues. A process moves between the states new, ready, running, waiting and terminated.
+
+OS: CPU Scheduling
+
+The CPU scheduler picks which ready process runs next. First Come First Served is simple but a long job can make short jobs wait (the convoy effect). Shortest Job First gives the minimum average waiting time but needs the burst length in advance. Round Robin gives each process a fixed time quantum, which is fair and good for interactive systems; a very small quantum wastes time in context switches. Priority scheduling can starve low priority processes, which aging fixes by slowly raising their priority.
+
+OS: Deadlocks
+
+A deadlock is a situation where a set of processes wait for each other forever. Four conditions must hold together: mutual exclusion, hold and wait, no preemption and circular wait. Breaking any one of them prevents deadlock. The Banker's algorithm avoids deadlock by granting a request only if the system stays in a safe state. Detection uses a resource allocation graph: a cycle means deadlock when every resource has a single instance. Recovery means terminating a process or preempting a resource.
+
+OS: Paging and Virtual Memory
+
+Paging divides logical memory into fixed size pages and physical memory into frames of the same size, so a process need not be contiguous in memory and external fragmentation disappears. A page table maps each page to a frame, and the TLB caches recent translations to make this fast. In virtual memory only some pages are in RAM; touching a missing page causes a page fault and the operating system loads it from disk. Page replacement algorithms such as FIFO, LRU and Optimal choose which page to evict. Thrashing happens when a process spends more time paging than executing.

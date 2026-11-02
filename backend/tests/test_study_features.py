@@ -101,7 +101,7 @@ def test_upload_embeds_chunks_and_search_uses_them(monkeypatch):
     monkeypatch.setattr(embeddings, "embed", fake_embed)
     embeddings._query_vector.cache_clear()
     doc = client.post("/api/demo/seed").json()["document_id"]
-    assert calls == ["RETRIEVAL_DOCUMENT"]
+    assert calls == ["RETRIEVAL_DOCUMENT"] * 3      # one call per notes document of the demo (OS, DBMS, ML)
     demo_chunks = "SELECT id FROM chunks WHERE document_id = ?"
     assert (db.one(f"SELECT COUNT(*) AS n FROM chunk_embeddings WHERE chunk_id IN ({demo_chunks})", (doc,))["n"]
             == db.one("SELECT COUNT(*) AS n FROM chunks WHERE document_id = ?", (doc,))["n"] > 0)
@@ -129,7 +129,7 @@ def test_today_shows_streak_due_revision_plan_and_last_session():
     prec = topic_id("Precision")
     data = client.get("/api/today").json()
     assert data["has_notes"] and data["streak"] == 0 and data["due"] == []
-    assert data["plan"][0]["kind"] == "learn" and data["plan"][0]["topic"] == "Precision"   # weakest new topic
+    assert data["plan"][0]["kind"] == "learn" and data["plan"][0]["topic"] in ("Precision", "OS: Processes and Threads")   # one of the weakest topics
 
     old = (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")   # plain text: works on SQLite and Postgres
     db.execute("INSERT INTO quiz_attempts (user_id, topic_id, question, is_correct, mastery_before, mastery_after, answered_at) "

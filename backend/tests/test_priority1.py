@@ -114,3 +114,30 @@ def test_old_evidence_fades_the_shown_mastery_but_not_the_stored_one(student):
     mastery_log.record(user_id, topic, "quiz", 70, 80, at=(date.today() - timedelta(days=30)).isoformat() + " 08:00:00")
     row = client.get("/api/dashboard", headers=headers).json()["mastery"][0]
     assert row["mastery_stored"] == 80 and row["mastery_score"] < 80
+
+
+# ---- the demo fixture
+def test_the_demo_has_real_titles_varied_mastery_a_streak_and_due_cards():
+    seeded = client.post("/api/demo/seed").json()
+    assert [d["title"] for d in seeded["documents"]] == ["Operating Systems Notes", "DBMS Notes", "Machine Learning Notes"]
+    rows = client.get("/api/dashboard").json()["mastery"]
+    scores = sorted(r["mastery_score"] for r in rows)
+    assert scores[0] < 40 and scores[-1] >= 85 and all(r["started"] for r in rows)                  # some in the 30s, some 85 and up
+    assert {r["source_kind"] for r in rows} == {"pdf", "text"}
+    today = client.get("/api/today").json()
+    assert today["streak"] == 4 and today["cards_due"] >= 5
+    history = client.get("/api/mastery-history").json()["topics"]
+    assert sum(1 for points in history.values() if len(points) >= 3) >= 8                            # a week behind most topics
+    assert len(client.get("/api/flashcards/due").json()["cards"]) == today["cards_due"]
+
+
+def test_the_demo_cannot_be_loaded_into_a_real_account(student):
+    _, headers = student
+    refused = client.post("/api/demo/seed", headers=headers)
+    assert refused.status_code == 403 and "demo mode" in refused.json()["error"]
+    assert client.get("/api/dashboard", headers=headers).json()["mastery"] == []
+
+
+def test_the_demo_circle_is_served_from_the_fixture():
+    circle = client.get("/api/demo/circle").json()
+    assert [f["name"] for f in circle["friends"]] == ["Aarav", "Riya", "Meera"] and circle["shared_notes"]
