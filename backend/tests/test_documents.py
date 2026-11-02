@@ -23,7 +23,7 @@ def fake_topics(system, prompt, required_keys=(), temperature=0.7, **_):
 
 @pytest.fixture()
 def two_documents(monkeypatch):
-    """The demo ML notes (older) plus a biology upload (newer)."""
+    """The demo ML notes (older) plus a biology upload (newer). The upload is titled by its own heading, "Photosynthesis"."""
     monkeypatch.setattr(gemini, "call_llm_json", fake_topics)
     for leftover in db.query("SELECT id FROM documents WHERE user_id = 1"):      # start from an empty library
         delete_document(1, leftover["id"])
@@ -40,16 +40,16 @@ def topic_id(name):
 def test_dashboard_groups_topics_by_document_newest_first(two_documents):
     mastery = client.get("/api/dashboard").json()["mastery"]
     docs_in_order = list(dict.fromkeys(m["document"] for m in mastery))
-    assert docs_in_order == ["bio.txt", "ml_notes.txt"]
+    assert docs_in_order == ["Photosynthesis", "ml_notes.txt"]
     assert {m["document_id"] for m in mastery} == set(two_documents.values())
-    assert [m["topic_name"] for m in mastery if m["document"] == "bio.txt"] == ["Photosynthesis", "Respiration"]
+    assert [m["topic_name"] for m in mastery if m["document"] == "Photosynthesis"] == ["Photosynthesis", "Respiration"]
 
 
 def test_search_scopes_to_one_document_or_all_notes(two_documents):
     only_bio = retrieval.retrieve(two_documents["bio"], "precision recall")
     assert only_bio == []                                              # not in the biology notes
     everywhere = retrieval.retrieve_for_user(1, "chloroplasts glucose")
-    assert everywhere and everywhere[0]["document"] == "bio.txt"
+    assert everywhere and everywhere[0]["document"] == "Photosynthesis"
     ml = retrieval.retrieve_for_user(1, "precision false positives")
     assert ml and ml[0]["document"] == "ml_notes.txt" and ml[0]["topic"] == "Precision"
 
@@ -83,7 +83,7 @@ def test_free_conversation_knows_topics_from_every_document(two_documents, monke
     with client.websocket_connect("/ws/voice") as ws:
         collect(ws)
     assert "Precision" in fake.system_prompt and "Photosynthesis" in fake.system_prompt
-    assert fake.tool_responses[0].response["results"][0]["document"] == "bio.txt"
+    assert fake.tool_responses[0].response["results"][0]["document"] == "Photosynthesis"
 
 
 def test_removing_a_document_removes_its_topics_and_progress_only(two_documents):
@@ -114,7 +114,7 @@ def test_removing_unknown_or_foreign_documents_is_a_404(two_documents):
 def test_loading_the_demo_again_keeps_the_students_own_uploads(two_documents):
     client.post("/api/demo/seed")
     names = {m["document"] for m in client.get("/api/dashboard").json()["mastery"]}
-    assert names == {"ml_notes.txt", "bio.txt"}
+    assert names == {"ml_notes.txt", "Photosynthesis"}
     assert db.one("SELECT COUNT(*) AS n FROM documents WHERE file_name = 'ml_notes.txt'")["n"] == 1   # replaced, not duplicated
 
 

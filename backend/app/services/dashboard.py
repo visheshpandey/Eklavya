@@ -1,6 +1,8 @@
 """Everything the dashboard shows, in one payload: mastery, weak topics, alerts, mission, history, decision log."""
 from app import db
 from app.agents import logger, study_mission
+from app.services import mastery_log
+from app.services.progress_data import local_today
 
 WEAK_BELOW = 60          # topics under this mastery % count as weak
 HISTORY_LIMIT = 20
@@ -9,10 +11,11 @@ LEARNER_STATE_LIMIT = 10
 
 def build_dashboard(user_id: int) -> dict:
     mastery = db.query(
-        "SELECT t.id AS topic_id, t.topic_name, t.document_id, d.file_name AS document, m.mastery_score, m.confidence_score "
+        "SELECT t.id AS topic_id, t.topic_name, t.document_id, d.file_name AS document, d.source_kind, m.mastery_score, m.confidence_score, m.last_updated "
         "FROM learner_mastery m JOIN topics t ON t.id = m.topic_id JOIN documents d ON d.id = t.document_id "
         "WHERE m.user_id = ? ORDER BY d.id DESC, t.id", (user_id,))
-    weak = sorted((m for m in mastery if m["mastery_score"] < WEAK_BELOW), key=lambda m: m["mastery_score"])
+    mastery = mastery_log.faded_rows(user_id, mastery, local_today())
+    weak = sorted((m for m in mastery if m["started"] and m["mastery_score"] < WEAK_BELOW), key=lambda m: m["mastery_score"])   # a topic not started is not "weak"
     open_misconceptions = db.query(
         "SELECT x.id, x.topic_id, t.topic_name, x.misconception_text, x.label, x.severity, x.detected_at "
         "FROM misconceptions x JOIN topics t ON t.id = x.topic_id "

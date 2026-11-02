@@ -8,6 +8,7 @@ from app.agents.document_intelligence import ingest_document
 from app.agents.logger import log_agent
 from app.config import settings
 from app.errors import NotFoundError
+from app.services import mastery_log
 from app.services.documents import delete_document
 
 NOTES_FILE = "ml_notes.txt"   # lives in settings.samples_dir
@@ -80,11 +81,13 @@ def seed_demo(user_id: int = 1):
     if not notes_path.is_file():
         raise NotFoundError(f"Demo notes not found: {notes_path}")
     res = ingest_document(user_id, NOTES_FILE, notes_path.read_text(encoding="utf-8"), use_llm=False)
+    db.execute("UPDATE documents SET file_name = ?, source_kind = 'text' WHERE id = ?", (NOTES_FILE, res["document_id"]))   # the seed keeps its own name so a re-seed finds and replaces it
     by_name = {t["topic_name"]: t["id"] for t in res["topics_found"]}
     for name, score in START_MASTERY.items():
         if name in by_name:
             db.execute("UPDATE learner_mastery SET mastery_score = ? WHERE user_id = ? AND topic_id = ?",
                        (score, user_id, by_name[name]))
+            mastery_log.record(user_id, by_name[name], "demo", 50.0, float(score))   # the demo student has already studied these
     n = 0
     for name, qs in QUESTIONS.items():
         if name not in by_name:

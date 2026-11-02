@@ -4,7 +4,7 @@ from app.agents.logger import log_agent
 from app.ai import embeddings
 from app.ai.gemini import extract_list, llm_json
 from app.config import settings
-from app.domain import retrieval
+from app.domain import retrieval, titles
 from app.errors import BadRequestError, LLMError
 
 SYSTEM = "You extract the topic structure of study notes. Respond with valid JSON only."
@@ -82,7 +82,17 @@ def _assign_topic(chunk, topics, weights):
     return topics[0]["id"] if len(topics) == 1 else None
 
 
-def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = True):
+def _model_title(text: str) -> str | None:
+    """A 3-6 word title from the first 1,500 characters; None if the model is unavailable (the file name is used then)."""
+    try:
+        data = llm_json(SYSTEM, 'Return JSON {"title": "..."}: a 3-6 word title for these study notes, in the notes\' own language, no quotes or file extension.\n\n' + text[:1500],
+                        temperature=0.2, timeout_ms=settings.gemini_long_timeout_ms)
+        return str(data.get("title", "")).strip() or None if isinstance(data, dict) else None
+    except Exception:  # noqa: BLE001 - a title is cosmetic
+        return None
+
+
+def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = True, *, url: str | None = None, metadata_title: str | None = None):
     """Chunk + topics + initial mastery rows. Returns {document_id, status, topics_found}."""
     db.ensure_user(user_id)
     chunks = retrieval.chunk_text(text)
@@ -94,7 +104,15 @@ def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = Tru
     names = _llm_topics(text) if use_llm else _heading_topics(chunks)
     source = "gemini" if use_llm else "seed headings"
 
-    doc_id = db.execute("INSERT INTO documents (user_id, file_name) VALUES (?, ?)", (user_id, file_name))
+    if url:   # the same page imported twice is one source
+        existing = db.one("SELECT id, file_name FROM documents WHERE user_id = ? AND source_url = ?", (user_id, titles.normalise_url(url)))
+        if existing:
+            kept = [{"id": t["id"], "topic_name": t["topic_name"]} for t in db.query("SELECT id, topic_name FROM topics WHERE document_id = ?", (existing["id"],))]
+            return {"document_id": existing["id"], "status": "already_added", "topics_found": kept}
+    weak_name = titles.is_weak(file_name) and not url
+    title = titles.best_title(file_name, text, metadata_title, _model_title(text) if (use_llm and weak_name and not titles.heading_title(text)) else None, name_first=bool(url))
+    doc_id = db.execute("INSERT INTO documents (user_id, file_name, source_kind, source_url) VALUES (?, ?, ?, ?)",
+                        (user_id, title, titles.kind_for(file_name, url), titles.normalise_url(url) if url else None))
     topics = []
     for n in names:
         tid = db.execute("INSERT INTO topics (document_id, topic_name) VALUES (?, ?)", (doc_id, n))

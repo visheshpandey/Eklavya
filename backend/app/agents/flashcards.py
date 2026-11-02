@@ -104,11 +104,15 @@ def reset_deck(user_id: int, today: date) -> dict:
 
 
 def review(user_id: int, card_id: int, knew: bool, today: date, hard: bool = False):
-    card = db.one("SELECT id, box FROM flashcards WHERE id = ? AND user_id = ?", (card_id, user_id))
+    card = db.one("SELECT id, box, topic_id FROM flashcards WHERE id = ? AND user_id = ?", (card_id, user_id))
     if not card:
         raise NotFoundError("Unknown flashcard")
     box = next_box(card["box"], knew, hard)
     due = today + timedelta(days=BOX_DAYS[box])
     db.execute("UPDATE flashcards SET box = ?, due_on = ?, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?",
                (box, due.isoformat(), card_id))
-    return {"id": card_id, "box": box, "due_on": due.isoformat(), "due_count": len(due_cards(user_id, today))}
+    result = {"id": card_id, "box": box, "due_on": due.isoformat(), "due_count": len(due_cards(user_id, today))}
+    if card.get("topic_id") is not None:   # the rating is evidence about the topic: "Again" lowers it, "Got it" raises it
+        from app.services import mastery_log
+        result["mastery"] = mastery_log.apply_card(user_id, card["topic_id"], "known" if knew else "hard" if hard else "again")
+    return result

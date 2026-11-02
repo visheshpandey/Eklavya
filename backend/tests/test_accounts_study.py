@@ -163,14 +163,14 @@ def test_a_scanned_pdf_is_read_by_gemini(monkeypatch):
     buffer = io.BytesIO()
     Image.new("RGB", (200, 100), "white").save(buffer, "PDF")
     monkeypatch.setattr(documents_route, "read_pdf", lambda raw: NOTES)
-    monkeypatch.setattr(documents_route, "ingest_document", lambda user_id, name, content: {"name": name, "chars": len(content)})
+    monkeypatch.setattr(documents_route, "ingest_document", lambda user_id, name, content, **_: {"name": name, "chars": len(content)})
     response = client.post("/api/upload-document", files={"file": ("scan.pdf", buffer.getvalue(), "application/pdf")})
     assert response.status_code == 200 and response.json() == {"name": "scan.pdf", "chars": len(NOTES)}
 
 
 def test_import_link_turns_a_link_into_notes(monkeypatch):
     monkeypatch.setattr(documents_route, "notes_from_link", lambda url: ("Precision and recall", NOTES))
-    monkeypatch.setattr(documents_route, "ingest_document", lambda user_id, name, content: {"name": name})
+    monkeypatch.setattr(documents_route, "ingest_document", lambda user_id, name, content, **_: {"name": name})
     assert client.post("/api/import-link", json={"url": "https://example.com/precision"}).json() == {"name": "Precision and recall"}
 
 

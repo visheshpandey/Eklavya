@@ -13,7 +13,7 @@ from app import db, lag_monitor
 from app.api import router as api_router
 from app.config import settings
 from app.errors import register_error_handlers
-from app.services import links
+from app.services import links, retitle
 from app.services.progress_data import use_timezone
 
 
@@ -27,15 +27,25 @@ async def _name_old_videos() -> None:
         logging.getLogger(__name__).warning("Could not rename old video notes", exc_info=True)
 
 
+async def _retitle_old_notes() -> None:
+    """Notes stored before human titles existed get a real title and a source type; the same link added twice becomes one."""
+    try:
+        await asyncio.to_thread(retitle.retitle_existing)
+    except Exception:  # noqa: BLE001 - cosmetic: a failure just leaves the old names
+        logging.getLogger(__name__).warning("Could not re-title old notes", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     watcher = asyncio.create_task(lag_monitor.watch())
     renamer = asyncio.create_task(_name_old_videos())
+    retitler = asyncio.create_task(_retitle_old_notes())
     try:
         yield
     finally:
         watcher.cancel()
         renamer.cancel()
+        retitler.cancel()
 
 
 def create_app() -> FastAPI:

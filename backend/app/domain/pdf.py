@@ -22,6 +22,16 @@ def clean_text(text: str) -> str:
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
+def pdf_title(raw: bytes) -> str | None:
+    """The title in a PDF's own metadata, if it has a real one."""
+    try:
+        with pdfplumber.open(io.BytesIO(raw)) as pdf:
+            title = (pdf.metadata or {}).get("Title")
+        return str(title).strip() or None if title else None
+    except Exception:  # noqa: BLE001 - metadata is optional
+        return None
+
+
 def extract_text(filename: str, raw: bytes) -> str:
     """Return the text of an uploaded file. Raises BadRequestError for unsupported or unreadable files."""
     name = (filename or "").lower()

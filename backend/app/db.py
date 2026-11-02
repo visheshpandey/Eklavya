@@ -107,6 +107,10 @@ CREATE TABLE IF NOT EXISTS flashcards (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER, front TEXT, back TEXT,
     source TEXT DEFAULT 'notes', created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS mastery_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, topic_id INTEGER, source TEXT,
+    mastery_before REAL, mastery_after REAL, delta REAL, at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS password_resets (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, token_hash TEXT, expires_at TEXT, used INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -163,6 +167,8 @@ MIGRATIONS = (
     ("flashcards", "reviewed_at", "TEXT"),
     ("misconceptions", "question_id", "INTEGER"),   # the question the mistake was made on (flashcards from mistakes)
     ("documents", "copied_from", "INTEGER"),          # notes added from a study group: the original document
+    ("documents", "source_kind", "TEXT"),             # pdf | text | photo | link | youtube (the little icon next to a source)
+    ("documents", "source_url", "TEXT"),              # the normalised address of an imported link, so the same page is never added twice
 )
 
 
