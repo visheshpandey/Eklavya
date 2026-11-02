@@ -19,7 +19,7 @@ function buildBust(tutor) {
   const rig = new THREE.Group();
   const skin = std(SKIN[tutor]);
   const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.5, 0.62, 8, 20), std(TOP[tutor]));
-  torso.rotation.z = Math.PI / 2; torso.position.y = -1.12; torso.scale.set(1, 1, 0.62);
+  torso.rotation.z = Math.PI / 2; torso.position.y = -1.0; torso.scale.set(1.15, 1.7, 0.62);
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.5, 16), skin); neck.position.y = -0.55;
   rig.add(torso, neck);
 
@@ -49,7 +49,7 @@ function buildBust(tutor) {
     eye.add(white, pupil); face.add(eye);
     return { eye, pupil, side };
   });
-  const brows = [-1, 1].map((side) => { const brow = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.03, 0.03), std(HAIR[tutor])); brow.position.set(side * 0.24, 0.27, 0.58); face.add(brow); return { brow, side }; });
+  const brows = [-1, 1].map((side) => { const brow = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.022, 0.03), std(HAIR[tutor])); brow.position.set(side * 0.24, 0.3, 0.58); face.add(brow); return { brow, side }; });
   const cheeks = [-1, 1].map((side) => { const cheek = new THREE.Mesh(new THREE.CircleGeometry(0.09, 20), new THREE.MeshBasicMaterial({ color: 0xe0856a, transparent: true, opacity: 0 })); cheek.position.set(side * 0.34, -0.16, 0.55); cheek.rotation.y = side * 0.5; face.add(cheek); return cheek; });
 
   const glasses = new THREE.Group();
@@ -72,7 +72,7 @@ function buildBust(tutor) {
 }
 
 export async function createMentor(host, { tutor = 'mentor' } = {}) {
-  const stage = createStage(host, { fov: 27, position: [0, 0.35, 5.3], target: [0, 0.18, 0], shadows: false, floor: false });
+  const stage = createStage(host, { fov: 27, position: [0, 0.2, 6.1], target: [0, -0.05, 0], shadows: false, floor: false });
   stage.key.position.set(-1.8, 2.6, 3.4);
   const bust = buildBust(tutor);
   stage.scene.add(bust.rig);
@@ -100,7 +100,7 @@ export async function createMentor(host, { tutor = 'mentor' } = {}) {
       const mood = want.mood;
       const aim = { smile: 0.28, brow: 0, lift: 0, tilt: 0, cheek: 0, lookX: pointer.x * 0.9, lookY: -pointer.y * 0.7 };
       if (mood === 'happy') Object.assign(aim, { smile: 1, brow: 0.35, cheek: 0.55 });
-      if (mood === 'gentle') Object.assign(aim, { smile: -0.15, brow: -0.7, tilt: 0.07 });
+      if (mood === 'gentle') Object.assign(aim, { smile: 0.05, brow: 0.8, tilt: 0.07 });   // concern: the inner brows lift (never lower)
       if (thinking) Object.assign(aim, { smile: 0.05, brow: 0.5, tilt: 0.14, lookX: 0.6, lookY: 0.8 });
       for (const key of ['smile', 'brow', 'lift', 'tilt', 'cheek', 'lookX', 'lookY']) now[key] = lerp(now[key], aim[key], k);
       now.open = lerp(now.open, speaking ? clamp(shownLevel * 1.7) : 0, Math.min(1, delta * 18));
@@ -122,7 +122,7 @@ export async function createMentor(host, { tutor = 'mentor' } = {}) {
       for (const { eye, pupil } of bust.eyes) { eye.scale.y = blink; pupil.position.x = now.lookX * 0.035; pupil.position.y = now.lookY * 0.03; }
 
       // brows, cheeks, mouth
-      for (const { brow, side } of bust.brows) { brow.position.y = 0.27 + now.brow * 0.035; brow.rotation.z = side * now.brow * -0.28; }
+      for (const { brow, side } of bust.brows) { brow.position.y = 0.3 + now.brow * 0.03; brow.rotation.z = side * -(0.1 + Math.max(0, now.brow) * 0.25); }   // at rest the inner ends sit a little high: open and friendly
       for (const cheek of bust.cheeks) cheek.material.opacity = now.cheek * 0.5;
       bust.lip.scale.set(1 - now.open * 0.25, now.smile * 0.55 + 0.04, 1);
       bust.lip.position.y = now.open * -0.04;
@@ -167,6 +167,5 @@ export async function createRiggedMentor(host) {
 }
 
 export async function createBestMentor(host, options) {
-  if (modelUrl()) { try { return await createRiggedMentor(host); } catch (error) { console.warn('the mentorModel GLB could not be used; drawing the built-in mentor', error); } }
   return createMentor(host, options);
 }

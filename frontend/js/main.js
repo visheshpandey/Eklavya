@@ -35,7 +35,7 @@ import { mountStudyLaunch } from './components/study-launch.js';
 import { mountSessionOrb } from './components/session-orb.js';
 import { mountStageTools } from './components/stage-tools.js';
 import { selectConceptMap } from './state/selectors.js';
-import { mountGraph, mountHeroScene, startMotion } from './motion/index.js';
+import { canScene, mountGraph, mountHeroScene, startMotion } from './motion/index.js';
 import { mountCelebration } from './components/celebration.js';
 import { mountStepper } from './components/stepper.js';
 import { mountDebateTag } from './components/debate-tag.js';
@@ -71,6 +71,7 @@ import { mountBadges } from './components/badges-view.js';
 import { mountMockExam } from './components/mock-exam.js';
 import { mountGroups } from './components/groups-view.js';
 import { mountAvatar } from './components/avatar.js';
+import { mountMentorFrame } from './avatar/system.js';
 import { mountCallScreen } from './components/call-screen.js';
 import { mountReconnectPrompt } from './components/reconnect-prompt.js';
 import { mountChallenge } from './components/challenge-view.js';
@@ -259,14 +260,19 @@ mountStudyHeader({
 const orb = mountSessionOrb({ store, orb: byId('orb'), status: byId('status'), onToggle: session.toggle });
 const getTutor = () => byId('tutor').value;
 const avatar = mountAvatar({ store, root: byId('avatar'), getTutor });
-const callScreen = mountCallScreen({ store, root: byId('call'), openButton: byId('btnCallScreen'), getTutor, onEnd: () => session.stop(), onPhoto: (file) => session.sendPhoto(file) });
-byId('tutor').addEventListener('change', (event) => { avatar.setTutor(event.target.value); callScreen.setTutor(event.target.value); });
-avatar.setTutor(getTutor());
-callScreen.setTutor(getTutor());
-session.attach(new VoiceClient({
+let voiceClient = null;
+const mentor = mountMentorFrame({ store, frame: byId('mentorFrame'), base: avatar, config: globalThis.APP_CONFIG ?? {}, reduceMotion, hasWebGL: canScene(),
+  setPlaybackMuted: (muted) => voiceClient?.setPlaybackMuted(muted) });   // the frame: the best avatar that is available, with fallbacks
+const callScreen = mountCallScreen({ store, root: byId('call'), frame: byId('mentorFrame'), openButton: byId('btnCallScreen'), onEnd: () => session.stop(), onPhoto: (file) => session.sendPhoto(file) });
+byId('tutor').addEventListener('change', (event) => mentor.setTutor(event.target.value));
+mentor.setTutor(getTutor());
+voiceClient = new VoiceClient({
   onEvent: session.handleEvent, onStatus: session.handleStatus,
-  onLevel: (level) => { globalThis.eklavyaLevel = level; orb.setLevel(level); avatar.setLevel(level); callScreen.setLevel(level); },   // one voice level moves the orb and both faces
-}));
+  onLevel: (level) => { globalThis.eklavyaLevel = level; orb.setLevel(level); mentor.setLevel(level); },   // one voice level moves the orb and the mentor
+  onAudio: (chunk) => mentor.feedAudio(chunk),
+  onInterrupt: () => mentor.interrupt(),
+});
+session.attach(voiceClient);
 mountStageTools({
   store, root: byId('stageTools'), captionRoot: byId('caption'),
   onToggleCaptions: () => store.dispatch(actions.captionsToggled()), onPhoto: session.sendPhoto,

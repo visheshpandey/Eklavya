@@ -1,12 +1,14 @@
-// The microphone as a living sphere: a noise-displaced icosphere whose surface roughens with the live voice level (the same 0-1 level that
-// comes from the Web Audio analyser). Terracotta while it listens to the student, green while the mentor speaks, gold while connecting.
+// The microphone as a smooth, glossy sphere. A clear-coated physical material on a finely subdivided icosphere; the surface breathes with a very low, very
+// slow simplex noise (never more than 0.08 of the radius) whose strength follows the live voice level, smoothed so it can never spike. The normals are
+// recomputed after the displacement so the highlights stay clean. Terracotta while the student talks, deep green while Eklavya speaks, a calm breathing
+// scale when it is quiet, and a soft glow ring behind it.
 import { PALETTE } from './env.js';
 import { THREE, createStage } from './scene-kit.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-const VERTEX = /* glsl */ `
-  uniform float uTime; uniform float uLevel;
-  varying vec3 vNormal; varying vec3 vView; varying float vShift;
-  // 3D simplex noise (Ashima Arts, MIT)
+export const MAX_DISPLACEMENT = 0.08;
+
+const NOISE = /* glsl */ `
   vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;} vec4 mod289(vec4 x){return x-floor(x*(1./289.))*289.;}
   vec4 permute(vec4 x){return mod289(((x*34.)+1.)*x);} vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
   float snoise(vec3 v){
@@ -27,56 +29,69 @@ const VERTEX = /* glsl */ `
     vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.); m=m*m;
     return 42.*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
   }
-  void main(){
-    float calm = 0.05 + 0.03 * sin(uTime * 1.3);
-    float n = snoise(normal * (1.4 + uLevel * 1.4) + vec3(0., uTime * (0.35 + uLevel * 1.4), uTime * 0.2));
-    float d = n * (calm + uLevel * 0.42);
-    vec3 displaced = position + normal * d;
-    vShift = d;
-    vNormal = normalize(normalMatrix * normal);
-    vec4 mv = modelViewMatrix * vec4(displaced, 1.);
-    vView = normalize(-mv.xyz);
-    gl_Position = projectionMatrix * mv;
-  }`;
-const FRAGMENT = /* glsl */ `
-  uniform vec3 uA; uniform vec3 uB; uniform float uLevel;
-  varying vec3 vNormal; varying vec3 vView; varying float vShift;
-  void main(){
-    float light = clamp(dot(normalize(vNormal), normalize(vec3(-0.5, 0.7, 0.8))), 0., 1.);
-    float rim = pow(1. - clamp(dot(normalize(vNormal), normalize(vView)), 0., 1.), 2.2);
-    vec3 color = mix(uA, uB, clamp(vShift * 3. + 0.45 + rim * 0.35, 0., 1.));
-    color = color * (0.62 + 0.5 * light) + rim * 0.28 * uB + uLevel * 0.08;
-    gl_FragColor = vec4(color, 1.);
-    #include <colorspace_fragment>
-  }`;
+  uniform float uTime; uniform float uAmp;
+  vec3 displace(vec3 p){ vec3 n = normalize(p); float d = snoise(n * 0.95 + vec3(0., uTime * 0.18, uTime * 0.1)) * uAmp; return n * (1.0 + d); }
+`;
 
-const hex = (value) => new THREE.Color(value);
-const LOOKS = {   // [body, highlight] per state
-  idle: [hex(PALETTE.green), hex(PALETTE.greenSoft)],
-  connecting: [hex('#8a6a30'), hex(PALETTE.gold)],
-  listening: [hex(PALETTE.terracotta), hex('#e0a07f')],
-  speaking: [hex('#3f7a55'), hex('#a3cfae')],
+const LOOKS = {   // [body, glow]
+  quiet: [new THREE.Color('#1f3a31'), new THREE.Color(PALETTE.greenSoft)],
+  student: [new THREE.Color(PALETTE.terracotta), new THREE.Color('#e0a07f')],
+  speaking: [new THREE.Color('#2f6b4a'), new THREE.Color('#8fc9a3')],
+  connecting: [new THREE.Color('#7a5c2a'), new THREE.Color(PALETTE.gold)],
 };
 
 export function createOrb(host) {
   const stage = createStage(host, { fov: 30, position: [0, 0, 5.8], target: [0, 0, 0], shadows: false, floor: false });
-  const uniforms = { uTime: { value: 0 }, uLevel: { value: 0 }, uA: { value: LOOKS.idle[0].clone() }, uB: { value: LOOKS.idle[1].clone() } };
-  const material = new THREE.ShaderMaterial({ uniforms, vertexShader: VERTEX, fragmentShader: FRAGMENT });
-  const sphere = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 5), material);
+  const pmrem = new THREE.PMREMGenerator(stage.renderer);
+  stage.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  stage.scene.environmentIntensity = 0.7;
+
+  const uniforms = { uTime: { value: 0 }, uAmp: { value: 0.02 } };
+  const material = new THREE.MeshPhysicalMaterial({ color: LOOKS.quiet[0].clone(), roughness: 0.22, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.06, sheen: 0.3, sheenColor: new THREE.Color('#ffffff') });
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${NOISE}`)
+      .replace('#include <beginnormal_vertex>', `
+        vec3 pn = normalize(position);
+        vec3 tA = normalize(cross(pn, abs(pn.y) > 0.9 ? vec3(1., 0., 0.) : vec3(0., 1., 0.)));
+        vec3 tB = cross(pn, tA);
+        float e = 0.02;
+        vec3 p0 = displace(pn), p1 = displace(normalize(pn + tA * e)), p2 = displace(normalize(pn + tB * e));
+        vec3 objectNormal = normalize(cross(p1 - p0, p2 - p0));
+        if (dot(objectNormal, pn) < 0.) objectNormal = -objectNormal;
+        #ifdef USE_TANGENT
+          vec3 objectTangent = vec3(tangent.xyz);
+        #endif`)
+      .replace('#include <begin_vertex>', 'vec3 transformed = displace(position);');
+  };
+  const sphere = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 32), material);   // detail 32: smooth enough that no facets show
   stage.scene.add(sphere);
-  let state = 'idle', level = 0;
+
+  // the glow ring behind it: a soft radial sprite
+  const glowCanvas = document.createElement('canvas'); glowCanvas.width = glowCanvas.height = 128;
+  const g = glowCanvas.getContext('2d'), gradient = g.createRadialGradient(64, 64, 18, 64, 64, 64);
+  gradient.addColorStop(0, 'rgba(255,255,255,0.0)'); gradient.addColorStop(0.55, 'rgba(255,255,255,0.55)'); gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gradient; g.fillRect(0, 0, 128, 128);
+  const glowTexture = new THREE.CanvasTexture(glowCanvas);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: LOOKS.quiet[1].clone(), transparent: true, opacity: 0.35, depthWrite: false }));
+  glow.scale.set(3.1, 3.1, 1); glow.position.z = -0.8;
+  stage.scene.add(glow);
+
+  let state = 'idle', level = 0, shown = 0;
   stage.add({ run(delta, time) {
+    shown += (level - shown) * Math.min(1, delta * 6);   // slow and smooth: a loud syllable never snaps the surface
     uniforms.uTime.value = time;
-    uniforms.uLevel.value += (level - uniforms.uLevel.value) * Math.min(1, delta * 12);
-    const [a, b] = LOOKS[state] ?? LOOKS.idle;
-    uniforms.uA.value.lerp(a, Math.min(1, delta * 5)); uniforms.uB.value.lerp(b, Math.min(1, delta * 5));
-    sphere.rotation.y = time * 0.25;
-    const scale = state === 'connecting' ? 1 + Math.sin(time * 4) * 0.05 : 1;
-    sphere.scale.setScalar(scale);
+    uniforms.uAmp.value = Math.min(MAX_DISPLACEMENT, 0.018 + shown * 0.06);
+    const look = state === 'connecting' ? LOOKS.connecting : state === 'speaking' ? LOOKS.speaking : state === 'listening' && shown > 0.05 ? LOOKS.student : LOOKS.quiet;
+    material.color.lerp(look[0], Math.min(1, delta * 4)); glow.material.color.lerp(look[1], Math.min(1, delta * 4));
+    glow.material.opacity += ((state === 'idle' ? 0.22 : 0.32 + shown * 0.4) - glow.material.opacity) * Math.min(1, delta * 4);
+    const breathe = 1 + Math.sin(time * 1.4) * (state === 'idle' ? 0.03 : 0.015) + shown * 0.05;
+    sphere.scale.setScalar(breathe); glow.scale.setScalar(3.1 * (1 + shown * 0.18));
+    sphere.rotation.y = time * 0.12;
   } });
   return {
     setLevel(next) { level = Math.max(0, Math.min(1, next)); },
     setState(next) { state = next; },
-    dispose() { stage.dispose(); },
+    dispose() { pmrem.dispose(); glowTexture.dispose(); stage.dispose(); },
   };
 }
