@@ -39,7 +39,7 @@ function whileVisible(host, create, apply, { onFail = null, wait = 3500 } = {}) 
     visible = now;
     if (now && !scene && !building) {
       building = true;
-      afterLoad(wait).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); guardPerformance(); } else created.dispose(); })
+      afterLoad(wait).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); } else created.dispose(); })
         .catch((error) => { building = false; if (visible) { console.error('3D scene not started', error); onFail?.(error); } });
     } else if (!now && scene) { scene.dispose(); scene = null; }
   }, '0px');

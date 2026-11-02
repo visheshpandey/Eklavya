@@ -268,6 +268,9 @@ mountStudyHeader({
 const orb = mountSessionOrb({ store, orb: byId('orb'), status: byId('status'), onToggle: session.toggle });
 const getTutor = () => byId('tutor').value;
 const avatar = mountAvatar({ store, root: byId('avatar'), getTutor });
+// the conversation is exactly as tall as the mentor frame beside it
+const studyGrid = document.querySelector('.study-grid');
+if (studyGrid && globalThis.ResizeObserver) new ResizeObserver(() => { const frame = byId('mentorFrame'); if (frame.clientHeight) studyGrid.style.setProperty('--frame-h', `${frame.clientHeight}px`); }).observe(byId('mentorFrame'));
 let voiceClient = null;
 const mentor = mountMentorFrame({ store, frame: byId('mentorFrame'), base: avatar, config: globalThis.APP_CONFIG ?? {}, reduceMotion, hasWebGL: canScene(),
   setPlaybackMuted: (muted) => voiceClient?.setPlaybackMuted(muted) });   // the frame: the best avatar that is available, with fallbacks

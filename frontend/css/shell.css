@@ -668,3 +668,16 @@ html.wave-gsap .wave i { animation: none; }
 .call { background: var(--bg); }
 .call { justify-content: flex-end; }
 .call .call-top { position: absolute; top: max(var(--s-5), env(safe-area-inset-top)); left: var(--s-5); right: var(--s-5); align-self: auto; }
+
+/* Study room: a large video-call frame with the microphone orb over its bottom centre, and a conversation as tall as the frame */
+@media (min-width: 70rem) {
+  .study-grid { grid-template-columns: minmax(0, 1fr) minmax(380px, 26rem); align-items: start; }
+  .study-side .convo { height: var(--frame-h, 440px); display: flex; flex-direction: column; }
+  .study-side .convo .chat { flex: 1 1 auto; max-height: none; min-height: 0; overflow-y: auto; }
+  .mentor-frame { width: min(100%, 760px); min-width: 520px; }
+}
+.mentor-frame .orb-wrap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; }
+.mentor-frame .caption { bottom: 138px; }
+.call .mentor-frame .orb-wrap { display: none; }
+.stage { padding-top: var(--s-4); gap: var(--s-4); }
+@media (max-width: 70rem) { .study-side .convo .chat { max-height: 22rem; } }
