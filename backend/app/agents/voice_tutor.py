@@ -40,7 +40,7 @@ MATCH_STRONG = 0.6   # at least this share of the question's words found in the 
 
 def _evidence(question: str, chunks, searched: int, search_ms: int) -> dict:
     """What the screen shows under the answer: the passages used, how well they match, how many were searched."""
-    used = chunks[:2]
+    used = retrieval.relevant_sources(question, chunks)   # at most 3, only the relevant ones
     share = retrieval.coverage(question, used)
     return {"sources": [{"document": c.get("document") or "", "topic": c["topic"], "heading": c["heading"], "text": c["text"]} for c in used],
             "terms": sorted(set(retrieval.tokenize(question))), "searched": searched,

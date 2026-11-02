@@ -6,14 +6,13 @@ import { el, render } from '../lib/dom.js';
 import { bestSentences, splitByTerms } from '../lib/highlight.js';
 import { coverLetters, groupSubjects } from '../lib/subjects.js';
 import { renderMarkdown } from '../lib/markdown.js';
+import { plural, shortDate } from '../lib/format.js';
 import { icon } from '../lib/icons.js';
 
 const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
 
-const when = (stamp) => {
-  const date = new Date(`${String(stamp).replace(' ', 'T')}Z`);
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-};
+const when = shortDate;   // "2 Nov"
+const DOUBTS_SHOWN = 5;
 const MATCH = { strong: ['Strong match', ''], partial: ['Partial match', ' partial'], none: ['Not in your notes', ' partial'] };
 
 export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWrap, onAsk, onList, onDelete, onClear, topics, subjects, sound, onListen }) {
@@ -24,6 +23,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   let timer = null;
   let draft = '';
   let error = '';
+  let showAllDoubts = false;
 
   /** A cited passage: its markdown is drawn (no "###" or "**" on screen) with the question's words highlighted. */
   function highlighted(text, terms) {
@@ -116,16 +116,27 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   function drawList() {
     const search = el('input', { id: 'doubt-search', class: 'field', type: 'search', value: query, autocomplete: 'off', placeholder: 'Search your doubts' });
     search.addEventListener('input', () => { query = search.value; clearTimeout(timer); timer = setTimeout(loadList, 250); });
-    const rows = doubts.doubts.map((d) => el('details', { class: 'doubt' },
-      el('summary', {}, el('span', { class: 'doubt-q', text: d.question }), el('span', { class: 'hint', text: when(d.created_at) })),
+    // the same question asked again is one row: "x6" and the latest date; newest first; five shown, the rest one click away
+    const groups = new Map();
+    for (const d of [...doubts.doubts].sort((x, y) => (y.id ?? 0) - (x.id ?? 0))) {
+      const key = String(d.question).trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(d);
+    }
+    const entries = [...groups.values()].map((list) => ({ latest: list[0], count: list.length, ids: list.map((item) => item.id) }));
+    const shown = showAllDoubts ? entries : entries.slice(0, DOUBTS_SHOWN);
+    const rows = shown.map(({ latest: d, count, ids }) => el('details', { class: 'doubt' },
+      el('summary', {}, el('span', { class: 'doubt-q', text: d.question }), count > 1 ? el('span', { class: 'meta-chip', text: `×${count}`, title: `Asked ${count} times` }) : null,
+        el('span', { class: 'hint', text: when(d.created_at) })),
       el('div', { class: 'md' }, renderMarkdown(d.answer)),
       d.topic && d.grounded ? el('span', { class: 'meta-chip', text: d.topic }) : null,
       el('button', { class: 'btn btn-danger-quiet btn-sm', type: 'button', 'aria-label': `Delete the doubt: ${d.question}`,
-        onclick: async () => { await onDelete(d.id); loadList(); } }, 'Delete')));
+        onclick: async () => { for (const id of ids) await onDelete(id); loadList(); } }, count > 1 ? `Delete all ${count}` : 'Delete')));
     render(listRoot,
       doubts.total ? search : null,
       rows.length ? el('div', { class: 'list' }, rows)
         : el('p', { class: 'empty', text: doubts.total ? `No doubts match "${query}".` : 'Nothing yet. Ask your first question above.' }),
+      entries.length > DOUBTS_SHOWN ? el('button', { class: 'btn btn-quiet btn-sm', type: 'button', onclick: () => { showAllDoubts = !showAllDoubts; drawList(); } }, showAllDoubts ? 'Show fewer' : `Show all ${plural(entries.length, 'doubt')}`) : null,
       doubts.total ? el('button', { class: 'btn btn-quiet btn-sm', type: 'button',
         onclick: async () => { if (globalThis.confirm('Delete all your saved doubts?')) { await onClear(); loadList(); } } }, 'Delete all doubts') : null);
     if (query) listRoot.querySelector('#doubt-search')?.setSelectionRange(query.length, query.length);

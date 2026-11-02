@@ -191,6 +191,26 @@ def retrieve_for_user(user_id: int, query: str, k: int = RETRIEVAL_TOP_K, query_
     return rank(chunks_of_user(user_id), query, k, query_vector, vectors)
 
 
+SOURCE_LIMIT = 3          # citations shown under an answer
+SOURCE_RELATIVE = 0.5     # a passage must score at least this share of the best passage's score
+SOURCE_MIN_COVERAGE = 0.2  # ... and share this much of the question's words, unless it is from the best passage's own topic
+
+
+def relevant_sources(question: str, chunks, limit: int = SOURCE_LIMIT):
+    """The passages worth citing (pure): best first, at most `limit`. A passage is dropped when its score is far below the best one's, or when it
+    neither shares the question's topic nor enough of its words (a question about deadlocks must not cite a passage about database transactions)."""
+    if not chunks:
+        return []
+    best = chunks[0]
+    kept = []
+    for chunk in sorted(chunks, key=lambda c: c.get("score", 0), reverse=True):
+        close = chunk.get("score", 0) >= SOURCE_RELATIVE * best.get("score", 0)
+        on_topic = chunk.get("topic") == best.get("topic") or coverage(question, [chunk]) >= SOURCE_MIN_COVERAGE
+        if close and on_topic:
+            kept.append(chunk)
+    return kept[:limit]
+
+
 def coverage(question: str, chunks) -> float:
     """Share (0 to 1) of the question's meaningful words that appear in the given passages: how well the notes answer it.
     A word and its plural or "-ing" form count as the same."""

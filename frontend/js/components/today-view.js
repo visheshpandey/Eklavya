@@ -4,6 +4,7 @@ import { el, render as replaceContent } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { SESSION_MODE } from '../lib/protocol.js';
 import { t } from '../lib/strings.js';
+import { shortDate } from '../lib/format.js';
 import { selectLanguage, selectToday } from '../state/selectors.js';
 
 const MAX_COUNTDOWN_DAYS = 1100;   // the server already ignores anything further out; this keeps a wrong value from ever being shown
@@ -71,7 +72,7 @@ export function mountTodayView({ store, root, onStart, onOpenTopic, onAddNotes, 
 
     const last = today.last_session
       ? el('p', { class: 'today-last' }, el('strong', { text: `${t('today.last', language)}: ` }),
-        [today.last_session.mode_name, today.last_session.topic, t('today.turns', language, { n: today.last_session.turns }), today.last_session.date]
+        [today.last_session.mode_name, today.last_session.topic, t('today.turns', language, { n: today.last_session.turns }), shortDate(today.last_session.date)]
           .filter(Boolean).join(' · '))
       : null;
 

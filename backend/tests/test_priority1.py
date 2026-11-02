@@ -142,3 +142,26 @@ def test_the_demo_cannot_be_loaded_into_a_real_account(student):
 def test_the_demo_circle_is_served_from_the_fixture():
     circle = client.get("/api/demo/circle").json()
     assert [f["name"] for f in circle["friends"]] == ["Aarav", "Riya", "Meera"] and circle["shared_notes"]
+
+
+# ---- the impact estimate
+def test_the_monthly_cost_is_computed_from_the_configured_models_and_shows_its_formula():
+    from app.config import settings
+    data = client.get("/api/impact").json()
+    assert data["models"] == {"text": settings.gemini_model, "live": settings.gemini_live_model, "embedding": settings.gemini_embed_model, "voice": settings.live_voice}
+    assert abs(sum(line["usd"] for line in data["lines"]) - data["total_usd"]) < 0.02
+    assert all("=" in line["formula"] or "x" in line["formula"] for line in data["lines"]) and data["voice_is_the_bulk"] and "assumptions" in data["verify"]
+
+
+# ---- Ask: only relevant citations
+def test_citations_drop_passages_that_are_far_off_or_off_topic():
+    from app.domain import retrieval
+    q = "Deadlock ke 4 conditions kya hain?"
+    deadlock = {"text": "A deadlock needs four conditions: mutual exclusion, hold and wait, no preemption and circular wait.", "topic": "OS: Deadlocks", "heading": "Deadlocks", "score": 4.0}
+    more = {"text": "Breaking any one of the deadlock conditions prevents deadlock.", "topic": "OS: Deadlocks", "heading": "Deadlocks", "score": 2.5}
+    dbms = {"text": "A transaction is a group of operations that succeed or fail as one unit. ACID describes its guarantees.", "topic": "DBMS: Transactions and ACID", "heading": "Transactions", "score": 0.9}
+    close_but_other_topic = {"text": "Durability means a committed change survives a crash.", "topic": "DBMS: Transactions and ACID", "heading": "Transactions", "score": 3.0}
+    assert retrieval.relevant_sources(q, [deadlock, more, dbms]) == [deadlock, more]
+    assert retrieval.relevant_sources(q, [deadlock, close_but_other_topic]) == [deadlock]      # a good score is not enough without sharing the question's words or topic
+    many = [{**deadlock, "score": 4.0 - i * 0.1} for i in range(6)]
+    assert len(retrieval.relevant_sources(q, many)) == 3 and retrieval.relevant_sources(q, []) == []

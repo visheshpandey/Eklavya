@@ -1,6 +1,7 @@
 // Exam planner: pick the exam date and daily minutes; see the next 7 days (and the whole plan on request).
 import { el, render as replaceContent } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
+import { shortDate } from '../lib/format.js';
 import { t } from '../lib/strings.js';
 import { groupBySubject } from '../lib/subjects.js';
 import { selectLanguage, selectPlan } from '../state/selectors.js';
@@ -13,7 +14,8 @@ const MAX_DAYS_AHEAD = 1100;   // the server's limit too (about three years): a 
 
 function dayLabel(iso, language) {
   const date = new Date(`${iso}T12:00:00`);
-  return new Intl.DateTimeFormat(language === 'hindi' ? 'hi-IN' : 'en-IN', { weekday: 'short', day: 'numeric', month: 'short' }).format(date);
+  const weekday = new Intl.DateTimeFormat(language === 'hindi' ? 'hi-IN' : 'en-GB', { weekday: 'short' }).format(date);
+  return `${weekday}, ${shortDate(iso)}`;   // "Mon, 2 Nov"
 }
 
 export function mountExamPlanner({ store, root, onSave, onClear, onOpenItem }) {

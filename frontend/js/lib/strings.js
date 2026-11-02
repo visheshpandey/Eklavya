@@ -9,13 +9,13 @@ const EN = {
   'm.today': 'Today', 'm.notes': 'Notes', 'm.study': 'Study', 'm.ask': 'Ask', 'm.cards': 'Cards', 'm.progress': 'Progress', 'm.groups': 'Groups',
   'rail.streak': 'Learning streak', 'cmd.search': 'Search', 'notes.lead': 'Add PDFs, text files or a photo of a page. Eklavya reads them, finds the topics and answers from them.',
   'notes.dropTitle': 'Drop your notes here',
-  'brand.tag': 'your study space', 'cmd.trigger': 'Search or jump to', 'convo.title': 'Conversation', 'stat.mastery': 'Average mastery', 'stat.masteryNote': 'across {n} topics', 'stat.answers': 'Answers', 'stat.answersNote': 'correct', 'stat.fixed': 'Misconceptions fixed', 'stat.fixedOpen': '{n} still open', 'stat.fixedNone': 'none open', 'stat.streak': 'Study streak', 'stat.day': '{n} day', 'stat.days': '{n} days', 'stat.streakNote': 'keep it going tonight',
+  'brand.tag': 'your study space', 'cmd.trigger': 'Search or jump to', 'convo.title': 'Conversation', 'stat.mastery': 'Average mastery', 'stat.masteryNote': 'across {n} topics', 'stat.masteryNote.one': 'across {n} topic', 'stat.answers': 'Answers', 'stat.answersNote': 'correct', 'stat.fixed': 'Misconceptions fixed', 'stat.fixedOpen': '{n} still open', 'stat.fixedNone': 'none open', 'stat.streak': 'Study streak', 'stat.day': '{n} day', 'stat.days': '{n} days', 'stat.streakNote': 'keep it going tonight',
   'notes.title': 'Your notes', 'notes.upload': 'Upload notes', 'notes.demo': 'Try the demo notes', 'notes.search': 'Search topics',
   'notes.hint': 'PDF (even scanned), text, or a photo of a page', 'notes.loading': 'Loading…',
   'lib.loading': 'Loading your notes...', 'lib.noneTitle': 'No notes yet',
   'lib.noneBody': 'Upload a PDF or text file, or try the demo notes, and your topics will appear here.',
   'lib.weakest': 'Weakest', 'lib.remove': 'Remove', 'lib.removeNamed': 'Remove {name}', 'lib.yes': 'Yes, remove', 'lib.cancel': 'Cancel',
-  'lib.confirm': 'Remove "{name}" and your progress on its topics?', 'lib.topics': '{n} topics', 'lib.matches': '{n} of {total}',
+  'lib.confirm': 'Remove "{name}" and your progress on its topics?', 'lib.topics': '{n} topics', 'lib.topics.one': '{n} topic', 'lib.matches': '{n} of {total}',
   'lib.noMatch': 'No topics match "{query}".',
   'progress.title': 'Your progress', 'progress.chart': 'Mastery over time', 'progress.mistakes': 'Misconceptions',
   'progress.recent': 'Recent answers', 'progress.why': 'Why the tutor did that', 'progress.map': 'How your topics connect',
@@ -27,12 +27,12 @@ const EN = {
 
   'today.late': 'Up late', 'today.morning': 'Good morning', 'today.afternoon': 'Good afternoon', 'today.evening': 'Good evening',
   'today.streak': '{n}-day streak', 'today.streakNone': 'Start a streak today',
-  'today.exam': '{n} days to your exam', 'today.examToday': 'Your exam is today',
+  'today.exam': '{n} days to your exam', 'today.exam.one': '{n} day to your exam', 'today.examToday': 'Your exam is today',
   'today.plan': "Today's plan", 'today.planMinutes': 'about {n} minutes', 'today.start': 'Start',
   'today.startPlan': "Start today's plan", 'today.nothing': 'Nothing due today. Pick any topic, or try a viva.',
   'today.noNotes': 'Add your notes to get a plan for today.', 'today.addNotes': 'Add notes',
-  'today.due': 'Due for revision', 'today.overdue': '{n} days late', 'today.dueToday': 'due today',
-  'today.last': 'Last time', 'today.turns': '{n} turns',
+  'today.due': 'Due for revision', 'today.overdue': '{n} days late', 'today.overdue.one': '{n} day late', 'today.dueToday': 'due today',
+  'today.last': 'Last time', 'today.turns': '{n} turns', 'today.turns.one': '{n} turn',
   'kind.revise': 'Quick revision', 'kind.learn': 'Learn', 'kind.test': 'Test',
 
   'planner.title': 'Exam planner', 'planner.date': 'Exam date', 'planner.minutes': 'Minutes a day',
@@ -87,13 +87,13 @@ const HI = {
   'm.today': 'आज', 'm.notes': 'नोट्स', 'm.study': 'पढ़ाई', 'm.ask': 'पूछें', 'm.cards': 'कार्ड', 'm.progress': 'प्रगति', 'm.groups': 'ग्रुप',
   'rail.streak': 'सीखने की लय', 'cmd.search': 'खोजें', 'notes.lead': 'PDF, टेक्स्ट फ़ाइल या पन्ने की फ़ोटो जोड़ें। एकलव्य उन्हें पढ़कर टॉपिक बनाता है और उन्हीं से जवाब देता है।',
   'notes.dropTitle': 'अपने नोट्स यहाँ छोड़ें',
-  'brand.tag': 'आपका आवाज़ वाला स्टडी मेंटर', 'cmd.trigger': 'खोजें या सीधे जाएँ', 'convo.title': 'बातचीत', 'stat.mastery': 'औसत महारत', 'stat.masteryNote': '{n} विषयों में', 'stat.answers': 'जवाब', 'stat.answersNote': 'सही', 'stat.fixed': 'सुधरी गलतफ़हमियाँ', 'stat.fixedOpen': '{n} अभी बाकी', 'stat.fixedNone': 'कोई बाकी नहीं', 'stat.streak': 'लगातार पढ़ाई', 'stat.day': '{n} दिन', 'stat.days': '{n} दिन', 'stat.streakNote': 'आज रात भी जारी रखें',
+  'brand.tag': 'आपका आवाज़ वाला स्टडी मेंटर', 'cmd.trigger': 'खोजें या सीधे जाएँ', 'convo.title': 'बातचीत', 'stat.mastery': 'औसत महारत', 'stat.masteryNote': '{n} विषयों में', 'stat.masteryNote.one': '{n} विषय में', 'stat.answers': 'जवाब', 'stat.answersNote': 'सही', 'stat.fixed': 'सुधरी गलतफ़हमियाँ', 'stat.fixedOpen': '{n} अभी बाकी', 'stat.fixedNone': 'कोई बाकी नहीं', 'stat.streak': 'लगातार पढ़ाई', 'stat.day': '{n} दिन', 'stat.days': '{n} दिन', 'stat.streakNote': 'आज रात भी जारी रखें',
   'notes.title': 'आपके नोट्स', 'notes.upload': 'नोट्स अपलोड करें', 'notes.demo': 'डेमो नोट्स आज़माएँ', 'notes.search': 'टॉपिक खोजें',
   'notes.hint': 'PDF, टेक्स्ट, या पेज की फ़ोटो', 'notes.loading': 'लोड हो रहा है…',
   'lib.loading': 'आपके नोट्स लोड हो रहे हैं...', 'lib.noneTitle': 'अभी कोई नोट्स नहीं',
   'lib.noneBody': 'PDF या टेक्स्ट फ़ाइल अपलोड करें, या डेमो नोट्स आज़माएँ; आपके टॉपिक यहाँ दिखेंगे।',
   'lib.weakest': 'सबसे कमज़ोर', 'lib.remove': 'हटाएँ', 'lib.removeNamed': '{name} हटाएँ', 'lib.yes': 'हाँ, हटाएँ', 'lib.cancel': 'रद्द करें',
-  'lib.confirm': '"{name}" और उसके टॉपिक की आपकी प्रगति हटानी है?', 'lib.topics': '{n} टॉपिक', 'lib.matches': '{total} में से {n}',
+  'lib.confirm': '"{name}" और उसके टॉपिक की आपकी प्रगति हटानी है?', 'lib.topics': '{n} टॉपिक', 'lib.topics.one': '{n} टॉपिक', 'lib.matches': '{total} में से {n}',
   'lib.noMatch': '"{query}" से कोई टॉपिक नहीं मिला।',
   'progress.title': 'आपकी प्रगति', 'progress.chart': 'समय के साथ महारत', 'progress.mistakes': 'गलतफ़हमियाँ',
   'progress.recent': 'हाल के जवाब', 'progress.why': 'ट्यूटर ने ऐसा क्यों किया', 'progress.map': 'आपके टॉपिक कैसे जुड़े हैं',
@@ -105,12 +105,12 @@ const HI = {
 
   'today.late': 'देर रात तक जाग रहे हैं', 'today.morning': 'सुप्रभात', 'today.afternoon': 'नमस्ते', 'today.evening': 'शुभ संध्या',
   'today.streak': 'लगातार {n} दिन', 'today.streakNone': 'आज से सिलसिला शुरू करें',
-  'today.exam': 'परीक्षा में {n} दिन बाकी', 'today.examToday': 'आज आपकी परीक्षा है',
+  'today.exam': 'परीक्षा में {n} दिन बाकी', 'today.exam.one': 'परीक्षा में {n} दिन बाकी', 'today.examToday': 'आज आपकी परीक्षा है',
   'today.plan': 'आज की योजना', 'today.planMinutes': 'लगभग {n} मिनट', 'today.start': 'शुरू करें',
   'today.startPlan': 'आज की योजना शुरू करें', 'today.nothing': 'आज कुछ बाकी नहीं। कोई भी टॉपिक चुनें, या वाइवा आज़माएँ।',
   'today.noNotes': 'आज की योजना के लिए अपने नोट्स जोड़ें।', 'today.addNotes': 'नोट्स जोड़ें',
-  'today.due': 'दोहराने का समय', 'today.overdue': '{n} दिन देर', 'today.dueToday': 'आज',
-  'today.last': 'पिछली बार', 'today.turns': '{n} बार बात',
+  'today.due': 'दोहराने का समय', 'today.overdue': '{n} दिन देर', 'today.overdue.one': '{n} दिन देर', 'today.dueToday': 'आज',
+  'today.last': 'पिछली बार', 'today.turns': '{n} बार बात', 'today.turns.one': '{n} बार बात',
   'kind.revise': 'जल्दी दोहराएँ', 'kind.learn': 'सीखें', 'kind.test': 'टेस्ट',
 
   'planner.title': 'परीक्षा योजना', 'planner.date': 'परीक्षा की तारीख', 'planner.minutes': 'रोज़ के मिनट',
@@ -164,7 +164,9 @@ const TABLES = { english: EN, hinglish: EN, hindi: HI };
 
 /** The label for `key` in the interface language for `language`, with {name} placeholders filled from `values`. */
 export function t(key, language = 'hinglish', values = {}) {
-  const text = (TABLES[language] ?? EN)[key] ?? EN[key] ?? key;
+  const table = TABLES[language] ?? EN;
+  // one of something has its own wording: "1 day", "1 turn" (a key.one, used when n is 1)
+  const text = (values.n === 1 ? (table[`${key}.one`] ?? EN[`${key}.one`]) : undefined) ?? table[key] ?? EN[key] ?? key;
   return text.replace(/\{(\w+)\}/g, (match, name) => (name in values ? String(values[name]) : match));
 }
 
