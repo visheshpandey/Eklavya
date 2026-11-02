@@ -731,3 +731,16 @@ html.wave-gsap .wave i { animation: none; }
 .mentor-frame .mf-static { inset: 14px 0 118px 0; }
 .mentor-frame .avatar { width: min(100%, 250px); height: 100%; max-height: 270px; margin-inline: auto; aspect-ratio: 120 / 130; }
 .mentor-frame .avatar-svg { height: 100%; width: 100%; }
+
+/* the server wake-up card */
+.wake { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 150; width: min(440px, calc(100vw - 24px)); }
+.wake[hidden] { display: none; }
+.wake-card { display: grid; gap: 8px; padding: 16px 18px; background: var(--hero); color: var(--hero-ink); border-radius: var(--r-panel); box-shadow: 0 20px 44px rgba(0, 0, 0, .35); animation: wakein .4s cubic-bezier(.2, .9, .3, 1.2); transition: opacity .5s, transform .5s; }
+.wake-card.wake-out { opacity: 0; transform: translateY(12px); }
+.wake-card .hint, .wake-line { color: var(--hero-mute); font-size: 13px; }
+.wake-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.wake-bar { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--hero-ink) 18%, transparent); overflow: hidden; }
+.wake-bar i { display: block; height: 100%; width: 0; background: var(--ochre); animation: wakefill 40s cubic-bezier(.2, .6, .3, 1) forwards; }
+@keyframes wakefill { to { width: 94%; } }
+@keyframes wakein { from { opacity: 0; transform: translateY(14px); } }
+@media (max-width: 700px) { .wake { bottom: 76px; } }

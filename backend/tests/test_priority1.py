@@ -156,3 +156,7 @@ def test_citations_drop_passages_that_are_far_off_or_off_topic():
     assert retrieval.relevant_sources(q, [deadlock, close_but_other_topic]) == [deadlock]      # a good score is not enough without sharing the question's words or topic
     many = [{**deadlock, "score": 4.0 - i * 0.1} for i in range(6)]
     assert len(retrieval.relevant_sources(q, many)) == 3 and retrieval.relevant_sources(q, []) == []
+
+
+def test_health_answers_without_a_login():
+    assert client.get("/api/health").json() == {"ok": True}

@@ -332,6 +332,7 @@
   </div>
 
   <dialog id="about" class="auth about" aria-labelledby="about-title"><div class="about-head"><h2 id="about-title" class="serif-sm">About Eklavya</h2><button id="aboutClose" class="icon-btn" type="button" aria-label="Close">×</button></div><div id="aboutBody"></div></dialog>
+  <div id="wake" class="wake" hidden></div>
   <dialog id="auth" class="auth"></dialog>
   <dialog id="account" class="auth account"></dialog>
   <dialog id="command" class="command" aria-label="Command menu"></dialog>
@@ -343,6 +344,7 @@
   <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/three-addons/"}}</script>
   <script src="config.js"></script>
+  <script>fetch(window.APP_CONFIG.apiBase + "/api/health", { cache: "no-store" }).catch(function () {});   /* wake the server the instant the page opens */</script>
   <script type="module" src="js/main.js"></script>
 </body>
 

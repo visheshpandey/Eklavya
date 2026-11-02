@@ -1,0 +1,15 @@
+# Keeps the free backend awake so a visitor never waits for a cold start: pings /api/health every 10 minutes.
+# The address is public (the same one in frontend/config.js), so no secret is needed.
+name: Keep the backend awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/health
+        run: curl --silent --show-error --retry 3 --retry-delay 20 --retry-all-errors --max-time 90 "https://eklavya-api-1bhf.onrender.com/api/health" > /dev/null

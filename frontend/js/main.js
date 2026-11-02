@@ -72,6 +72,7 @@ import { mountMockExam } from './components/mock-exam.js';
 import { mountGroups } from './components/groups-view.js';
 import { mountDemoCircle } from './components/demo-circle.js';
 import { mountWelcome } from './components/welcome.js';
+import { mountWakeBanner } from './components/wake-banner.js';
 import { createTour } from './components/tour.js';
 import { mountImpact } from './components/impact-view.js';
 import { isLite, setLite } from './motion/env.js';
@@ -442,6 +443,8 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 
 // motion layer (smooth scroll, reveals, count-ups, tilt, flame, confetti): added once the page is up, skipped for "reduce motion"
 startMotion({ store });
+
+mountWakeBanner({ root: byId('wake') });
 
 // --- first impression: the welcome line, the guided tour, the Demo pill, the help menu (tour, about, lite mode) and the impact section
 const tour = createTour({

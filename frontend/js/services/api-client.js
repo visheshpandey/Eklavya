@@ -1,6 +1,7 @@
 // HTTP access to the backend. Gemini is called by the backend only; the browser never sees a key.
 import { API_BASE } from '../lib/config.js';
 import { getToken, signOut } from '../lib/session.js';
+import { ready as serverReady } from '../lib/warmup.js';
 
 /** Any failed request. `code` is the backend's machine code ("not_found", "llm_unavailable", ...) or "network". */
 export class ApiError extends Error {
@@ -19,6 +20,7 @@ function timezone() {
 }
 
 async function request(path, { method = 'GET', json, form } = {}) {
+  await serverReady;   // a sleeping server is woken first, so nothing fails while it starts
   const options = { method, headers: {} };
   const token = getToken();
   if (token) options.headers.authorization = `Bearer ${token}`;

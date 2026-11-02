@@ -67,6 +67,11 @@ def create_app() -> FastAPI:
         return await call_next(request)
     app.include_router(api_router)
 
+    @app.get("/api/health")
+    def health():
+        """Answers instantly without touching the database: the page and the keep-alive job use it to see that the server is awake."""
+        return {"ok": True}
+
     @app.get("/")
     def root():
         return {"status": "ok", "service": "Eklavya API"}
