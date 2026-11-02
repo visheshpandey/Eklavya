@@ -611,3 +611,15 @@ html.wave-gsap .wave i { animation: none; }
 .o2-friend.you { background: var(--ochre); color: #fff; border-color: var(--ochre); }
 @keyframes o2spin { from { transform: rotate(0deg) translateX(120px) rotate(0deg) scaleY(.6); } to { transform: rotate(360deg) translateX(120px) rotate(-360deg) scaleY(.6); } }
 @media (prefers-reduced-motion: reduce) { .o2-friend { animation: none; transform: translateX(calc(var(--i) * 56px - 84px)); } }
+/* flashcards: compact enough that the Leitner shelf is on screen without scrolling at 1440 x 832 */
+.fcmain { padding: 10px 18px 10px; gap: 8px; margin-top: 4px; }
+.fcstage { height: clamp(230px, 31vh, 300px); }
+.fc-shelf { height: 190px; margin-top: 6px; }
+.fc-rate button { min-height: 54px; }
+.fc-decks { margin-top: 8px; }
+.fc-decks summary { cursor: pointer; font-weight: 600; display: flex; align-items: baseline; gap: 10px; }
+.fcstage { height: clamp(190px, 25vh, 250px); }
+.fc-shelf { height: 165px; }
+.fc-rate button { min-height: 48px; }
+.fc-top .page-title { font-size: clamp(34px, 4vw, 44px); }
+.fcmain { gap: 6px; }

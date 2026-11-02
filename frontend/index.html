@@ -154,7 +154,7 @@
                 <input id="librarySearch" class="field" type="search" placeholder="Search topics" data-i18n-placeholder="notes.search" autocomplete="off">
               </div>
             </div>
-            <div class="docs-wrap"><div id="library" class="library-list"></div></div>
+            <div class="docs-wrap"><div id="libraryList" class="library-list"></div></div>
           </section>
 
           <!-- STUDY ROOM -->
@@ -234,7 +234,7 @@
           <section id="panel-ask" class="panel" role="tabpanel" aria-labelledby="tab-ask">
             <div><p class="mono">No guesswork. Just your material.</p><h1 class="page-title">Ask Eklavya<em>.</em></h1></div>
             <div class="askgrid">
-              <div style="min-width:0"><div id="ask" class="ask"></div></div>
+              <div style="min-width:0"><div id="askChat" class="ask"></div></div>
               <aside class="card" style="align-self:start">
                 <span class="mono">Your sources</span>
                 <h3 class="serif-sm" style="margin:6px 0 10px">What Eklavya can use</h3>
@@ -296,13 +296,13 @@
             <div class="fcmain" id="fcReview"></div>
             <div id="fcShelf" class="fc-shelf" aria-hidden="true"></div>
             <div class="lb lb-sr" role="list" aria-label="Cards by box"><div role="listitem"><b>0</b><small>NEW</small></div><div role="listitem"><b>1</b><small>1 DAY</small></div><div role="listitem"><b>2</b><small>3 DAYS</small></div><div role="listitem"><b>3</b><small>7 DAYS</small></div><div role="listitem"><b>4</b><small>14 DAYS</small></div><div role="listitem"><b>5</b><small>30 DAYS</small></div></div>
-            <section class="block fc-decks" aria-labelledby="h-cards"><h3 id="h-cards" data-i18n="progress.cards">Your decks</h3><div id="flashcards" class="flashcards"></div></section>
+            <details class="block fc-decks"><summary id="h-cards"><span data-i18n="progress.cards">Your decks</span> <small class="hint">Make cards from your notes</small></summary><div id="fcDecks" class="flashcards"></div></details>
           </section>
 
           <!-- STUDY GROUPS -->
           <section id="panel-groups" class="panel" role="tabpanel" aria-labelledby="tab-groups">
             <div><p class="mono">Learn better, together</p><h1 class="page-title">Your study circle<em>.</em></h1><p class="lead">Share notes, compare progress and challenge a friend.</p></div>
-            <div id="groups" class="groups"></div>
+            <div id="groupsRoot" class="groups"></div>
             <section class="block" aria-labelledby="h-challenge"><h3 id="h-challenge">Challenge a friend</h3><div id="challenge" class="challenge"></div></section>
           </section>
         </main>

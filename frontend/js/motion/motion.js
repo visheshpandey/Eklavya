@@ -214,7 +214,7 @@ export async function initMotion({ store }) {
 
   // ---- study groups: members orbit the shared book
   function groups(root) {
-    for (const detail of root.querySelectorAll('#groups .group-detail:not([data-orbit])')) {
+    for (const detail of root.querySelectorAll('#groupsRoot .group-detail:not([data-orbit])')) {
       detail.dataset.orbit = '1';
       if (!canScene()) continue;
       const members = [...detail.querySelectorAll('.leaderboard li')].map((li) => ({ rank: Number(li.querySelector('.lb-rank')?.textContent) || 1,

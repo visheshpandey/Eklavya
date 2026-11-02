@@ -167,7 +167,7 @@ const mockExam = mountMockExam({
 const badges = mountBadges({ root: byId('badges'), onLoad: backend.badges });
 const topicsOf = () => selectDashboard(store.getState())?.mastery ?? [];
 const ask = mountAsk({
-  chatRoot: byId('ask'), listRoot: byId('doubts'), sourcesRoot: byId('srcList'), recentRoot: byId('recentDoubts'), recentWrap: byId('recentWrap'),
+  chatRoot: byId('askChat'), listRoot: byId('doubts'), sourcesRoot: byId('srcList'), recentRoot: byId('recentDoubts'), recentWrap: byId('recentWrap'),
   onAsk: (question) => backend.ask(question, byId('lang').value),
   onList: backend.doubts, onDelete: backend.deleteDoubt, onClear: backend.clearDoubts,
   topics: () => [...topicsOf()].sort((a, b) => a.mastery_score - b.mastery_score).map((topic) => topic.topic_name),
@@ -236,7 +236,7 @@ mountCommandMenu({
 
 // --- notes library
 mountLibrary({
-  store, root: byId('library'), searchInput: byId('librarySearch'),
+  store, root: byId('libraryList'), searchInput: byId('librarySearch'),
   onOpenTopic: notes.openTopic,
   onToggleDocument: (documentId) => store.dispatch(actions.documentToggled(documentId)),
   onSearch: (text) => store.dispatch(actions.librarySearched(text)),
@@ -334,7 +334,7 @@ byId('fcMore').addEventListener('click', (event) => { event.stopPropagation(); s
 document.addEventListener('click', (event) => { if (!event.target.closest('.fc-menu')) setFcMenu(false); });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !fcMenu.hidden) { setFcMenu(false); byId('fcMore').focus(); } });
 fcMenu.addEventListener('click', () => setFcMenu(false));
-mountFlashcards({ store, root: byId('flashcards'), onLoad: home.loadFlashcards, onMake: home.makeFlashcards });
+mountFlashcards({ store, root: byId('fcDecks'), onLoad: home.loadFlashcards, onMake: home.makeFlashcards });
 const mockRound = () => { showView(VIEWS.FLASHCARDS); flashReview.startMock(); };
 byId('mockRoundBtn').addEventListener('click', mockRound);
 byId('mockRoundBtn2').addEventListener('click', mockRound);
@@ -406,7 +406,7 @@ const guestCircleRoot = document.createElement('div');
 guestCircleRoot.className = 'guest-circle';
 mountDemoCircle({ store, root: guestCircleRoot, api: backend, onSignIn: openSignIn, onNotes: () => showView(VIEWS.LIBRARY) });
 const groupsView = mountGroups({
-  root: byId('groups'), api: backend, signedIn: () => signedIn, onSignIn: openSignIn, myDocuments: documentsOf, guestRoot: guestCircleRoot,
+  root: byId('groupsRoot'), api: backend, signedIn: () => signedIn, onSignIn: openSignIn, myDocuments: documentsOf, guestRoot: guestCircleRoot,
   onNotesAdded: () => notes.refresh(), notify: notifier.success,
 });
 byId('challenge').closest('section').hidden = !signedIn;   // guests see the study-circle card above instead of a second sign-in prompt
