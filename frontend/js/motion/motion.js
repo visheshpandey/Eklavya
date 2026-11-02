@@ -6,7 +6,7 @@ import { PALETTE, finePointer, loadScript } from './env.js';
 import { canScene, mountOnScreen } from './index.js';
 import { CHECK, DOWNLOAD, FLAME } from './lottie-data.js';
 
-const REVEAL = '.hero, .section, .card, .stat, .sub, .rstep, .plan-group, .map-frame, .doc, .badge, .lb-row, .group-card, .block';
+const REVEAL = '.hero, .section, .card, .stat, .sub, .rstep, .plan-group, .map-frame, .doc, .badge, .lb-row, .group-card, .block, .topic-row';
 const COUNT = '.stat strong, #streakDays, .sub .row strong, .mring-num';
 const BARS = '.bar > i, .meter > span';
 const TILT = '.card, .stat, .sub, .mode';
@@ -15,14 +15,15 @@ const seen = new Set();          // things already animated once: a re-draw with
 const once = (key) => (seen.has(key) ? false : (seen.add(key), true));
 let booting = true;   // the first pass: what is already on screen when the layer starts is left alone (hiding it now would only make it flash)
 const inView = (node) => node.getBoundingClientRect().top < innerHeight;
+const visibleNow = (node) => node.isConnected && node.offsetParent !== null && node.getBoundingClientRect().top < innerHeight;
 const visible = (node) => node.isConnected && node.offsetParent !== null && !(booting && inView(node));
 const keyOf = (node, tag) => `${tag}|${node.className}|${(node.textContent || '').trim().slice(0, 40)}|${[...node.parentElement.children].indexOf(node)}`;
 
 export async function initMotion({ store }) {
-  await Promise.all([loadScript('vendor/gsap.min.js'), loadScript('vendor/lenis.min.js'), loadScript('vendor/lottie_light.min.js'), loadScript('vendor/confetti.browser.js')]);
+  await Promise.all([loadScript('vendor/gsap.min.js'), loadScript('vendor/MotionPathPlugin.min.js'), loadScript('vendor/lenis.min.js'), loadScript('vendor/lottie_light.min.js'), loadScript('vendor/confetti.browser.js')]);
   await loadScript('vendor/ScrollTrigger.min.js');
   const { gsap, ScrollTrigger, Lenis, lottie, confetti } = globalThis;
-  gsap.registerPlugin(ScrollTrigger);
+  gsap.registerPlugin(ScrollTrigger, globalThis.MotionPathPlugin);
   document.documentElement.dataset.motion = 'on';
 
   // ---- smooth scroll, driven by GSAP's own clock so ScrollTrigger and Lenis never disagree
@@ -158,7 +159,7 @@ export async function initMotion({ store }) {
       suppress = true;   // the click that follows a drag must not flip the card
       const choice = wrap.dataset.throw;
       delete wrap.dataset.throw;
-      const button = choice && review.querySelector(`[data-rate="${choice}"]`);
+      const button = choice && review.querySelector('.card3.flipped') && review.querySelector(`[data-rate="${choice}"]:not(:disabled)`);
       if (!button) { gsap.to(wrap, { x: 0, y: 0, rotation: 0, duration: 0.7, ease: 'elastic.out(1, 0.6)' }); return; }
       gsap.to(wrap, { x: choice === 'known' ? 700 : choice === 'again' ? -700 : dx, y: choice === 'hard' ? -420 : dy, rotation: choice === 'known' ? 25 : choice === 'again' ? -25 : 0, opacity: 0, duration: 0.32, ease: 'power2.in',
         onComplete: () => { gsap.set(wrap, { clearProps: 'all' }); button.click(); } });
@@ -167,22 +168,38 @@ export async function initMotion({ store }) {
     review.addEventListener('pointercancel', release);
     review.addEventListener('click', (event) => { if (suppress) { suppress = false; event.stopPropagation(); event.preventDefault(); } }, true);
 
-    // the Leitner boxes in 3D, in place of the six plain tiles (which stay for screen readers)
-    const tiles = document.querySelector('#panel-flashcards .lb');
-    if (tiles && canScene()) {
-      const host = document.createElement('div');
-      host.className = 'boxes3d';
-      tiles.before(host);
-      tiles.classList.add('lb-sr');
+    // the Leitner shelf in 3D; a rated card flies into its box along a curved path, the box gives, and a Got it sparkles
+    const shelfHost = document.getElementById('fcShelf');
+    if (shelfHost && canScene()) {
       let counts = [0, 0, 0, 0, 0, 0];
-      const boxes = mountOnScreen(host, async (element) => (await import('./cards-3d.js')).createBoxes(element), (scene) => scene.setCounts(counts));
+      const shelf = mountOnScreen(shelfHost, async (element) => (await import('./cards-3d.js')).createBoxes(element), (scene) => scene.setCounts(globalThis.eklavyaBoxes ?? counts));
       document.addEventListener('eklavya:cards', (event) => {
-        const { type, boxes: next, from, to } = event.detail;
-        if (type === 'counts') { counts = next; boxes.scene()?.setCounts(next); }
-        if (type === 'rate') boxes.scene()?.drop(from, to);
+        const { type, boxes: next, to, value } = event.detail;
+        if (type === 'counts') { counts = next; shelf.scene()?.setCounts(next); }
+        if (type === 'rate') flyToBox(to, value, shelf.scene());
       });
     }
   }
+  function flyToBox(to, value, scene) {
+    const stage = document.querySelector('#fcReview .fcstage');
+    const shelfBox = document.getElementById('fcShelf')?.getBoundingClientRect();
+    if (!stage || !shelfBox || !scene) return;
+    const from = stage.getBoundingClientRect();
+    const targetX = shelfBox.left + shelfBox.width * scene.xFraction(to), targetY = shelfBox.top + shelfBox.height * 0.62;
+    const ghost = document.createElement('div');
+    ghost.className = 'fc-ghost';
+    Object.assign(ghost.style, { left: `${from.left + from.width / 2}px`, top: `${from.top + from.height / 2}px` });
+    document.body.append(ghost);
+    const dx = targetX - (from.left + from.width / 2), dy = targetY - (from.top + from.height / 2);
+    gsap.timeline({ onComplete: () => {
+      ghost.remove();
+      scene.land(to);
+      if (value === 'known') confetti({ particleCount: 16, spread: 55, startVelocity: 18, scalar: 0.55, gravity: 0.8, ticks: 60, disableForReducedMotion: true, colors: [PALETTE.gold, PALETTE.greenSoft],
+        origin: { x: targetX / innerWidth, y: targetY / innerHeight } });
+    } })
+      .to(ghost, { duration: 0.85, ease: 'power2.inOut', scale: 0.4, rotation: value === 'again' ? -200 : 200, motionPath: { path: [{ x: dx * 0.35, y: -Math.min(140, Math.abs(dy) * 0.6) - 40 }, { x: dx, y: dy }], curviness: 1.5 } });
+  }
+
   // the empty deck gets a floating stack of cards
   function stacks(root) {
     for (const empty of root.querySelectorAll('#fcReview .card3-empty:not([data-stack])')) {
@@ -262,6 +279,8 @@ export async function initMotion({ store }) {
     }
   }
 
+  document.addEventListener('eklavya:celebrate', (event) => celebrate(document.querySelector(event.detail?.near)));
+
   // one pass over what is on screen now, and again whenever the components draw something new
   const main = document.getElementById('main') ?? document.body;
   const pass = (root) => { reveal(root); counts(root); bars(root); rings(root); checks(root); stacks(root); groups(root); pops(root); ask(root); watchRoute(); };
@@ -317,6 +336,65 @@ export async function initMotion({ store }) {
         onComplete: () => gsap.to(ghost, { opacity: 0, duration: 0.3, onComplete: () => ghost.remove() }) });
     }, 140);
   }, true);
+
+  // ---- the sidebar's active mark slides between tabs
+  const tablist = document.querySelector('#tabs [role="tablist"]');
+  if (tablist) {
+    tablist.style.position = 'relative';
+    const pip = document.createElement('span');
+    pip.className = 'rail-pip'; pip.setAttribute('aria-hidden', 'true');
+    tablist.prepend(pip);
+    const place = (animate) => {
+      const active = tablist.querySelector('[aria-selected="true"]');
+      if (!active) return;
+      const to = { y: active.offsetTop + 8, height: active.offsetHeight - 16 };
+      if (animate) gsap.to(pip, { ...to, duration: 0.35, ease: 'power3.out' }); else gsap.set(pip, to);
+    };
+    place(false);
+    store.select(selectView, () => requestAnimationFrame(() => place(true)));
+    addEventListener('resize', () => place(false));
+  }
+
+  // ---- the quote types itself in the first time it is seen
+  const quote = document.getElementById('quote');
+  function typeIn(node) {
+    const full = node.textContent;
+    if (!full || !once('quote')) return;
+    const progress = { n: 0 };
+    node.setAttribute('aria-label', full);
+    gsap.to(progress, { n: full.length, duration: Math.min(2.2, full.length * 0.03), ease: 'none', onUpdate: () => { node.textContent = full.slice(0, Math.round(progress.n)); }, onComplete: () => { node.textContent = full; node.removeAttribute('aria-label'); } });
+  }
+  if (quote) ScrollTrigger.create({ trigger: quote, start: 'top 92%', once: true, onEnter: () => typeIn(quote) });
+
+  // ---- the study room's waveform: bars that move on their own, and swell with the live voice level during a session
+  const waveBars = [...document.querySelectorAll('.wave i')];
+  if (waveBars.length) {
+    gsap.set(waveBars, { transformOrigin: '50% 50%' });
+    document.documentElement.classList.add('wave-gsap');
+    const phases = waveBars.map((_, i) => ({ speed: 1.3 + (i % 4) * 0.35, phase: i * 0.9 }));
+    let level = 0;
+    gsap.ticker.add((time) => {
+      if (waveBars[0].offsetParent === null) return;
+      const live = document.getElementById('app')?.hasAttribute('data-live');
+      level += (((live ? globalThis.eklavyaLevel : 0) ?? 0) - level) * 0.2;
+      waveBars.forEach((bar, i) => { const wobble = 0.55 + 0.35 * Math.sin(time * phases[i].speed + phases[i].phase); gsap.set(bar, { scaleY: wobble * (live ? 0.7 + level * 2.2 : 1) }); });
+    });
+  }
+
+  // ---- a removed document slides away (and comes back if the removal did not happen)
+  document.addEventListener('click', (event) => {
+    const yes = event.target.closest?.('.doc-confirm .btn-danger');
+    const doc = yes?.closest('.doc');
+    if (!doc) return;
+    gsap.to(doc, { opacity: 0, x: -24, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0, duration: 0.45, ease: 'power2.in', overflow: 'hidden',
+      onComplete: () => setTimeout(() => { if (doc.isConnected) gsap.set(doc, { clearProps: 'all' }); }, 3500) });
+  }, true);
+
+  // ---- new messages in the conversation slide in
+  const chat = document.getElementById('chat');
+  if (chat) new MutationObserver((records) => {
+    for (const record of records) for (const node of record.addedNodes) if (node.nodeType === 1 && node.classList?.contains('msg') && !node.classList.contains('typing')) gsap.from(node, { y: 14, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+  }).observe(chat, { childList: true });
 
   // ---- the streak flame in the sidebar: lit and bigger the longer the streak
   const flame = document.createElement('span');
