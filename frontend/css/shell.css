@@ -676,8 +676,6 @@ html.wave-gsap .wave i { animation: none; }
   .study-side .convo .chat { flex: 1 1 auto; max-height: none; min-height: 0; overflow-y: auto; }
   .mentor-frame { width: min(100%, 760px); min-width: 520px; }
 }
-.mentor-frame .orb-wrap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; }
-.mentor-frame .caption { bottom: 138px; }
 .call .mentor-frame .orb-wrap { display: none; }
 .stage { padding-top: var(--s-4); gap: var(--s-4); }
 @media (max-width: 70rem) { .study-side .convo .chat { max-height: 22rem; } }
@@ -728,6 +726,60 @@ html.wave-gsap .wave i { animation: none; }
 .impact .md-list { font-size: 14px; color: var(--ink-3); line-height: 1.6; margin: 6px 0 0; }
 @media (max-width: 700px) { .stage { padding-inline: 10px; } .mentor-frame { width: 100%; min-width: 0; } }
 /* the drawn mentor in the big frame: normal size, centred above the orb, never behind it */
-.mentor-frame .mf-static { inset: 14px 0 118px 0; }
 .mentor-frame .avatar { width: min(100%, 250px); height: 100%; max-height: 270px; margin-inline: auto; aspect-ratio: 120 / 130; }
 .mentor-frame .avatar-svg { height: 100%; width: 100%; }
+
+/* Study room as one calm video call: the mentor fills the frame, the call bar sits under it (mic, status, tools), the conversation beside */
+.stage { align-items: stretch; gap: 14px; padding: 16px; }
+.mentor-frame { width: 100%; max-width: none; min-width: 0; }
+.mentor-frame .mf-static { inset: 18px; }
+.mentor-frame .avatar { max-height: 340px; }
+.mentor-frame .caption { bottom: 16px; }
+.call-bar { display: flex; align-items: center; gap: 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-hi); }
+.call-bar .orb-wrap, .call-bar > .orb { flex: none; width: 72px; height: 72px; }
+.call-bar .orb { width: 72px; height: 72px; }
+.call-bar .orb svg { width: 28px; height: 28px; }
+.call-bar .orb3d { left: -20px; top: -20px; width: 112px; height: 112px; }
+.call-bar-text { flex: 1 1 auto; min-width: 0; text-align: left; display: grid; gap: 2px; }
+.call-bar-text .stage-status { font-size: 17px; margin: 0; }
+.call-bar-text .stage-hint { margin: 0; }
+.call-bar-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.call-bar-tools .stage-tools { margin: 0; justify-content: flex-end; }
+.stage-text:empty, .stage > .stage-text { gap: 6px; }
+@media (max-width: 700px) {
+  .call-bar { flex-wrap: wrap; gap: 12px; }
+  .call-bar-tools { width: 100%; justify-content: flex-start; }
+  .call-bar-tools .stage-tools { justify-content: flex-start; }
+}
+
+/* the folded sections on Today */
+.fold { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 14px; }
+.fold > summary { display: flex; align-items: baseline; gap: 14px; cursor: pointer; list-style: none; min-height: 44px; }
+.fold > summary::-webkit-details-marker { display: none; }
+.fold > summary b { font: 400 22px var(--font-serif); }
+.fold > summary::after { content: "+"; margin-left: auto; font: 400 24px var(--font-serif); color: var(--ink-3); }
+.fold[open] > summary::after { content: "\2013"; }
+.fold > :not(summary) { margin-top: 12px; }
+/* the top bar: language, one menu, sign in, search */
+.top { position: relative; }
+#btnMore { display: inline-flex; }
+.topmenu { display: none; position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; width: min(320px, calc(100vw - 32px)); flex-direction: column; align-items: stretch; gap: 8px; padding: 16px; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 18px 40px var(--drop-shadow); }
+.topmenu.open { display: flex; }
+.topmenu .menu-label { position: static; width: auto; height: auto; clip: auto; white-space: normal; font: 500 10px/1.4 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-top: 4px; }
+.topmenu .select { max-width: none; width: 100%; min-height: var(--tap); }
+.topmenu #soundBtn { justify-content: flex-start; }
+.topmenu #btnTheme { width: 100%; }
+.menu-rule { border: 0; border-top: 1px solid var(--line); margin: 6px 0 2px; }
+.menu-item { text-align: left; min-height: 44px; padding: 0 10px; border: 0; background: none; border-radius: 8px; color: var(--ink); font-size: 14px; }
+.menu-item:hover, .menu-item:focus-visible { background: var(--sage); }
+.menu-item[hidden], .topmenu .demo-pill[hidden] { display: none; }
+.topmenu .demo-pill { align-self: flex-start; }
+#lang { max-width: 120px; }
+/* Study groups: avatars and two columns of cards */
+.gc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; align-items: start; }
+.gc-stack { display: grid; gap: 14px; }
+.gc-card { padding: 16px 18px; }
+.gc-card h4 { margin: 0 0 10px; font: 400 20px var(--font-serif); }
+.lb-av { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sage); font: 400 16px var(--font-serif); flex: none; }
+.leaderboard .is-you .lb-av { background: var(--ochre); color: #fff; }
+@media (max-width: 900px) { .gc-cols { grid-template-columns: 1fr; } }

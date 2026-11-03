@@ -77,6 +77,12 @@
         <header class="top">
           <span class="mono brand-top">Eklavya / <b id="crumb">Today</b></span>
           <div class="topacts">
+              <label class="visually-hidden" for="lang">Tutor language</label>
+              <select id="lang" class="select">
+                <option value="hinglish" selected>Hinglish</option>
+                <option value="english">English</option>
+                <option value="hindi" lang="hi">हिन्दी</option>
+              </select>
             <div id="topMenu" class="topmenu" role="group" aria-label="Settings">
               <button class="btn btn-secondary" id="soundBtn" type="button" aria-pressed="true"><span class="sound-label">Sound on</span></button>
               <label class="menu-label" for="tutor">Tutor personality: calm mentor or friendly senior</label>
@@ -84,24 +90,16 @@
                 <option value="mentor" selected title="Calm mentor">Mentor</option>
                 <option value="senior" title="Friendly senior">Senior</option>
               </select>
-              <label class="menu-label" for="lang">Tutor language</label>
-              <select id="lang" class="select">
-                <option value="hinglish" selected>Hinglish</option>
-                <option value="english">English</option>
-                <option value="hindi" lang="hi">हिन्दी</option>
-              </select>
               <span class="menu-label">Display</span>
               <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
+              <span id="demoPill" class="demo-pill" hidden>Demo mode</span>
+              <hr class="menu-rule">
+              <button class="menu-item" type="button" id="helpTour">Replay the tour</button>
+              <button class="menu-item" type="button" id="helpAbout">About Eklavya and its impact</button>
+              <button class="menu-item" type="button" id="helpLite">Lite mode</button>
+              <button class="menu-item" type="button" id="helpExit" hidden>Exit demo (sign in)</button>
             </div>
-            <button id="demoPill" class="demo-pill" type="button" hidden aria-label="You are in demo mode. Sign in to leave it."><i aria-hidden="true"></i>Demo</button>
-            <span class="help-wrap"><button id="btnHelp" class="icon-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="helpMenu" aria-label="Help: tour, about, lite mode"><span aria-hidden="true" style="font:600 18px var(--font-sans)">?</span></button>
-              <div id="helpMenu" class="help-menu" role="menu" hidden>
-                <button role="menuitem" type="button" id="helpTour">Replay the tour</button>
-                <button role="menuitem" type="button" id="helpAbout">About Eklavya and its impact</button>
-                <button role="menuitem" type="button" id="helpLite">Lite mode</button>
-                <button role="menuitem" type="button" id="helpExit" hidden>Exit demo (sign in)</button>
-              </div></span>
-            <button id="btnStreak" class="streak-chip" type="button" aria-expanded="false" aria-controls="streakSheet" aria-label="Learning streak: 0 days"><span data-icon="fire" data-size="18"></span><b id="streakChipN" class="tnum">0</b></button>
+                        <button id="btnStreak" class="streak-chip" type="button" aria-expanded="false" aria-controls="streakSheet" aria-label="Learning streak: 0 days"><span data-icon="fire" data-size="18"></span><b id="streakChipN" class="tnum">0</b></button>
             <button id="btnMore" class="icon-btn" type="button" aria-expanded="false" aria-controls="topMenu" aria-label="Settings: sound, tutor, language, display"><span aria-hidden="true" style="font-size:22px;line-height:1">⋯</span></button>
             <button id="btnSignIn" class="btn btn-primary" type="button" hidden>Sign in</button>   <!-- guests only: the way in is always in view -->
             <button id="btnAccountTop" class="icon-btn top-account" type="button" aria-label="Account"><span data-icon="user" data-size="18"></span></button>
@@ -136,12 +134,11 @@
             </div>
             <div class="section"><div><span class="mono">Your subjects</span><h2 class="section-title">Taking shape.</h2></div><button class="linkbtn" id="seeMap" type="button">See how they connect ↗</button></div>
             <div class="subs" id="subjects"></div>
-            <div class="today-more">
-              <span class="mono">More for today</span>
+            <details class="fold today-more"><summary><span class="mono">More for today</span><b>Your plan, revision and exam planner</b></summary>
               <div id="todayMore" class="today"></div>
               <section id="planner" class="block planner" aria-label="Exam planner"></section>
-            </div>
-            <section id="impact" class="block impact" aria-labelledby="h-impact"><div class="section"><div><span class="mono">Why Eklavya</span><h2 id="h-impact" class="section-title">Built for how Indian students study.</h2></div></div><div id="impactBody"></div></section>
+            </details>
+            <details class="fold" id="impact"><summary><span class="mono">Why Eklavya</span><b>Built for how Indian students study</b></summary><div id="impactBody"></div></details>
           </section>
 
           <!-- MY NOTES -->
@@ -200,16 +197,20 @@
             <div class="study-grid">
               <div class="study-main">
                 <div class="stage">
-                  <div id="mentorFrame" class="mentor-frame" data-mode="static"><div id="avatar" class="avatar-slot mf-static"></div><p id="caption" class="caption" aria-hidden="true" hidden></p>
-                    <button id="orb" class="orb" type="button" data-state="idle" aria-label="Start a voice conversation"></button></div>
+                  <div id="mentorFrame" class="mentor-frame" data-mode="static"><div id="avatar" class="avatar-slot mf-static"></div><p id="caption" class="caption" aria-hidden="true" hidden></p></div>
+                  <!-- the call bar: the microphone beside the status, like the controls under a video call -->
+                  <div class="call-bar">
+                    <button id="orb" class="orb" type="button" data-state="idle" aria-label="Start a voice conversation"></button>
+                    <div class="call-bar-text">
+                      <p id="status" class="stage-status">Tap to talk to Eklavya</p>
+                      <p class="stage-hint" data-i18n="stage.hint">Headphones work best.</p>
+                    </div>
+                    <div class="call-bar-tools"><div id="stageTools" class="stage-tools"></div><button id="btnCallScreen" class="btn btn-secondary btn-sm" type="button" hidden>Full screen call</button></div>
+                  </div>
                   <div class="stage-text">
-                    <p id="status" class="stage-status">Tap to talk to Eklavya</p>
-                    <p class="stage-hint" data-i18n="stage.hint">Headphones work best.</p>
                     <p id="debateTag" class="debate-tag" hidden></p>
                     <ol id="stepper" class="stepper" aria-label="Lesson steps" hidden></ol>
                     <div id="reconnect" class="reconnect" role="alert" hidden></div>
-                    <div id="stageTools" class="stage-tools"></div>
-                    <button id="btnCallScreen" class="btn btn-secondary btn-sm" type="button" hidden>Full screen call</button>
                   </div>
                   <p id="celebrate" class="celebrate" role="status" hidden></p>
                 </div>

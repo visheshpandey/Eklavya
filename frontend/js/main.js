@@ -462,20 +462,15 @@ const welcome = mountWelcome({
 });
 byId('demoPill').hidden = signedIn;
 byId('demoPill').addEventListener('click', () => authDialog.open());
-const helpMenu = byId('helpMenu');
-const setHelp = (open) => { helpMenu.hidden = !open; byId('btnHelp').setAttribute('aria-expanded', String(open)); };
-byId('btnHelp').addEventListener('click', (event) => { event.stopPropagation(); setHelp(helpMenu.hidden); });
-document.addEventListener('click', (event) => { if (!event.target.closest('.help-wrap')) setHelp(false); });
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !helpMenu.hidden) { setHelp(false); byId('btnHelp').focus(); } });
-byId('helpTour').addEventListener('click', () => { setHelp(false); tour.start(); });
+byId('helpTour').addEventListener('click', () => { setMenu(false); tour.start(); });
 byId('helpLite').textContent = isLite() ? 'Lite mode: on (turn off)' : 'Lite mode: off (turn on)';
 byId('helpLite').addEventListener('click', () => { setLite(!isLite()); location.reload(); });
 byId('helpExit').hidden = signedIn;
-byId('helpExit').addEventListener('click', () => { setHelp(false); authDialog.open(); });
+byId('helpExit').addEventListener('click', () => { setMenu(false); authDialog.open(); });
 const aboutDialog = byId('about');
 let aboutShown = false;
 byId('helpAbout').addEventListener('click', () => {
-  setHelp(false);
+  setMenu(false);
   if (!aboutShown) { aboutShown = true; mountImpact({ root: byId('aboutBody') }); }
   aboutDialog.showModal();
 });

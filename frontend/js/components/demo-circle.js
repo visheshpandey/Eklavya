@@ -92,19 +92,20 @@ export function mountDemoCircle({ store, root, api, onSignIn, onNotes }) {
         el('div', { class: 'orbit3d', 'aria-hidden': 'true' }, el('div', { class: 'orbit2d' }, el('span', { class: 'o2-book' }),
           rows.slice(0, 4).map((r, i) => el('span', { class: `o2-friend${r.you ? ' you' : ''}`, style: `--i:${i};--n:${Math.min(rows.length, 4)}`, text: r.name.slice(0, 1) })))),
         el('div', { class: 'group-code-row' }, el('strong', { text: circle.name }), el('span', { class: 'hint', text: 'Invite code' }), el('strong', { class: 'group-code', text: circle.code })),
+        el('div', { class: 'gc-cols' }, el('section', { class: 'card gc-card' },
         el('h4', { text: 'This week: mastery gained' }),
         el('ol', { class: 'leaderboard' }, rows.map((r) => el('li', { class: r.you ? 'is-you' : '' },
-          el('span', { class: 'lb-rank', text: String(r.rank) }),
+          el('span', { class: 'lb-rank', text: String(r.rank) }), el('span', { class: 'lb-av', 'aria-hidden': 'true', text: r.name.slice(0, 1) }),
           el('span', { class: 'lb-name', text: r.you ? `${r.name} (you)` : r.name }),
           el('span', { class: 'hint', text: `${r.streak}-day streak, ${r.mastery}% mastery` }),
           el('strong', { text: `${r.gain >= 0 ? '+' : ''}${r.gain} pts` })))),
-        el('p', { class: 'hint', text: 'Points are the average mastery gained across topics this week.' }),
+        el('p', { class: 'hint', text: 'Points are the average mastery gained across topics this week.' })),
+        el('div', { class: 'gc-stack' }, el('section', { class: 'card gc-card' },
         el('h4', { text: 'Shared notes' }),
         el('ul', { class: 'list' }, circle.shared_notes.map((n) => el('li', { class: 'shared-note' },
           el('span', {}, el('strong', { text: n.title }), el('span', { class: 'hint', text: ` ${n.topics} topics, from ${n.by}` })),
-          el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: onNotes }, 'Open in my notes')))),
-        el('h4', { text: 'Challenge a friend' }),
-        challengeBox()));
+          el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: onNotes }, 'Open in my notes'))))),
+        el('section', { class: 'card gc-card' }, el('h4', { text: 'Challenge a friend' }), challengeBox())))));
   }
 
   document.addEventListener('eklavya:mastery-history', draw);
