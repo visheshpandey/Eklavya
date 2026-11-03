@@ -71,6 +71,6 @@ def test_users_only_see_their_own_notes_and_user_id_in_the_request_is_ignored():
 
 def test_voice_socket_uses_the_token_and_a_new_account_has_no_notes():
     token = signup("voice@example.com").json()["token"]
-    with client.websocket_connect(f"/ws/voice?token={token}") as ws:
+    with client.websocket_connect(f"/ws/voice?token={token}&mode=learn&topic_id=1") as ws:
         event = ws.receive_json()
     assert event["type"] == "error" and "Upload your notes" in event["message"]

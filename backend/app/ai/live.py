@@ -156,7 +156,7 @@ def build_system_prompt(language: str, topics: list, mode: str = "free", focus_t
     style = DEBATE_STYLES.get((debate or {}).get("style"), DEBATE_STYLES["tough"])
     rules = prompts.load("language_rules.md").replace("{{LANGUAGE_RULE}}", LANGUAGE_RULES.get(language, LANGUAGE_RULES["hinglish"]))
     return (prompts.load(persona).replace("{{LANGUAGE}}", LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["hinglish"]))
-            .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "not specified")
+            .replace("{{TOPICS}}", ", ".join(t["topic_name"] for t in topics) or "none yet: the student has not added notes, so just have a normal conversation and answer from your own knowledge")
             .replace("{{STYLE}}", style)
             .replace("{{SESSION_PLAN}}", plan)
             + (f"\n\n# Your personality in this session\n{TUTORS.get(tutor, TUTORS['mentor'])['style']}\n"

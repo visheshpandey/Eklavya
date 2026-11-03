@@ -30,7 +30,7 @@ async def voice(ws: WebSocket, user_id: int = auth.CurrentUser, lang: str = "hin
     topics = await asyncio.to_thread(      # the event loop also answers every voice socket's pings: never wait on the database here
         db.query, "SELECT t.id, t.topic_name, t.document_id FROM topics t JOIN documents d ON d.id = t.document_id "
         "WHERE d.user_id = ? ORDER BY d.id DESC, t.id", (user_id,))
-    if not topics:
+    if not topics and mode != "free":   # a plain conversation needs no notes; lessons, tests, vivas and debates do
         await ws.send_json({"type": "error", "code": "need_notes", "retryable": False, "message": live.ERROR_MESSAGES["need_notes"]})
         await ws.close()
         return

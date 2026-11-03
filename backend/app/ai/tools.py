@@ -28,7 +28,7 @@ VIVA_ANSWER_SECONDS = 90     # the on-screen answer timer for each viva question
 TOOL_DECLARATIONS = [
     types.FunctionDeclaration(
         name="search_notes",
-        description="Search the student's uploaded notes. Call this before explaining anything from their subject.",
+        description="Search the student's uploaded notes. Call this before explaining anything from their subject (not needed for casual chat or when they have no notes).",
         parameters=S(type=T.OBJECT, properties={
             "query": S(type=T.STRING, description="Short English keywords for what the student asked about, e.g. 'precision definition example'."),
         }, required=["query"])),
@@ -208,7 +208,7 @@ async def search_notes(ctx: ToolContext, query: str = "", **_):
                f"{len(hits)} chunks" + (f", best: {hits[0]['topic']} ({hits[0]['score']})" if hits else ""),
                "Grounded the answer in notes" if hits else "Nothing found in notes", 0.8 if hits else 0.3)
     if not hits:
-        return {"found": False, "message": "Nothing about this in the student's notes."}
+        return {"found": False, "message": "Nothing about this in the student's notes. You may answer from your own general knowledge: say once, briefly, that this is not from their notes."}
     return {"found": True, "results": [
         {"document": h["document"], "topic": h["topic"], "section": h["heading"], "text": h["text"]} for h in hits]}
 

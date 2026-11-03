@@ -264,11 +264,22 @@ def test_gemini_go_away_reconnects_instead_of_ending(monkeypatch):
     assert len(seen) == 2
 
 
-def test_no_notes_uploaded_is_told_to_upload_first():
+def test_lesson_without_notes_is_told_to_upload_first():
     token = client.post("/api/auth/signup", json={"email": "nonotes@example.com", "password": "longenough1"}).json()["token"]
-    with client.websocket_connect(f"/ws/voice?token={token}") as ws:
+    with client.websocket_connect(f"/ws/voice?token={token}&mode=learn&topic_id=1") as ws:
         ev = ws.receive_json()
     assert ev["type"] == "error" and ev["code"] == "need_notes" and "Upload your notes" in ev["message"]
+
+
+def test_plain_conversation_needs_no_notes(monkeypatch):
+    token = client.post("/api/auth/signup", json={"email": "chatonly@example.com", "password": "longenough1"}).json()["token"]
+    fake = FakeSession([[sc(turn_complete=True)]])
+    connect, seen = connect_sequence(fake)
+    monkeypatch.setattr(live, "default_connect", connect)
+    with client.websocket_connect(f"/ws/voice?token={token}") as ws:
+        events, _ = collect(ws, until="turn_complete")
+    assert not any(e.get("code") == "need_notes" for e in events)
+    assert "has not added notes" in seen[0].system_prompt and "general knowledge" in seen[0].system_prompt
 
 
 def test_user_text_goes_to_gemini_and_shows_as_transcript(monkeypatch):
