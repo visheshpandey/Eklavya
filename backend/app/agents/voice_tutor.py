@@ -18,7 +18,7 @@ LANG_RULES = {
     "hindi": "Reply in simple Hindi (Devanagari), keeping technical terms in English.",
     "hinglish": "Reply in clear Hinglish: Hindi words written in Roman letters (never Devanagari) mixed with English terms.",
 }
-SYSTEM = ("You are Eklavya, a warm, respectful study mentor. Answer ONLY from the notes provided. "
+SYSTEM = ("You are Eklavya, a warm, respectful study mentor. Answer from the notes provided (unless told the notes only list the topic). "
           "Keep it short (3-5 sentences) with one simple example. Address the student as aap (or you), gender-neutral, and "
           "never use bhai, yaar, dost, bro or tum. Use only Hindi and English words, no other language. "
           "Respond with valid JSON only.")
@@ -35,6 +35,9 @@ def _save(user_id: int, question: str, out: dict) -> dict:
     return out
 
 
+OUTLINE_RULE = ("These notes are a syllabus: they only NAME the topic. Explain it from standard college-level knowledge, as it is "
+                "taught for this syllabus, still short and with one simple example. In the answer, say once, briefly, that your notes "
+                "only list this topic, so this explanation is from general knowledge. Never invent what the notes say.")
 MATCH_STRONG = 0.6   # at least this share of the question's words found in the passages
 
 
@@ -75,6 +78,7 @@ def ask(user_id: int, question: str, language: str = "hinglish", document_id: in
             "source_document": None, "source_topic": None, "follow_up_question": None, "grounded": False,
             **_evidence(question, [], searched, search_ms)})
 
+    outline = retrieval.is_outline(chunks)   # a syllabus: the notes name the topic but do not explain it
     notes = "\n\n".join(f"[{c['topic']} / {c['heading']}] {c['text']}" for c in chunks)
     earlier = db.query("SELECT question, answer FROM doubts WHERE user_id = ? ORDER BY id DESC LIMIT ?", (user_id, CONTEXT_DOUBTS))
     chat = "".join(f"Student: {d['question']}\nYou: {d['answer']}\n" for d in reversed(earlier))
@@ -82,7 +86,7 @@ def ask(user_id: int, question: str, language: str = "hinglish", document_id: in
     prompt = f"""{LANG_RULES.get(language, LANG_RULES['hinglish'])}
 {context}
 Student question: {question}
-
+{OUTLINE_RULE if outline else ""}
 Notes:
 {notes}
 
@@ -102,7 +106,7 @@ Return JSON {{"answer": "...", "follow_up_question": "one short question that ch
     top = chunks[0]
     out = {"answer": d["answer"], "follow_up_question": d["follow_up_question"],
            "source_topic": d.get("source_topic") or top["topic"]}
-    out.update({"source_document": top["document_id"], "grounded": True, "chunks_used": len(chunks),
+    out.update({"source_document": top["document_id"], "grounded": True, "chunks_used": len(chunks), "from_syllabus": outline,
                 **_evidence(question, chunks, searched, search_ms)})
     log_agent(user_id, "voice_tutor", f"Question: {question} [{language}]",
               f"Retrieved {len(chunks)} chunks, best: {top['topic']} ({top['score']})",

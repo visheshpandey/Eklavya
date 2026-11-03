@@ -43,7 +43,9 @@ def _generate_with_llm(topic_id: int, count: int, difficulty: str):
         return []
     chunks = retrieval.retrieve(topic["document_id"], topic["topic_name"], k=4)
     context = "\n\n".join(c["text"] for c in chunks) or topic["topic_name"]
-    prompt = f"""Write exactly {count} {difficulty}-level multiple-choice questions about "{topic['topic_name']}", using ONLY the notes below.
+    source = ("using standard college-level knowledge of this topic (the notes below are a syllabus that only names it; keep to how it is taught there)"
+              if retrieval.is_outline(chunks) else "using ONLY the notes below")
+    prompt = f"""Write exactly {count} {difficulty}-level multiple-choice questions about "{topic['topic_name']}", {source}.
 Return JSON:
 {{"questions": [{{
   "question": "text",

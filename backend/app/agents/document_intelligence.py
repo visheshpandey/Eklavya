@@ -10,16 +10,19 @@ from app.errors import BadRequestError, LLMError
 SYSTEM = "You extract the topic structure of study notes. Respond with valid JSON only."
 
 
-MAX_TOPICS = 30
+MAX_TOPICS = 60   # a full syllabus (5 units of 8-12 topics) fits
 TOPIC_TEXT_CHARS = 60_000   # about 15k tokens: enough for a whole syllabus booklet in one call
 
 
 def _llm_topics(text: str):
     prompt = (
-        f'Return JSON {{"topics": ["Topic 1", "Topic 2"]}}: 3-{MAX_TOPICS} study topics (1-6 words each) covering the notes '
+        f'Return JSON {{"topics": ["Topic 1", "Topic 2"]}}: 1-{MAX_TOPICS} study topics (1-6 words each) covering the notes '
         "below, in the order they appear. If the notes contain several subjects or courses, start each topic with a short "
         'subject name so topics are distinguishable (for example "DBMS: Normalization"). Skip administrative parts such as '
-        "reference books or marks.\n\nNotes:\n" + text[:TOPIC_TEXT_CHARS]
+        "reference books, marks, credits or exam rules.\n"
+        "If the text is a syllabus or a list of topics (short items, few full sentences), keep EVERY listed topic as its own "
+        "topic, even a single word such as \"Paging\" or \"Deadlock\": do not merge items, drop them or summarise them into "
+        "broader groups. Keep the student's own wording.\n\nNotes:\n" + text[:TOPIC_TEXT_CHARS]
     )
     data = llm_json(SYSTEM, prompt, temperature=0.2, timeout_ms=settings.gemini_long_timeout_ms)
     names = [str(t).strip() for t in extract_list(data, "topics") if str(t).strip()]

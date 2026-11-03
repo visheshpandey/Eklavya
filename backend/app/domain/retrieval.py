@@ -191,6 +191,27 @@ def retrieve_for_user(user_id: int, query: str, k: int = RETRIEVAL_TOP_K, query_
     return rank(chunks_of_user(user_id), query, k, query_vector, vectors)
 
 
+OUTLINE_SEGMENT_WORDS = 6   # a piece of text this long (between commas, dashes, full stops) explains something
+OUTLINE_MIN_WORDS = 20      # fewer explaining words than this: nothing to teach from
+OUTLINE_SHARE = 0.3         # or less than this share of the text explains anything: a list of topics
+
+
+def is_outline(chunks) -> bool:
+    """True when the passages only NAME topics (a syllabus, a list of units), so there is nothing to teach from (pure).
+
+    A syllabus line such as "Unit 2: CPU Scheduling - FCFS, SJF, Round Robin" splits into short items; real notes have
+    sentences. Only pieces of OUTLINE_SEGMENT_WORDS or more count as explanation.
+    """
+    explaining = total = 0
+    for chunk in chunks or []:
+        for piece in re.split(r"[.,;:!?\n()|•–—]|\s-\s", chunk.get("text", "")):
+            n = len(piece.split())
+            total += n
+            if n >= OUTLINE_SEGMENT_WORDS:
+                explaining += n
+    return explaining < OUTLINE_MIN_WORDS or explaining < OUTLINE_SHARE * total
+
+
 SOURCE_LIMIT = 3          # citations shown under an answer
 SOURCE_RELATIVE = 0.5     # a passage must score at least this share of the best passage's score
 SOURCE_MIN_COVERAGE = 0.2  # ... and share this much of the question's words, unless it is from the best passage's own topic

@@ -64,7 +64,7 @@ def test_topic_extraction_sees_the_whole_document_and_caps_the_topic_count(monke
     def fake(system, prompt, required_keys=(), temperature=0.7, **_):
         if "topic structure" in system:
             seen["prompt"] = prompt
-            return {"success": True, "data": {"topics": [f"Topic {i}" for i in range(45)] + ["Topic 3"]}}
+            return {"success": True, "data": {"topics": [f"Topic {i}" for i in range(75)] + ["Topic 3"]}}
         return {"success": False, "error": "unexpected"}
 
     monkeypatch.setattr(gemini, "call_llm_json", fake)
@@ -72,8 +72,8 @@ def test_topic_extraction_sees_the_whole_document_and_caps_the_topic_count(monke
     assert len(text) > 12000 and text.index("LATE-MARKER-WORD") > 8000
     result = docs.ingest_document(1, "long.txt", text)
     assert "LATE-MARKER-WORD" in seen["prompt"]
-    assert len(result["topics_found"]) == docs.MAX_TOPICS == 30
-    assert len({t["topic_name"] for t in result["topics_found"]}) == 30                  # duplicates removed
+    assert len(result["topics_found"]) == docs.MAX_TOPICS == 60
+    assert len({t["topic_name"] for t in result["topics_found"]}) == 60                  # duplicates removed
 
 
 def test_chunks_go_to_the_topic_their_heading_names_not_to_one_sharing_generic_words():

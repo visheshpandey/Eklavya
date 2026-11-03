@@ -27,7 +27,9 @@ def generate(user_id: int, topic_id: int):
     context = "\n\n".join(p["text"] for p in passages)
     if not context:
         raise NotFoundError("Nothing in the notes for this topic yet.")
-    prompt = (f'Write {CARDS_PER_TOPIC} flashcards about "{topic["topic_name"]}" using ONLY these notes. Return JSON '
+    source = ("using standard college-level knowledge of it (these notes are a syllabus that only names the topic; keep to how it is taught there)"
+              if retrieval.is_outline(passages) else "using ONLY these notes")
+    prompt = (f'Write {CARDS_PER_TOPIC} flashcards about "{topic["topic_name"]}" {source}. Return JSON '
               '{"cards": [{"front": "a short question or term", "back": "the answer in 1-2 sentences, with a formula or '
               'example if the notes have one"}]}. Mix definitions, formulas, worked numbers and "why" questions.\n\n'
               f"Notes:\n{context}")

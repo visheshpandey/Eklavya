@@ -62,6 +62,8 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
         el('span', { class: 'mono', text: `Searched ${item.searched ?? 0} passage${item.searched === 1 ? '' : 's'} in ${item.ms ?? 0} ms` })),
       el('p', { class: 'mono', text: item.question }),
       el('div', { class: 'md' }, renderMarkdown(item.answer)),
+      item.from_syllabus ? el('p', { class: 'hint ask-note', text: 'Your notes only list this topic, so this explanation is from general knowledge. The passage below is where your syllabus names it.' }) : null,
+      item.fallback ? el('p', { class: 'hint ask-note', text: 'The AI helper was busy, so this is the closest passage of your notes.' }) : null,
       item.follow_up_question ? el('button', { class: 'chip-action', type: 'button', onclick: () => fill(item.follow_up_question) }, item.follow_up_question) : null,
       ...(item.sources ?? []).map((source) => el('div', { class: 'passage' }, highlighted(bestSentences(source.text, item.terms, 3), item.terms),
         el('span', { class: 'mono', text: `${source.document} · ${source.heading || source.topic}` }))),

@@ -15,7 +15,7 @@ from google.genai import types
 from app import db
 from app.agents import evaluation, quiz, study_mission
 from app.agents.logger import log_agent
-from app.domain import board as boards, scoring
+from app.domain import retrieval, board as boards, scoring
 from app.domain.mastery import update_mastery
 from app.services import search
 
@@ -209,6 +209,11 @@ async def search_notes(ctx: ToolContext, query: str = "", **_):
                "Grounded the answer in notes" if hits else "Nothing found in notes", 0.8 if hits else 0.3)
     if not hits:
         return {"found": False, "message": "Nothing about this in the student's notes. You may answer from your own general knowledge: say once, briefly, that this is not from their notes."}
+    if retrieval.is_outline(hits):
+        return {"found": True, "only_listed": True,
+                "message": "The notes only list this topic (a syllabus). Teach it from standard college-level knowledge, and say once, "
+                           "briefly, that the details are not in their notes.",
+                "results": [{"document": h["document"], "topic": h["topic"], "section": h["heading"], "text": h["text"]} for h in hits]}
     return {"found": True, "results": [
         {"document": h["document"], "topic": h["topic"], "section": h["heading"], "text": h["text"]} for h in hits]}
 
