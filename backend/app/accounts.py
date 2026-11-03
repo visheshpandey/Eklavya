@@ -80,7 +80,7 @@ def change_password(user_id: int, current: str, new: str) -> dict:
 
 # rows that belong to the user directly; documents (with their topics, notes and questions) are removed first
 _USER_TABLES = ("learner_mastery", "quiz_attempts", "misconceptions", "study_missions", "agent_logs", "learner_state",
-                "boards", "flashcards", "password_resets", "push_subscriptions", "doubts")
+                "boards", "flashcards", "password_resets", "push_subscriptions", "doubts", "feedback")
 
 
 def delete_account(user_id: int, password: str, confirm: str) -> dict:

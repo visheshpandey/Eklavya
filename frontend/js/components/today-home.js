@@ -84,7 +84,8 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
       el('div', {}, el('span', { class: 'mono', text: '● Your next session' }),
         el('h2', {}, next ? topicName : 'Your notes,', el('br'), el('em', { text: next ? 'one clear step at a time.' : 'explained out loud.' })),
         el('p', { text: next ? `Continue with ${topicName}: a short voice lesson, then a quick check on what stuck.` : 'Add notes and Eklavya plans your day, talks you through each topic and tests you by voice.' }),
-        startButton),
+        startButton,
+        el('ul', { class: 'hero-chips', 'aria-label': 'What makes Eklavya different' }, ['Speaks Hinglish', 'Cites your own notes', 'Knows what you are forgetting'].map((text) => el('li', { text })))),
       desk));
     if (!reduceMotion) {   // the desk and book lean toward the pointer
       const book3d = desk.querySelector('.book');

@@ -149,10 +149,13 @@
               <div><b data-i18n="notes.dropTitle">Drop your notes here</b><p data-i18n="notes.hint">PDF (even scanned), text, or a photo of a page. Up to 10 MB per file.</p></div>
               <div class="drop-acts">
                 <button id="btnUpload" class="btn btn-primary" type="button"><span data-icon="upload-simple" data-size="18"></span><span data-i18n="notes.upload">Upload notes</span></button>
+                <button id="btnSnap" class="btn btn-secondary" type="button">Snap a page of notes</button>
                 <button id="btnDemo" class="btn btn-secondary" type="button" data-i18n="notes.demo">Try the demo notes</button>
               </div>
+              <input id="fileCam" type="file" accept="image/*" capture="environment" hidden aria-label="Take a photo of a page of your notes">
               <input id="file" type="file" accept=".pdf,.txt,.md,.png,.jpg,.jpeg,.webp,.heic,image/*" multiple hidden aria-label="Choose PDFs, text files or photos of your notes">
             </div>
+            <div id="afterUpload" class="after-upload" role="status" hidden></div>
             <div class="notes-tools">
               <div id="linkImport" class="link-import"></div>
               <div class="search">

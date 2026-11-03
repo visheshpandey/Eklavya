@@ -783,3 +783,31 @@ html.wave-gsap .wave i { animation: none; }
 .lb-av { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--sage); font: 400 16px var(--font-serif); flex: none; }
 .leaderboard .is-you .lb-av { background: var(--ochre); color: #fff; }
 @media (max-width: 900px) { .gc-cols { grid-template-columns: 1fr; } }
+
+/* after a photo or file is read: one tap to a voice lesson */
+.after-upload { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--sage); }
+.after-upload[hidden] { display: none; }
+.after-upload small { color: var(--ink-3); font-size: 13px; }
+
+.hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; padding: 0; list-style: none; }
+.hero-chips li { padding: 6px 12px; border: 1px solid rgba(255, 255, 255, .28); border-radius: 999px; font: 500 11px/1.2 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: rgba(255, 255, 255, .85); }
+
+.impact-how { margin-top: 20px; }
+.arch { display: block; width: 100%; max-width: 640px; height: auto; margin: 10px 0; }
+
+/* the three-question feedback card */
+.fb-card { position: fixed; right: 20px; bottom: 20px; z-index: 120; width: min(360px, calc(100vw - 32px)); padding: 16px 18px; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 18px 40px var(--drop-shadow); }
+.fb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font: 400 20px var(--font-serif); }
+.fb-x { font-size: 22px; line-height: 1; }
+.fb-q { border: 0; padding: 0; margin: 10px 0 0; }
+.fb-q legend { font-size: 14px; margin-bottom: 6px; padding: 0; }
+.fb-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-opt { min-height: 40px; min-width: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font-size: 14px; cursor: pointer; }
+.fb-opt[aria-pressed="true"] { background: var(--green, #29483e); border-color: var(--green, #29483e); color: #fff; }
+.fb-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.fb-thanks { font-size: 14px; }
+@media (max-width: 700px) { .fb-card { bottom: 84px; right: 16px; } }
+
+.fold .md-list { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 6px; list-style: disc; font-size: 15px; color: var(--ink-2, var(--ink)); line-height: 1.55; }
+.fold .impact-grid > div > p { font-size: 15px; line-height: 1.6; }
+.fold .impact-how .hint, .fold .impact-grid .hint { margin-top: 6px; }

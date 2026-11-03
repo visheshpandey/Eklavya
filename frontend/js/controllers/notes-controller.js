@@ -9,8 +9,9 @@ import { actions } from '../state/actions.js';
  * @param {ReturnType<typeof import('./notifier.js').createNotifier>} deps.notifier
  * @param {number} deps.userId
  * @param {() => void} deps.endSession stops any running voice session before notes change
+ * @param {(result: {topics_found: {id: number, topic_name: string}[]}, name: string) => void} [deps.onUploaded] called after notes were added from a file
  */
-export function createNotesController({ store, backend, notifier, userId, endSession }) {
+export function createNotesController({ store, backend, notifier, userId, endSession, onUploaded = () => {} }) {
   let demoLoad = null;   // the demo load in progress, if any
   async function loadDashboard() {
     const dashboard = await backend.dashboard(userId);
@@ -68,6 +69,7 @@ export function createNotesController({ store, backend, notifier, userId, endSes
       store.dispatch(actions.notesReset());
       await loadDashboard();
       notifier.success(`Found ${result.topics_found.length} topics in ${file.name}. Tap one to start.`);
+      onUploaded(result, file.name);
     }),
 
     /** Remove one notes document and the progress on its topics. */

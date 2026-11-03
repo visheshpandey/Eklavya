@@ -1,6 +1,6 @@
 // Entry point: builds the store, services and controllers, then mounts each UI component on its element.
 import { USER_ID } from './lib/config.js';
-import { byId } from './lib/dom.js';
+import { byId, el, render } from './lib/dom.js';
 import { t } from './lib/strings.js';
 import { hydrateIcons } from './lib/icons.js';
 import { SESSION_MODE, VOICE_STATUS } from './lib/protocol.js';
@@ -74,6 +74,7 @@ import { mountDemoCircle } from './components/demo-circle.js';
 import { mountWelcome } from './components/welcome.js';
 import { createTour } from './components/tour.js';
 import { mountImpact } from './components/impact-view.js';
+import { mountFeedbackCard } from './components/feedback-card.js';
 import { isLite, setLite } from './motion/env.js';
 import { mountAvatar } from './components/avatar.js';
 import { mountMentorFrame } from './avatar/system.js';
@@ -99,9 +100,12 @@ const notifier = createNotifier(store);
 const home = createHomeController({ store, backend, notifier, userId: USER_ID, onMastery: () => notes?.refresh() });   // a rating changes mastery: reload it everywhere
 
 let session;   // the notes controller needs to end a session; the session controller needs the notes controller
-const notes = createNotesController({ store, backend, notifier, userId: USER_ID, endSession: () => session.stop() });
+const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(answers) });
+document.addEventListener('eklavya:mastery', () => feedback.count());   // a flashcard rating
+const notes = createNotesController({ store, backend, notifier, userId: USER_ID, endSession: () => session.stop(),
+  onUploaded: (result, name) => showAfterUpload(result.topics_found?.[0], name) });
 session = createSessionController({ store, notes, notifier, userId: USER_ID, getLanguage: () => byId('lang').value, getTutor: () => byId('tutor').value,
-  onProgress: home.refresh, preparePhoto: shrinkPhoto });
+  onProgress: () => { home.refresh(); feedback.count(); }, preparePhoto: shrinkPhoto });
 
 // what the student last started, so finishing it can tick off a step of today's route
 let launch = null;
@@ -248,6 +252,21 @@ mountLibrary({
   onRemoveDocument: notes.removeDocument,
 });
 mountLinkImport({ root: byId('linkImport'), onImport: notes.importLink });
+// a photo of a page: the camera on a phone; afterwards one tap starts a voice lesson on the first topic found
+byId('btnSnap').addEventListener('click', () => byId('fileCam').click());
+byId('fileCam').addEventListener('change', async (event) => {
+  const [file] = event.target.files; event.target.value = '';
+  if (!file) return;
+  const button = byId('btnSnap'); button.disabled = true; button.textContent = 'Reading the photo…';
+  try { await notes.uploadFile(file); } finally { button.disabled = false; button.textContent = 'Snap a page of notes'; }
+});
+function showAfterUpload(topic, name) {
+  const box = byId('afterUpload');
+  if (!topic) { box.hidden = true; return; }
+  const go = el('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: () => { box.hidden = true; showView(VIEWS.STUDY); startMode('learn', topic.id); } }, 'Start a voice lesson ↗');
+  render(box, el('span', {}, el('b', { text: topic.topic_name }), el('small', { text: ` is ready from ${name}` })), go);
+  box.hidden = false;
+}
 mountHeaderControls({
   demoButton: byId('btnDemo'), uploadButton: byId('btnUpload'), fileInput: byId('file'), dropZone: byId('drop'),
   onLoadDemo: notes.loadDemo, onUpload: notes.uploadFile,
@@ -475,4 +494,4 @@ byId('helpAbout').addEventListener('click', () => {
   aboutDialog.showModal();
 });
 byId('aboutClose').addEventListener('click', () => aboutDialog.close());
-mountImpact({ root: byId('impactBody') });
+mountImpact({ root: byId('impactBody'), loadSummary: () => backend.feedbackSummary() });

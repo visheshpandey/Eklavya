@@ -10,7 +10,7 @@ from app import db
 from app.agents.logger import log_agent
 from app.ai.gemini import llm_json
 from app.domain import language_check, retrieval
-from app.errors import BadRequestError
+from app.errors import BadRequestError, LLMError
 from app.services.search import search
 
 LANG_RULES = {
@@ -48,6 +48,19 @@ def _evidence(question: str, chunks, searched: int, search_ms: int) -> dict:
             "match": "none" if not used else "strong" if share >= MATCH_STRONG else "partial"}
 
 
+def _from_notes_only(user_id: int, question: str, chunks, evidence: dict) -> dict:
+    """When Gemini cannot answer, show the best passage of the student's own notes, with its citation, instead of an error."""
+    top = chunks[0]
+    text = " ".join(top["text"].split())
+    if len(text) > 420:
+        text = text[:420].rsplit(" ", 1)[0] + "…"
+    log_agent(user_id, "voice_tutor", f"Question: {question}", "Gemini unavailable", "Showed the best passage from the notes", 0.5)
+    return _save(user_id, question, {
+        "answer": f"The AI helper is busy right now, so here is what your notes say about it: {text}",
+        "follow_up_question": None, "source_topic": top["topic"], "source_document": top["document_id"],
+        "grounded": True, "chunks_used": len(chunks), "fallback": True, **evidence})
+
+
 def ask(user_id: int, question: str, language: str = "hinglish", document_id: int = None):
     if not document_id and not retrieval.has_notes(user_id):
         raise BadRequestError("No notes uploaded yet. Upload a document first.")
@@ -74,7 +87,11 @@ Notes:
 {notes}
 
 Return JSON {{"answer": "...", "follow_up_question": "one short question that checks understanding", "source_topic": "topic name you used"}}"""
-    d = llm_json(SYSTEM, prompt, required_keys=("answer", "follow_up_question"), temperature=0.5)
+    try:
+        d = llm_json(SYSTEM, prompt, required_keys=("answer", "follow_up_question"), temperature=0.5)
+    except LLMError as err:   # Gemini is busy, out of quota or slow: the notes themselves still answer
+        log.warning("Ask fell back to the notes: %s", err)
+        return _from_notes_only(user_id, question, chunks, _evidence(question, chunks, searched, search_ms))
     slips = language_check.violations(f"{d['answer']} {d['follow_up_question']}", language)
     if slips:   # the model slipped (a stray word from another language, Devanagari in Hinglish, "bhai"): ask once more, then clean up
         log.warning("Ask answer slipped (%s): %s", language, "; ".join(slips))

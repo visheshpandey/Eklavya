@@ -46,6 +46,21 @@ def test_ask_returns_the_passages_it_used_and_how_well_they_match(student, monke
     assert none["match"] == "none" and none["sources"] == [] and none["grounded"] is False and none["searched"] == 1
 
 
+def test_ask_falls_back_to_the_notes_when_gemini_is_busy(student, monkeypatch):
+    from app.errors import LLMError
+    user_id, headers = student
+    notes(user_id)
+
+    def busy(*a, **k):
+        raise LLMError("quota")
+    monkeypatch.setattr(voice_tutor, "llm_json", busy)
+    res = client.post("/api/tutor/ask", headers=headers, json={"question": "explain gradient descent", "language": "english"})
+    assert res.status_code == 200
+    out = res.json()
+    assert out["fallback"] is True and out["grounded"] is True and "your notes say" in out["answer"]
+    assert out["sources"] and out["sources"][0]["document"] == "ml.txt"   # still cites the passage
+
+
 def test_hard_steps_a_card_back_one_box_again_resets_and_got_it_moves_up():
     assert flashcards.next_box(3, knew=True) == 4
     assert flashcards.next_box(3, knew=False) == 0

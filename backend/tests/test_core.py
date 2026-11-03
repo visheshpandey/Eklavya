@@ -131,7 +131,8 @@ def test_gemini_outage_is_a_502_with_no_canned_content_and_no_partial_writes():
     GEMINI_DOWN["on"] = True
 
     r = client.post("/api/tutor/ask", json={"question": "what is recall"})
-    assert r.status_code == 502 and "Gemini" in r.json()["error"] and "answer" not in r.json()
+    # Ask is the one exception: it shows the student's own best passage (with its citation), not invented text
+    assert r.status_code == 200 and r.json()["fallback"] is True and r.json()["sources"]
     assert client.post("/api/missions/generate", json={}).status_code == 502
     assert client.post("/api/upload-document", files={"file": ("n.txt", b"Heading\n\n" + b"word " * 30)}).status_code == 502
 

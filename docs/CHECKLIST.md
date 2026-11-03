@@ -59,3 +59,10 @@ Legend: [x] done and verified · [ ] to do. Details of each step are in [LOG.md]
 - [ ] Design screens not built yet: dark debate screen, first-run mic screen, side-by-side Progress layout
 - [ ] Hindi text for the new Today hero, study modes, Ask, flashcard review
 - [ ] Later (optional, paid): realistic video avatar from a vendor; the drawn avatar sits behind its own component so it can be swapped
+
+## Before judging (3 to 5 December 2026) — only the owner can do these
+- [ ] About 2 December: turn keep-awake on (uncomment the `schedule` lines in `.github/workflows/keep-awake.yml`, push) so Render does not sleep
+- [ ] Check the Render free instance hours left and the Gemini free quota
+- [ ] Live site: My notes -> Remove the old demo notes on the guest account
+- [ ] Ask 10 to 20 classmates to use the app and answer the three-question card (the result appears on "Why Eklavya" after 5 answers)
+- [ ] Record the 2-minute demo video and make the 5-slide deck (on hold)

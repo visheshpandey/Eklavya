@@ -20,6 +20,7 @@ export function mountWelcome({ root, isGuest, onDemo, onUpload, onTour, storage 
         el('span', { class: 'mono', text: 'A voice-first study mentor' }),
         el('h2', { text: 'Your notes. Your language. A mentor that talks back.' }),
         el('p', { class: 'lead', text: 'Upload notes → talk in Hinglish → get tested → watch mastery grow.' }),
+        el('ul', { class: 'hero-chips', 'aria-label': 'What makes Eklavya different' }, ['Speaks Hinglish', 'Cites your own notes', 'Knows what you are forgetting'].map((text) => el('li', { text }))),
         el('div', { class: 'welcome-acts' },
           isGuest ? el('button', { class: 'btn btn-primary btn-lg', type: 'button', id: 'btnTryDemo', onclick: async () => { done(); await onDemo(); } }, 'Try a 30-sec demo') : el('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { done(); onTour(); } }, 'Take the tour'),
           el('button', { class: 'btn btn-secondary btn-lg', type: 'button', onclick: () => { done(); onUpload(); } }, 'Upload my notes'),
