@@ -731,19 +731,3 @@ html.wave-gsap .wave i { animation: none; }
 .mentor-frame .mf-static { inset: 14px 0 118px 0; }
 .mentor-frame .avatar { width: min(100%, 250px); height: 100%; max-height: 270px; margin-inline: auto; aspect-ratio: 120 / 130; }
 .mentor-frame .avatar-svg { height: 100%; width: 100%; }
-
-/* the loading screen while a sleeping server wakes: a whole calm page, shown only when the wait is noticeable */
-.splash { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: var(--bg); opacity: 0; animation: splashin .5s ease .6s forwards; transition: opacity .6s; }
-.splash.splash-out { opacity: 0 !important; animation: none; pointer-events: none; }
-.splash-inner { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 24px; max-width: 460px; }
-.splash .logo { width: 64px; height: 64px; font-size: 44px; animation: splashbob 2.4s ease-in-out infinite; }
-.splash-title { font: 400 44px var(--font-serif); margin: 0; }
-.splash-sub { color: var(--ink-3); }
-.splash-bar { display: block; width: min(300px, 70vw); height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 6px; }
-.splash-bar i { display: block; height: 100%; width: 0; background: var(--terracotta); animation: splashfill 40s cubic-bezier(.2, .6, .3, 1) forwards; }
-.splash-note { font-size: 13px; color: var(--ink-3); }
-.splash-line { font: italic 18px/1.35 var(--font-serif); color: var(--ink); min-height: 2.7em; max-width: 36ch; }
-@keyframes splashin { to { opacity: 1; } }
-@keyframes splashfill { to { width: 94%; } }
-@keyframes splashbob { 50% { transform: rotate(-4deg) translateY(-6px); } }
-@media (prefers-reduced-motion: reduce) { .splash .logo, .splash-bar i { animation: none; } .splash-bar i { width: 60%; } }
