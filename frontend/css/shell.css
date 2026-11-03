@@ -431,7 +431,7 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 
 /* Study room 3D: the mentor's canvas sits over the drawn face; the orb's sphere sits behind its button */
 .avatar { position: relative; }
-.avatar.is-3d .avatar-svg { opacity: 0; }
+.avatar.is-3d .avatar-svg { opacity: 0; visibility: hidden; animation: none; }
 .avatar .scene-canvas { z-index: 1; }
 .orb-wrap { position: relative; display: inline-grid; place-items: center; width: 96px; height: 96px; }
 .orb3d { position: absolute; left: -27px; top: -27px; width: 150px; height: 150px; pointer-events: none; }
