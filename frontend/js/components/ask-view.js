@@ -8,6 +8,7 @@ import { coverLetters, groupSubjects } from '../lib/subjects.js';
 import { renderMarkdown } from '../lib/markdown.js';
 import { plural, shortDate } from '../lib/format.js';
 import { icon } from '../lib/icons.js';
+import { createDictation } from '../lib/dictation.js';
 
 const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
 
@@ -15,7 +16,7 @@ const when = shortDate;   // "2 Nov"
 const DOUBTS_SHOWN = 5;
 const MATCH = { strong: ['Strong match', ''], partial: ['Partial match', ' partial'], none: ['Not in your notes', ' partial'] };
 
-export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWrap, onAsk, onList, onDelete, onClear, topics, subjects, sound, onListen }) {
+export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWrap, onAsk, onList, onDelete, onClear, topics, subjects, sound, onListen, getLanguage = () => 'hinglish' }) {
   const thread = [];   // this visit's questions and answers, newest first
   let busy = false;
   let query = '';
@@ -24,6 +25,26 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   let draft = '';
   let error = '';
   let showAllDoubts = false;
+  let listening = false;
+  const dictation = createDictation({
+    getLanguage,
+    onText: (text) => { draft = text; const box = chatRoot.querySelector('#ask-input'); if (box) box.value = text; },
+    onState: (state, code) => {
+      listening = state === 'listening';
+      paintMic();
+      if (state !== 'error') return;
+      error = code === 'not-allowed' ? 'Allow the microphone to speak your question.' : code === 'no-speech' ? 'I did not hear anything. Try again.' : '';
+      const line = chatRoot.querySelector('.err');
+      if (line) line.textContent = error;
+    },
+  });
+  function paintMic() {
+    const mic = chatRoot.querySelector('#ask-mic');
+    if (!mic) return;
+    mic.setAttribute('aria-pressed', String(listening));
+    mic.setAttribute('aria-label', listening ? 'Stop listening' : 'Speak your question');
+    mic.classList.toggle('on', listening);
+  }
 
   /** A cited passage: its markdown is drawn (no "###" or "**" on screen) with the question's words highlighted. */
   function highlighted(text, terms) {
@@ -44,7 +65,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
       item.follow_up_question ? el('button', { class: 'chip-action', type: 'button', onclick: () => fill(item.follow_up_question) }, item.follow_up_question) : null,
       ...(item.sources ?? []).map((source) => el('div', { class: 'passage' }, highlighted(bestSentences(source.text, item.terms, 3), item.terms),
         el('span', { class: 'mono', text: `${source.document} · ${source.heading || source.topic}` }))),
-      sound.isOn() ? el('button', { class: 'linkbtn', type: 'button', onclick: () => onListen(item.answer) }, 'Listen ↗') : null);
+      el('button', { class: 'linkbtn listen-btn', type: 'button', onclick: () => onListen(item.answer) }, icon('speaker-high', { size: 16 }), ' Listen'));
   }
 
   function exampleChips() {
@@ -60,10 +81,15 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
     input.addEventListener('input', () => { draft = input.value; if (error) { error = ''; chatRoot.querySelector('.err').textContent = ''; } });
     input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) form.requestSubmit(); });
     const form = el('form', { class: 'askbox', id: 'askForm' }, input,
-      el('div', { class: 'cbot' }, el('small', { text: 'Answers come only from your library. Ctrl+Enter to send.' }),
-        el('button', { class: 'btn btn-primary', type: 'submit', disabled: busy ? '' : null }, busy ? 'Asking…' : 'Ask ↗')));
+      el('div', { class: 'cbot' }, el('small', { text: 'Answers come from your notes first. Ctrl+Enter to send.' }),
+        el('div', { class: 'cact' },
+          dictation.available() ? el('button', { id: 'ask-mic', class: 'btn btn-secondary ask-mic', type: 'button', 'aria-pressed': String(listening),
+            'aria-label': listening ? 'Stop listening' : 'Speak your question', disabled: busy ? '' : null,
+            onclick: () => { if (dictation.listening()) dictation.stop(); else dictation.start(input.value); } }, icon('microphone', { size: 20 })) : null,
+          el('button', { class: 'btn btn-primary', type: 'submit', disabled: busy ? '' : null }, busy ? 'Asking…' : 'Ask ↗'))));
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      dictation.stop();
       const question = input.value.trim();
       if (!question) { error = 'Enter a question first.'; chatRoot.querySelector('.err').textContent = error; input.focus(); return; }
       if (busy) return;

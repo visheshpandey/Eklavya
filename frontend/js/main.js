@@ -180,7 +180,8 @@ const ask = mountAsk({
   onAsk: (question) => backend.ask(question, byId('lang').value),
   onList: backend.doubts, onDelete: backend.deleteDoubt, onClear: backend.clearDoubts,
   topics: () => [...topicsOf()].sort((a, b) => a.mastery_score - b.mastery_score).map((topic) => topic.topic_name),
-  subjects: topicsOf, sound, onListen: (text) => sound.speak(text, byId('lang').value === 'hindi' ? 'hi-IN' : 'en-IN'),
+  subjects: topicsOf, sound, getLanguage: () => byId('lang').value,
+  onListen: (text) => { if (sound.isSpeaking()) { sound.stopSpeaking(); return; } sound.speak(text, byId('lang').value === 'hindi' ? 'hi-IN' : 'en-IN', { force: true }); },
 });
 store.select(selectDashboard, () => ask.redrawSide());
 

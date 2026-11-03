@@ -38,8 +38,9 @@ export function createSound({ on = true, audio = globalThis } = {}) {
     } catch { /* silence is fine */ }
   }
 
-  function speak(text, lang = 'en-IN') {
-    if (!enabled || !audio.speechSynthesis) return false;
+  /** Read text aloud. `force` is for a button the student pressed on purpose: it works even when the Sound toggle is off. */
+  function speak(text, lang = 'en-IN', { force = false } = {}) {
+    if ((!enabled && !force) || !audio.speechSynthesis) return false;
     try {
       audio.speechSynthesis.cancel();
       const utterance = new audio.SpeechSynthesisUtterance(text);
@@ -48,11 +49,12 @@ export function createSound({ on = true, audio = globalThis } = {}) {
       return true;
     } catch { return false; }
   }
+  const isSpeaking = () => { try { return Boolean(audio.speechSynthesis?.speaking); } catch { return false; } };
   const stopSpeaking = () => { try { audio.speechSynthesis?.cancel(); } catch { /* nothing playing */ } };
 
   return {
     isOn: () => enabled,
     set(value) { enabled = Boolean(value); if (!enabled) stopSpeaking(); },
-    pageTurn, speak, stopSpeaking,
+    pageTurn, speak, stopSpeaking, isSpeaking,
   };
 }

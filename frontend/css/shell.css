@@ -811,3 +811,11 @@ html.wave-gsap .wave i { animation: none; }
 .fold .md-list { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 6px; list-style: disc; font-size: 15px; color: var(--ink-2, var(--ink)); line-height: 1.55; }
 .fold .impact-grid > div > p { font-size: 15px; line-height: 1.6; }
 .fold .impact-how .hint, .fold .impact-grid .hint { margin-top: 6px; }
+
+/* Ask: speak the question, hear the answer */
+.cact { display: flex; align-items: center; gap: 10px; }
+.ask-mic { min-width: 48px; min-height: 48px; padding: 0 12px; }
+.ask-mic.on { background: var(--terracotta); border-color: var(--terracotta); color: #fff; animation: micpulse 1.2s ease-in-out infinite; }
+@keyframes micpulse { 50% { box-shadow: 0 0 0 8px rgba(184, 96, 74, .22); } }
+@media (prefers-reduced-motion: reduce) { .ask-mic.on { animation: none; } }
+.listen-btn { display: inline-flex; align-items: center; gap: 6px; }
