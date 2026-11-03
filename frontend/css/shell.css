@@ -819,3 +819,33 @@ html.wave-gsap .wave i { animation: none; }
 @keyframes micpulse { 50% { box-shadow: 0 0 0 8px rgba(184, 96, 74, .22); } }
 @media (prefers-reduced-motion: reduce) { .ask-mic.on { animation: none; } }
 .listen-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* the guided demo: a calm card docked bottom-left, a pill when made smaller */
+.guide-dock { position: fixed; left: 20px; bottom: 20px; z-index: 110; }
+.guide-dock[hidden] { display: none; }
+.guide { width: min(360px, calc(100vw - 32px)); padding: 16px 18px; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 18px 40px var(--drop-shadow); }
+.guide-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.guide-head b { display: block; font: 400 21px/1.15 var(--font-serif); margin-top: 4px; }
+.guide-tools { display: flex; gap: 4px; }
+.guide-tools .icon-btn { width: 36px; height: 36px; min-width: 36px; font-size: 20px; line-height: 1; }
+.guide-bar { display: block; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin: 12px 0 6px; }
+.guide-bar i { display: block; height: 100%; background: var(--terracotta); transition: width .4s ease; }
+.guide-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.guide-step { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.guide-step:last-child { border-bottom: 0; }
+.guide-mk { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); font: 500 12px var(--font-mono); color: var(--ink-3); }
+.guide-step.cur .guide-mk { border-color: var(--terracotta); color: var(--terracotta); }
+.guide-step.done .guide-mk { background: var(--green, #29483e); border-color: var(--green, #29483e); color: #fff; }
+.guide-step.done .guide-copy b { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--line); }
+.guide-copy { display: grid; gap: 2px; min-width: 0; }
+.guide-copy b { font-size: 14px; font-weight: 600; }
+.guide-copy small { font-size: 12.5px; color: var(--ink-3); line-height: 1.4; }
+.guide-alt { justify-self: start; font-size: 12.5px; padding: 0; min-height: 28px; }
+.guide-end p { font-size: 14px; line-height: 1.5; margin: 8px 0 12px; }
+.guide-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.guide-pill { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-hi); color: var(--ink); box-shadow: 0 10px 24px var(--drop-shadow); cursor: pointer; }
+.guide-pill b { font: 400 18px var(--font-serif); }
+@media (max-width: 700px) { .guide-dock { left: 16px; right: 16px; bottom: 76px; } .guide { width: auto; } }
+
+/* the guide sits bottom-right on wide screens (the left is the content); the feedback card takes bottom-left */
+@media (min-width: 701px) { .guide-dock { left: auto; right: 20px; } .fb-card { right: auto; left: 20px; } }

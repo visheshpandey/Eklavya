@@ -72,6 +72,7 @@ import { mountMockExam } from './components/mock-exam.js';
 import { mountGroups } from './components/groups-view.js';
 import { mountDemoCircle } from './components/demo-circle.js';
 import { mountWelcome } from './components/welcome.js';
+import { mountGuide } from './components/guide.js';
 import { createTour } from './components/tour.js';
 import { mountImpact } from './components/impact-view.js';
 import { mountFeedbackCard } from './components/feedback-card.js';
@@ -100,6 +101,7 @@ const notifier = createNotifier(store);
 const home = createHomeController({ store, backend, notifier, userId: USER_ID, onMastery: () => notes?.refresh() });   // a rating changes mastery: reload it everywhere
 
 let session;   // the notes controller needs to end a session; the session controller needs the notes controller
+const guideMark = (id) => document.dispatchEvent(new CustomEvent('eklavya:guide', { detail: id }));
 const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(answers) });
 document.addEventListener('eklavya:mastery', () => feedback.count());   // a flashcard rating
 const notes = createNotesController({ store, backend, notifier, userId: USER_ID, endSession: () => session.stop(),
@@ -177,7 +179,7 @@ const badges = mountBadges({ root: byId('badges'), onLoad: backend.badges });
 const topicsOf = () => selectDashboard(store.getState())?.mastery ?? [];
 const ask = mountAsk({
   chatRoot: byId('askChat'), listRoot: byId('doubts'), sourcesRoot: byId('srcList'), recentRoot: byId('recentDoubts'), recentWrap: byId('recentWrap'),
-  onAsk: (question) => backend.ask(question, byId('lang').value),
+  onAsk: async (question) => { const answer = await backend.ask(question, byId('lang').value); guideMark('ask'); return answer; },
   onList: backend.doubts, onDelete: backend.deleteDoubt, onClear: backend.clearDoubts,
   topics: () => [...topicsOf()].sort((a, b) => a.mastery_score - b.mastery_score).map((topic) => topic.topic_name),
   subjects: topicsOf, sound, getLanguage: () => byId('lang').value,
@@ -208,11 +210,13 @@ mountExamPlanner({
   store, root: byId('planner'), onSave: home.savePlan, onClear: home.clearPlan,
   onOpenItem: (item) => notes.openTopic(item.topic_id),   // a day chip opens the topic; the Start buttons on Today's plan start a session
 });
+/** Nobody has used the welcome on this browser yet: a judge's first look. */
+function firstVisit() { try { return localStorage.getItem('eklavya.welcome.done') !== '1'; } catch { return false; } }
 // the opening animation plays once per visit (not for a link to a specific screen, not with reduced motion)
 const intro = mountIntro({
   intro: byId('intro'), frame: document.querySelector('.frame'), nav: byId('mtabs'), skip: byId('skip'),
   getDesk: () => document.getElementById('desk'), reduceMotion,
-  deepLink: Boolean(params.get('view') || params.get('reset') || location.hash.slice(1)) || needsLogin(),   // not behind the login screen: it plays after signing in
+  deepLink: Boolean(params.get('view') || params.get('reset') || location.hash.slice(1)) || needsLogin() || firstVisit(),   // a first visit sees the message, not an animation   // not behind the login screen: it plays after signing in
 });
 
 mountRail({ store, streakDays: byId('streakDays'), streakUnit: byId('streakUnit'), streakText: byId('streakNote'), weekDots: byId('weekDots'), dueBadge: byId('dueNav'), crumb: byId('crumb') });
@@ -427,7 +431,8 @@ store.select(selectView, (view) => { if (location.hash.slice(1) !== view) histor
 globalThis.addEventListener('hashchange', () => { if (validView(location.hash.slice(1))) store.dispatch(actions.viewChanged(location.hash.slice(1))); });
 if (params.get('reset')) authDialog.open('reset', params.get('reset'));
 else if (needsLogin()) authDialog.open();
-else notes.refresh().then(() => intro.whenDone(() => { if (!onboardingDone()) store.dispatch(actions.onboardingSet(true)); }));   // the guide waits for the intro
+// the 3-step first-run dialog is for a signed-in student; a guest (a judge) gets the welcome and the guided demo instead, with nothing on top
+else notes.refresh().then(() => intro.whenDone(() => { if (signedIn && !onboardingDone()) store.dispatch(actions.onboardingSet(true)); }));
 
 const documentsOf = () => {
   const seen = new Map();
@@ -475,14 +480,44 @@ const tour = createTour({
   ],
   onEnd: (finished) => { welcome.done(); showView(VIEWS.TODAY); if (finished) notifier.success('That was the tour. Replay it any time from the ? menu.'); },
 });
+// --- the guided demo: four real things to do, each ticked when it really happened
+const DEMO_QUESTION = 'Precision aur recall mein kya difference hai?';
+const demoTopics = () => topicsOf();
+const guide = mountGuide({
+  root: byId('guide'),
+  actions: {
+    ask: () => { showView(VIEWS.ASK); ask.askNow(demoTopics().some((t) => t.topic_name === 'Precision') ? DEMO_QUESTION : `Explain ${demoTopics()[0]?.topic_name ?? 'this topic'} in simple words.`); },
+    talk: () => { const first = demoTopics().find((t) => t.topic_name === 'Precision') ?? demoTopics()[0]; showView(VIEWS.STUDY); if (first) startMode(SESSION_MODE.LEARN, first.topic_id); else session.start(SESSION_MODE.FREE); },
+    type: () => { showView(VIEWS.STUDY); session.start(SESSION_MODE.FREE); setTimeout(() => byId('textin')?.focus(), 1200); },
+    cards: () => { showView(VIEWS.FLASHCARDS); document.activeElement?.blur(); },   // Space flips the card, not this button again
+    progress: () => showView(VIEWS.PROGRESS),
+    why: () => { showView(VIEWS.TODAY); const fold = byId('impact'); fold.open = true; setTimeout(() => fold.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); },
+    ownNotes: openNotes,
+  },
+});
+document.addEventListener('eklavya:guide', (event) => guide.mark(event.detail));
+document.addEventListener('eklavya:mastery', () => guideMark('cards'));
+store.select(selectView, (view) => { if (view === VIEWS.PROGRESS) guideMark('progress'); });
+store.select(selectVoiceStatus, (status) => { if (status === VOICE_STATUS.LISTENING || status === VOICE_STATUS.SPEAKING) guideMark('talk'); });
+byId('textform').addEventListener('submit', () => { if (byId('textin').value.trim()) guideMark('talk'); });
+async function startGuide() {
+  guide.open();
+  showView(VIEWS.TODAY);
+  if (!(selectDashboard(store.getState())?.mastery?.length)) {   // already has notes: nothing to reload
+    notifier.info('Loading the demo notes…');
+    await notes.loadDemo();
+    await home.refresh();
+  }
+}
 const welcome = mountWelcome({
   root: byId('welcome'), isGuest: !signedIn,
-  onDemo: async () => { notifier.info('Loading the demo notes…'); tour.start(); if (!(selectDashboard(store.getState())?.mastery?.length)) { await notes.loadDemo(); await home.refresh(); } },   // already has notes: nothing to reload   // the tour starts at once; the demo data arrives while it runs
+  onDemo: startGuide,   // the guided demo: load the demo notes if needed, then the four-step checklist
   onUpload: openNotes, onTour: () => tour.start(),
 });
 byId('demoPill').hidden = signedIn;
 byId('demoPill').addEventListener('click', () => authDialog.open());
 byId('helpTour').addEventListener('click', () => { setMenu(false); tour.start(); });
+byId('helpGuide').addEventListener('click', () => { setMenu(false); startGuide(); });
 byId('helpLite').textContent = isLite() ? 'Lite mode: on (turn off)' : 'Lite mode: off (turn on)';
 byId('helpLite').addEventListener('click', () => { setLite(!isLite()); location.reload(); });
 byId('helpExit').hidden = signedIn;

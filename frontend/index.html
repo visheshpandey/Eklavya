@@ -94,6 +94,7 @@
               <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
               <span id="demoPill" class="demo-pill" hidden>Demo mode</span>
               <hr class="menu-rule">
+              <button class="menu-item" type="button" id="helpGuide">Start the guided demo</button>
               <button class="menu-item" type="button" id="helpTour">Replay the tour</button>
               <button class="menu-item" type="button" id="helpAbout">About Eklavya and its impact</button>
               <button class="menu-item" type="button" id="helpLite">Lite mode</button>
@@ -245,7 +246,7 @@
 
           <!-- ASK -->
           <section id="panel-ask" class="panel" role="tabpanel" aria-labelledby="tab-ask">
-            <div><p class="mono">No guesswork. Just your material.</p><h1 class="page-title">Ask Eklavya<em>.</em></h1></div>
+            <div><p class="mono">No guesswork. Just your material.</p><h1 class="page-title">Ask Eklavya<em>.</em></h1><p class="lead">Type or speak a question. Every answer shows the exact passage of your notes it came from.</p></div>
             <div class="askgrid">
               <div style="min-width:0"><div id="askChat" class="ask"></div></div>
               <aside class="card" style="align-self:start">
@@ -298,7 +299,7 @@
           <!-- FLASHCARDS -->
           <section id="panel-flashcards" class="panel" role="tabpanel" aria-labelledby="tab-flashcards">
             <div class="fc-top">
-              <div><p class="mono">Small repetitions. Long memory.</p><h1 class="page-title">Flashcards<em>.</em></h1></div>
+              <div><p class="mono">Small repetitions. Long memory.</p><h1 class="page-title">Flashcards<em>.</em></h1><p class="lead">Flip a card and rate it. Eklavya decides when you see it again, and your mastery moves with every rating.</p></div>
               <div class="fc-actions">
                 <span class="fc-info"><button id="fcInfo" class="icon-btn" type="button" aria-describedby="fcTip" aria-label="How spaced repetition works">?</button>
                   <span id="fcTip" role="tooltip" class="fc-tip">Got it moves a card to a longer gap. Hard steps it back one box. Again brings it back today. Your schedule is saved with your account.</span></span>
@@ -349,6 +350,7 @@
   <script src="config.js"></script>
   <script>fetch(window.APP_CONFIG.apiBase + "/api/health", { cache: "no-store" }).catch(function () {});   /* wake the server the instant the page opens */</script>
   <script type="module" src="js/main.js"></script>
+  <div id="guide" class="guide-dock" hidden></div>
 </body>
 
 </html>
