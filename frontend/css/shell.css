@@ -732,15 +732,18 @@ html.wave-gsap .wave i { animation: none; }
 .mentor-frame .avatar { width: min(100%, 250px); height: 100%; max-height: 270px; margin-inline: auto; aspect-ratio: 120 / 130; }
 .mentor-frame .avatar-svg { height: 100%; width: 100%; }
 
-/* the server wake-up card */
-.wake { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 150; width: min(440px, calc(100vw - 24px)); }
-.wake[hidden] { display: none; }
-.wake-card { display: grid; gap: 8px; padding: 16px 18px; background: var(--hero); color: var(--hero-ink); border-radius: var(--r-panel); box-shadow: 0 20px 44px rgba(0, 0, 0, .35); animation: wakein .4s cubic-bezier(.2, .9, .3, 1.2); transition: opacity .5s, transform .5s; }
-.wake-card.wake-out { opacity: 0; transform: translateY(12px); }
-.wake-card .hint, .wake-line { color: var(--hero-mute); font-size: 13px; }
-.wake-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.wake-bar { display: block; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--hero-ink) 18%, transparent); overflow: hidden; }
-.wake-bar i { display: block; height: 100%; width: 0; background: var(--ochre); animation: wakefill 40s cubic-bezier(.2, .6, .3, 1) forwards; }
-@keyframes wakefill { to { width: 94%; } }
-@keyframes wakein { from { opacity: 0; transform: translateY(14px); } }
-@media (max-width: 700px) { .wake { bottom: 76px; } }
+/* the loading screen while a sleeping server wakes: a whole calm page, shown only when the wait is noticeable */
+.splash { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: var(--bg); opacity: 0; animation: splashin .5s ease .6s forwards; transition: opacity .6s; }
+.splash.splash-out { opacity: 0 !important; animation: none; pointer-events: none; }
+.splash-inner { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 24px; max-width: 460px; }
+.splash .logo { width: 64px; height: 64px; font-size: 44px; animation: splashbob 2.4s ease-in-out infinite; }
+.splash-title { font: 400 44px var(--font-serif); margin: 0; }
+.splash-sub { color: var(--ink-3); }
+.splash-bar { display: block; width: min(300px, 70vw); height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.splash-bar i { display: block; height: 100%; width: 0; background: var(--terracotta); animation: splashfill 40s cubic-bezier(.2, .6, .3, 1) forwards; }
+.splash-note { font-size: 13px; color: var(--ink-3); }
+.splash-line { font: italic 18px/1.35 var(--font-serif); color: var(--ink); min-height: 2.7em; max-width: 36ch; }
+@keyframes splashin { to { opacity: 1; } }
+@keyframes splashfill { to { width: 94%; } }
+@keyframes splashbob { 50% { transform: rotate(-4deg) translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .splash .logo, .splash-bar i { animation: none; } .splash-bar i { width: 60%; } }
