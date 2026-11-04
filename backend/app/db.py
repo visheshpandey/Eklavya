@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS challenge_attempts (
 MIGRATIONS = (
     ("voice_sessions", "study_mode", "TEXT"),
     ("voice_sessions", "topic_id", "INTEGER"),
+    ("users", "plan_snapshot", "TEXT"),               # the plan the planner agent last built (JSON), to see which days were missed
     ("users", "guest_since", "TEXT"),                 # set for a private guest (one per browser), so old ones can be cleared
     ("users", "password_hash", "TEXT"),
     ("users", "google_sub", "TEXT"),                  # Google account id, for "Sign in with Google"

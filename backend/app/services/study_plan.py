@@ -5,7 +5,8 @@ from app import db
 from app.domain.concept_map import build_links
 from app.domain.planner import build_plan
 from app.errors import BadRequestError
-from app.services.progress_data import local_today, topics_with_progress
+from app.services import plan_agent
+from app.services.progress_data import local_today
 
 
 MAX_EXAM_DAYS = 1100   # about three years: anything further out is a typo (a six-digit year typed into a date field)
@@ -46,12 +47,13 @@ def get_plan(user_id: int):
         return {"exam_date": None, "minutes_per_day": (user or {}).get("daily_study_minutes") or 30, "plan": None}
     exam = date.fromisoformat(user["target_exam_date"])
     minutes = user["daily_study_minutes"] or 30
-    topics = topics_with_progress(user_id)
+    topics = plan_agent.planning_topics(user_id)   # mastery after forgetting: stale topics are planned as the weak ones they have become
     try:
         plan = build_plan(topics, local_today(), exam, minutes) if topics else None
     except ValueError:
         plan = None   # the saved exam date has passed
-    return {"exam_date": exam.isoformat(), "minutes_per_day": minutes, "plan": plan}
+    replan = plan_agent.review(user_id, exam, minutes, local_today(), plan) if plan else None   # the agent: checks yesterday's plan, re-plans, says what changed
+    return {"exam_date": exam.isoformat(), "minutes_per_day": minutes, "plan": plan, "replan": replan}
 
 
 def set_plan(user_id: int, exam_date: str, minutes_per_day: int):
@@ -70,7 +72,7 @@ def set_plan(user_id: int, exam_date: str, minutes_per_day: int):
 
 
 def clear_plan(user_id: int):
-    db.execute("UPDATE users SET target_exam_date = NULL WHERE id = ?", (user_id,))
+    db.execute("UPDATE users SET target_exam_date = NULL, plan_snapshot = NULL WHERE id = ?", (user_id,))
     return get_plan(user_id)
 
 
