@@ -76,6 +76,7 @@ import { mountGuide } from './components/guide.js';
 import { createTour } from './components/tour.js';
 import { mountImpact } from './components/impact-view.js';
 import { mountFeedbackCard } from './components/feedback-card.js';
+import { mountBehindScenes } from './components/behind-scenes.js';
 import { isLite, setLite } from './motion/env.js';
 import { mountAvatar } from './components/avatar.js';
 import { mountMentorFrame } from './avatar/system.js';
@@ -540,3 +541,4 @@ byId('helpAbout').addEventListener('click', () => {
 });
 byId('aboutClose').addEventListener('click', () => aboutDialog.close());
 mountImpact({ root: byId('impactBody'), loadSummary: () => backend.feedbackSummary() });
+mountBehindScenes({ root: byId('behindBody'), details: byId('behindScenes'), load: () => backend.behindTheScenes() });

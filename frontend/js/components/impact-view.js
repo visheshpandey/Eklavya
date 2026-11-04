@@ -6,7 +6,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const svg = (name, attrs = {}, ...kids) => { const node = document.createElementNS(NS, name); for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v); node.append(...kids); return node; };
 
 /** Browser -> API -> (Gemini, notes search, mastery) -> database, drawn with the page's own colours. */
-function diagram() {
+export function diagram() {
   const box = (x, y, w, label, sub, fill) => svg('g', {},
     svg('rect', { x, y, width: w, height: 54, rx: 10, fill, stroke: 'var(--line)' }),
     svg('text', { x: x + w / 2, y: y + 24, 'text-anchor': 'middle', 'font-size': 14, fill: 'var(--ink)', style: 'font-family:var(--font-serif)' }, label),

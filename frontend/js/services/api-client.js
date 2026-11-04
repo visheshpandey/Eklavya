@@ -115,6 +115,7 @@ export const backend = {
   demoCircle: () => request('/api/demo/circle'),
   sendFeedback: (answers) => request('/api/feedback', { method: 'POST', json: answers }),
   feedbackSummary: () => request('/api/feedback/summary'),
+  behindTheScenes: () => request('/api/behind-the-scenes'),
   masteryHistory: (userId) => request(`/api/mastery-history?user_id=${userId}`),
   flashcards: (topicId, userId) => request(`/api/flashcards?user_id=${userId}${topicId ? `&topic_id=${topicId}` : ''}`),
   makeFlashcards: (topicId, userId) => request('/api/flashcards/generate', { method: 'POST', json: { user_id: userId, topic_id: topicId } }),
