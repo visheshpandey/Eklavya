@@ -11,6 +11,7 @@ from app.agents.logger import log_agent
 from app.ai.gemini import llm_json
 from app.domain import language_check, retrieval
 from app.errors import BadRequestError, LLMError
+from app.services import usage
 from app.services.search import search
 
 LANG_RULES = {
@@ -65,6 +66,14 @@ def _from_notes_only(user_id: int, question: str, chunks, evidence: dict) -> dic
 
 
 def ask(user_id: int, question: str, language: str = "hinglish", document_id: int = None):
+    """Answer one question, and note how long it took in total (for the Behind the scenes panel)."""
+    began = time.perf_counter()
+    out = _ask(user_id, question, language, document_id)
+    usage.record_ask(user_id, round((time.perf_counter() - began) * 1000), bool(out.get("fallback")))
+    return out
+
+
+def _ask(user_id: int, question: str, language: str = "hinglish", document_id: int = None):
     if not document_id and not retrieval.has_notes(user_id):
         raise BadRequestError("No notes uploaded yet. Upload a document first.")
     started = time.perf_counter()

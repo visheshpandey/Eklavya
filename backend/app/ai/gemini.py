@@ -19,6 +19,7 @@ from google.genai import types
 
 from app.config import settings
 from app.errors import LLMError
+from app.services import usage
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
     if hit and time.time() - hit[0] < CACHE_TTL_SECONDS:
         return hit[1]
 
+    usage.count("gemini_calls")   # a real call to Gemini (cached answers above are not counted)
     last_error = "unknown error"
     for attempt in range(1, ATTEMPTS + 1):
         try:
@@ -85,6 +87,7 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
         log.warning("Gemini call failed (attempt %d/%d): %s", attempt, ATTEMPTS, last_error)
         if attempt < ATTEMPTS and any(marker.lower() in last_error.lower() for marker in TRANSIENT):
             time.sleep(RETRY_PAUSE_SECONDS * attempt)   # give an overloaded model a moment before trying again
+    usage.count("gemini_failed")
     return {"success": False, "error": last_error}
 
 

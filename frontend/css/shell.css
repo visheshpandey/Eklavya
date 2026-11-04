@@ -855,3 +855,9 @@ html.wave-gsap .wave i { animation: none; }
 .goal .bar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .goal .bar i { display: block; height: 100%; background: var(--terracotta); transition: width .5s ease; }
 .goal small { color: var(--ink-3); font-size: 13px; }
+/* Behind the scenes: real counts, the decision log, the diagram */
+.bts-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.bts-stat { display: grid; gap: 4px; align-content: start; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-hi); }
+.bts-stat b { font: 400 34px/1 var(--font-serif); }
+.bts-stat small { font-size: 12.5px; color: var(--ink-3); line-height: 1.4; }
+@media (max-width: 700px) { .bts-stats { grid-template-columns: 1fr; } }
