@@ -849,3 +849,9 @@ html.wave-gsap .wave i { animation: none; }
 
 /* the guide sits bottom-right on wide screens (the left is the content); the feedback card takes bottom-left */
 @media (min-width: 701px) { .guide-dock { left: auto; right: 20px; } .fb-card { right: auto; left: 20px; } }
+
+/* today's goal under the greeting */
+.goal { display: grid; gap: 6px; max-width: 360px; margin-top: 14px; }
+.goal .bar { display: block; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.goal .bar i { display: block; height: 100%; background: var(--terracotta); transition: width .5s ease; }
+.goal small { color: var(--ink-3); font-size: 13px; }

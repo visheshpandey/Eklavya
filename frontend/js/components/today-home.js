@@ -43,7 +43,19 @@ export function mountTodayHome({ store, head, hero, route, subjects, quote, talk
       el('p', { class: 'mono', text: dateLine(new Date()) }),
       // with a name: "Good evening, Asha."  without one: just "Good evening." (never a made-up name)
       el('h1', { class: 'page-title' }, name ? [el('span', { text: `${greeting},` }), ' ', el('em', { text: `${name}.` })] : [el('span', { text: greeting }), el('em', { text: '.' })]),
-      el('p', { class: 'lead', text: 'Let\'s make one thing clearer today.' }));
+      el('p', { class: 'lead', text: 'Let\'s make one thing clearer today.' }),
+      goalLine(selectToday(store.getState())?.goal));
+  }
+
+  /** Today's goal: a few answers or flashcards, with a thin bar. Nothing is shown until the first data arrives. */
+  function goalLine(goal) {
+    if (!goal) return null;
+    const percent = Math.min(100, Math.round((goal.done / goal.target) * 100));
+    const noun = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
+    return el('div', { class: 'goal', role: 'group', 'aria-label': `Today's goal: ${Math.min(goal.done, goal.target)} of ${goal.target}` },
+      el('span', { class: 'mono', text: goal.reached ? 'Goal reached' : `Today's goal · ${goal.done} of ${goal.target}` }),
+      el('span', { class: 'bar', 'aria-hidden': 'true' }, el('i', { style: `width:${percent}%` })),
+      el('small', { text: goal.reached ? 'Nice. Your streak is safe for today.' : `${noun(goal.left, 'answer')} or flashcards keeps your streak going.` }));
   }
 
   function drawHero(data) {

@@ -1,5 +1,7 @@
 # Eklavya
 
+[![Tests](https://github.com/visheshpandey/Eklavya/actions/workflows/ci.yml/badge.svg)](https://github.com/visheshpandey/Eklavya/actions/workflows/ci.yml)
+
 A voice-first, multilingual (English / Hindi / Hinglish) study mentor. Pick a topic from your notes and
 Eklavya teaches it out loud while drawing on a whiteboard, then tests you by voice, names the exact
 misconception behind your mistakes, gives you a short study mission, and shows your mastery rising.

@@ -1,0 +1,37 @@
+# Runs every automated test on each push and pull request, so "all tests pass" is something anyone can check.
+# No secrets and no Gemini key are needed: the tests never call Gemini or the network.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+  workflow_dispatch: {}
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+      - run: python -m pytest -q -p no:cacheprovider
+        working-directory: backend
+        env:
+          GEMINI_API_KEY: ""
+
+  frontend:
+    name: Frontend (node tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm test
+        working-directory: frontend

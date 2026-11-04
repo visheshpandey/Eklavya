@@ -5,6 +5,7 @@ from app import db
 from app.domain.planner import build_plan
 from app.domain.revision import due_topics, interval_days
 from app.domain.streak import study_streak
+from app.services import goal
 from app.services.progress_data import active_days, local_date, local_today, topics_with_progress
 from app.services.study_plan import usable_exam
 
@@ -86,6 +87,7 @@ def _payload(user_id, user, day, topics, due, plan):
         "plan": plan,
         "plan_minutes": sum(item["minutes"] for item in plan),
         "last_session": _last_session(user_id),
+        "goal": goal.progress(goal.actions_on(user_id, day)),
         "exam_date": exam,
         "exam_days_left": (exam_day - day).days if exam_day else None,
         "cards_total": db.one("SELECT COUNT(*) AS n FROM flashcards WHERE user_id = ?", (user_id,))["n"],

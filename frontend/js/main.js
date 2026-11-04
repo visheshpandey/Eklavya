@@ -73,6 +73,7 @@ import { mountGroups } from './components/groups-view.js';
 import { mountDemoCircle } from './components/demo-circle.js';
 import { mountWelcome } from './components/welcome.js';
 import { mountGuide } from './components/guide.js';
+import { createInstaller } from './lib/install.js';
 import { createTour } from './components/tour.js';
 import { mountImpact } from './components/impact-view.js';
 import { mountFeedbackCard } from './components/feedback-card.js';
@@ -472,6 +473,13 @@ store.select(selectView, (view) => {
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js').catch(() => { /* the app works without it */ });
 }
+
+// "Install Eklavya": shown in the ⋯ menu only when the browser offers it
+const installer = createInstaller({ onAvailable: (available) => { byId('helpInstall').hidden = !available; } });
+byId('helpInstall').addEventListener('click', async () => {
+  setMenu(false);
+  if (await installer.install() === 'accepted') notifier.success('Eklavya is on your home screen.');
+});
 
 // motion layer (smooth scroll, reveals, count-ups, tilt, flame, confetti): added once the page is up, skipped for "reduce motion"
 startMotion({ store });
