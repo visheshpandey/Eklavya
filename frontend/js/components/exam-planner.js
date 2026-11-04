@@ -9,6 +9,20 @@ import { selectLanguage, selectPlan } from '../state/selectors.js';
 const MINUTE_CHOICES = [15, 30, 45, 60, 90];
 const PREVIEW_DAYS = 7;
 
+const AGENT_LINE = {
+  english: 'Eklavya plans from your weakest and fading topics, and re-plans by itself if you miss a day.',
+  hindi: 'एकलव्य आपके कमज़ोर और भूलते विषयों से योजना बनाता है, और कोई दिन छूटे तो खुद नई योजना बना देता है।',
+};
+
+/** What the planner agent says about a re-plan: the sentence, or null when nothing was missed (pure, so it can be tested). */
+export function replanNote(plan) {
+  const text = plan?.replan?.message;
+  return typeof text === 'string' && text.trim() ? text.trim() : null;
+}
+
+/** The one-line explanation shown under the title once there is a plan. */
+export const agentLine = (language) => AGENT_LINE[language] ?? AGENT_LINE.english;
+
 const isoDay = (date) => date.toISOString().slice(0, 10);
 const MAX_DAYS_AHEAD = 1100;   // the server's limit too (about three years): a six-digit year typed into a date field is a typo
 
@@ -59,9 +73,12 @@ export function mountExamPlanner({ store, root, onSave, onClear, onOpenItem }) {
 
     const days = plan?.plan?.days ?? [];
     const shown = showAll ? days : days.slice(0, PREVIEW_DAYS);
+    const note = replanNote(plan);
     replaceContent(root,
       el('h3', { class: 'block-title' }, icon('calendar-blank', { size: 20 }), t('planner.title', language)),
       form,
+      note ? el('p', { class: 'replan-note', role: 'status' }, el('span', { class: 'mono', text: 'Plan updated' }), note) : null,
+      days.length ? el('p', { class: 'hint planner-agent', text: agentLine(language) }) : null,
       days.length
         ? [el('h4', { class: 'sub-title', text: showAll ? t('planner.title', language) : t('planner.next', language) }),
           el('ol', { class: 'plan-days' }, shown.map((day) => dayRow(day, language))),

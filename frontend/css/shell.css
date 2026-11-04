@@ -849,3 +849,8 @@ html.wave-gsap .wave i { animation: none; }
 
 /* the guide sits bottom-right on wide screens (the left is the content); the feedback card takes bottom-left */
 @media (min-width: 701px) { .guide-dock { left: auto; right: 20px; } .fb-card { right: auto; left: 20px; } }
+
+/* the study planner agent: what it changed when days were missed */
+.replan-note { display: grid; gap: 4px; margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--terracotta); border-radius: 12px; background: var(--paper-hi); font-size: 14px; line-height: 1.45; color: var(--ink); }
+.replan-note .mono { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--terracotta); }
+.planner-agent { margin: 10px 0 0; max-width: 60ch; }
