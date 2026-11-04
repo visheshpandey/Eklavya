@@ -44,7 +44,7 @@ def test_upload_rejects_unsupported_unreadable_empty_and_oversized_files(monkeyp
     assert_error(client.post("/api/upload-document", files={"file": ("n.docx", b"x" * 100)}), 400, "bad_request")
     bad_pdf = client.post("/api/upload-document", files={"file": ("n.pdf", b"this is not a pdf")})
     assert "could not be read" in assert_error(bad_pdf, 400, "bad_request")["error"]
-    assert_error(client.post("/api/upload-document", files={"file": ("n.txt", b"too short")}), 400, "bad_request")
+    assert_error(client.post("/api/upload-document", files={"file": ("n.txt", b"x")}), 400, "bad_request")   # one word is a topic; one letter is not
     assert_error(client.post("/api/upload-document", data={}), 400, "bad_request")
 
     monkeypatch.setattr(documents, "settings", dataclasses.replace(config.settings, max_upload_mb=1))

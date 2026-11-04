@@ -5,6 +5,7 @@ import pytest
 from app import accounts, db
 from app.agents import document_intelligence as docs
 from app.agents import voice_tutor
+from app.domain import retrieval
 from app.domain.retrieval import is_outline
 from main import app  # noqa: F401
 from tests.test_live import client
@@ -68,3 +69,28 @@ def test_ask_teaches_a_listed_topic_from_general_knowledge_and_says_so(student, 
     assert out["from_syllabus"] is syllabus
     assert ("only NAME the topic" in prompts[0]) is syllabus   # only a syllabus lets the model go beyond the notes
     assert out["sources"]                                      # the syllabus line is still cited: it is where the topic is named
+
+
+@pytest.mark.parametrize("text,items", [
+    ("Operating Systems Syllabus\n\nUnit 1\nPaging\nSegmentation\nDeadlock\nThrashing\n\nUnit 2\nSemaphores\nFCFS\nRound Robin\n",
+     ["Paging", "Segmentation", "Deadlock", "Thrashing", "Semaphores", "FCFS", "Round Robin"]),
+    ("Paging\n\nDeadlock\n\nThrashing\n\nSemaphores", ["Paging", "Deadlock", "Thrashing", "Semaphores"]),
+    ("Paging", ["Paging"]),
+])
+def test_a_one_word_syllabus_is_kept_not_refused(text, items):
+    """Found with real Gemini: short lines were all taken for headings, so nothing was stored and the upload was refused."""
+    stored = " ".join(c["text"] for c in retrieval.chunk_text(text))
+    assert all(item in stored for item in items)
+    assert is_outline(retrieval.chunk_text(text))
+
+
+def test_one_word_can_be_uploaded(student, monkeypatch):
+    _, headers = student
+    monkeypatch.setattr(docs, "llm_json", lambda *a, **k: {"topics": ["Paging"]})
+    res = client.post("/api/upload-document", headers=headers, files={"file": ("topic.txt", b"Paging")})
+    assert res.status_code == 200 and res.json()["topics_found"][0]["topic_name"] == "Paging"
+
+
+def test_a_title_above_real_notes_is_not_stored_as_a_topic_list():
+    chunks = retrieval.chunk_text("My Notes\n\nPaging\n\nPaging splits memory into fixed size pages.")
+    assert [c["text"] for c in chunks] == ["Paging splits memory into fixed size pages."]

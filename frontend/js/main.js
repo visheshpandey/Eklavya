@@ -265,6 +265,14 @@ byId('fileCam').addEventListener('change', async (event) => {
   const button = byId('btnSnap'); button.disabled = true; button.textContent = 'Reading the photo…';
   try { await notes.uploadFile(file); } finally { button.disabled = false; button.textContent = 'Snap a page of notes'; }
 });
+// a sample syllabus goes through the real upload: one word is a whole topic, and Eklavya can teach each one
+const SAMPLE_SYLLABUS = 'Operating Systems Syllabus\n\nUnit 1\nProcesses\nThreads\nCPU Scheduling\nRound Robin\n\nUnit 2\nDeadlock\nSemaphores\n\nUnit 3\nPaging\nSegmentation\nThrashing\n';
+async function trySampleSyllabus() {
+  showView(VIEWS.LIBRARY);
+  const button = byId('btnSample'); button.disabled = true; button.textContent = 'Reading the syllabus…';
+  try { await notes.uploadFile(new File([SAMPLE_SYLLABUS], 'Sample OS syllabus.txt', { type: 'text/plain' })); } finally { button.disabled = false; button.textContent = 'Try a sample syllabus'; }
+}
+byId('btnSample').addEventListener('click', trySampleSyllabus);
 function showAfterUpload(topic, name) {
   const box = byId('afterUpload');
   if (!topic) { box.hidden = true; return; }
@@ -474,11 +482,11 @@ const tour = createTour({
   steps: [
     { view: VIEWS.TODAY, target: '#desk', fallback: '#todayHero', title: 'Your next topic, as a 3D book', text: 'Eklavya reads your notes and picks what to study next. The book shows that topic and how well you know it.' },
     { view: VIEWS.STUDY, target: '#mentorFrame', title: 'Talk to your mentor', text: 'Tap the microphone and speak in English, Hindi or Hinglish. As it explains, a whiteboard draws the idea, and you can interrupt any time.' },
-    { view: VIEWS.ASK, target: '#askForm', fallback: '#askChat', title: 'Ask your notes', text: 'Type a question. The answer comes only from your own notes, with the exact passages it used cited underneath.' },
+    { view: VIEWS.ASK, target: '#askForm', fallback: '#askChat', title: 'Ask your notes', text: 'Type or speak a question. The answer comes from your own notes, with the exact passages it used cited underneath.' },
     { view: VIEWS.FLASHCARDS, target: '.fcstage', fallback: '#fcReview', title: 'Flip, rate, watch mastery move', text: 'Press Space to flip a card, then 1, 2 or 3. A message tells you how that topic\'s mastery changed, and the card drops into its box on the shelf.' },
     { view: VIEWS.PROGRESS, target: '#graph3d', fallback: '#conceptMap', title: 'See how your ideas connect', text: 'Every topic is a sphere: green is strong, gold is growing, terracotta needs a look. Click one to fly to it and study it.' },
   ],
-  onEnd: (finished) => { welcome.done(); showView(VIEWS.TODAY); if (finished) notifier.success('That was the tour. Replay it any time from the ? menu.'); },
+  onEnd: (finished) => { welcome.done(); showView(VIEWS.TODAY); if (finished) notifier.success('That was the tour. Replay it any time from the ⋯ menu.'); },
 });
 // --- the guided demo: four real things to do, each ticked when it really happened
 const DEMO_QUESTION = 'Precision aur recall mein kya difference hai?';
@@ -488,7 +496,8 @@ const guide = mountGuide({
   actions: {
     ask: () => { showView(VIEWS.ASK); ask.askNow(demoTopics().some((t) => t.topic_name === 'Precision') ? DEMO_QUESTION : `Explain ${demoTopics()[0]?.topic_name ?? 'this topic'} in simple words.`); },
     talk: () => { const first = demoTopics().find((t) => t.topic_name === 'Precision') ?? demoTopics()[0]; showView(VIEWS.STUDY); if (first) startMode(SESSION_MODE.LEARN, first.topic_id); else session.start(SESSION_MODE.FREE); },
-    type: () => { showView(VIEWS.STUDY); session.start(SESSION_MODE.FREE); setTimeout(() => byId('textin')?.focus(), 1200); },
+    skipTalk: () => guideMark('talk'),
+    sample: trySampleSyllabus,
     cards: () => { showView(VIEWS.FLASHCARDS); document.activeElement?.blur(); },   // Space flips the card, not this button again
     progress: () => showView(VIEWS.PROGRESS),
     why: () => { showView(VIEWS.TODAY); const fold = byId('impact'); fold.open = true; setTimeout(() => fold.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); },

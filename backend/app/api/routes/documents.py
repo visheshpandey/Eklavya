@@ -14,7 +14,8 @@ from app.services.documents import delete_document
 from app.services.links import notes_from_link
 
 router = APIRouter()
-MIN_TEXT_CHARS = 50
+MIN_TEXT_CHARS = 50     # below this, a photo or scanned PDF was not read properly
+MIN_TOPIC_CHARS = 3
 
 
 @router.post("/api/upload-document")
@@ -40,7 +41,7 @@ async def upload_document(file: UploadFile = File(None), text: str = Form(None),
         name, content, metadata_title = "pasted-notes.txt", text, None
     else:
         raise BadRequestError("Upload a file or paste some text.")
-    if len(content.strip()) < MIN_TEXT_CHARS:
+    if len(content.strip()) < MIN_TOPIC_CHARS:   # one word is a whole topic: "Paging" is enough
         raise BadRequestError("Could not read enough text from this.")
     # ingest calls Gemini (blocking): keep it off the event loop that also serves the voice WebSocket
     extra = {"metadata_title": metadata_title} if metadata_title else {}

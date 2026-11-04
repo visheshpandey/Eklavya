@@ -1,6 +1,6 @@
 // HTTP access to the backend. Gemini is called by the backend only; the browser never sees a key.
 import { API_BASE } from '../lib/config.js';
-import { getToken, signOut } from '../lib/session.js';
+import { authToken, getGuestToken, getToken, needsLogin, saveGuestToken, signOut } from '../lib/session.js';
 import { ready as serverReady } from '../lib/warmup.js';
 
 /** Any failed request. `code` is the backend's machine code ("not_found", "llm_unavailable", ...) or "network". */
@@ -19,10 +19,19 @@ function timezone() {
   try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; }
 }
 
+let guestRequest = null;
+/** A guest gets a private id once, before their first call. If that fails the app still opens, on the shared demo. */
+function ensureGuest() {
+  if (getToken() || getGuestToken() || needsLogin()) return null;
+  guestRequest ??= fetch(`${API_BASE}/api/guest`, { method: 'POST' }).then((res) => (res.ok ? res.json() : null)).then((data) => { if (data?.token) saveGuestToken(data.token); }).catch(() => {});
+  return guestRequest;
+}
+
 async function request(path, { method = 'GET', json, form } = {}) {
   await serverReady;   // a sleeping server is woken first, so nothing fails while it starts
+  await ensureGuest();
   const options = { method, headers: {} };
-  const token = getToken();
+  const token = authToken();
   if (token) options.headers.authorization = `Bearer ${token}`;
   options.headers['x-timezone'] = timezone();   // "today" and streaks follow the student's own calendar
   if (json) { options.headers['content-type'] = 'application/json'; options.body = JSON.stringify(json); }
@@ -39,7 +48,8 @@ async function request(path, { method = 'GET', json, form } = {}) {
   try { data = await response.json(); } catch { /* body was not JSON */ }
 
   if (response.status === 401 && token && !path.startsWith('/api/auth/')) {   // an expired or invalid login: back to the login screen
-    signOut();
+    if (getToken()) signOut();   // a login ran out: back to the login screen
+    else saveGuestToken(null);   // an old guest was cleared: this browser simply starts as a new one
     globalThis.location?.reload();
   }
   if (!response.ok) {

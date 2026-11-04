@@ -6,6 +6,7 @@ from app import accounts, auth, db
 from app.api.schemas import (ChangePasswordRequest, DeleteAccountRequest, ForgotRequest, GoogleRequest, LoginRequest,
                              ResetRequest, SignupRequest)
 from app.config import settings
+from app.services import guests
 
 router = APIRouter()
 
@@ -18,6 +19,12 @@ def client_ip(request: Request) -> str:
 @router.get("/api/auth/config")
 def config():
     return accounts.server_features()
+
+
+@router.post("/api/guest")
+def new_guest(request: Request):
+    """A private guest for this browser: its own notes, progress and feedback, shared with nobody."""
+    return guests.create(client_ip(request))
 
 
 @router.post("/api/auth/signup")
@@ -37,7 +44,7 @@ async def google(req: GoogleRequest, request: Request):
 
 @router.get("/api/auth/me")
 def me(user_id: int = auth.CurrentUser):
-    if user_id == settings.demo_user_id:
+    if db.is_guest(user_id):
         return {"id": user_id, "name": "Demo student", "email": None, "guest": True}
     row = db.one("SELECT * FROM users WHERE id = ?", (user_id,))
     return {**auth.public_user(row), "has_password": bool(row.get("password_hash")), "google": bool(row.get("google_sub"))}

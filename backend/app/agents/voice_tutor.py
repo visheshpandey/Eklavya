@@ -36,8 +36,8 @@ def _save(user_id: int, question: str, out: dict) -> dict:
 
 
 OUTLINE_RULE = ("These notes are a syllabus: they only NAME the topic. Explain it from standard college-level knowledge, as it is "
-                "taught for this syllabus, still short and with one simple example. In the answer, say once, briefly, that your notes "
-                "only list this topic, so this explanation is from general knowledge. Never invent what the notes say.")
+                "taught for this syllabus, still short and with one simple example. Include this exact sentence once, translated into the reply's "
+                "language: \"Your notes only list this topic, so this explanation is from general knowledge.\" Never invent what the notes say.")
 MATCH_STRONG = 0.6   # at least this share of the question's words found in the passages
 
 

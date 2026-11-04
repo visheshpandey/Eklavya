@@ -28,7 +28,7 @@ export const doneCount = (state) => GUIDE_STEPS.filter((step) => state.done[step
 /**
  * @param {object} deps
  * @param {HTMLElement} deps.root where the card lives
- * @param {{ask: () => void, talk: () => void, type: () => void, cards: () => void, progress: () => void, why: () => void, ownNotes: () => void}} deps.actions
+ * @param {{ask: () => void, talk: () => void, skipTalk: () => void, cards: () => void, progress: () => void, sample: () => void, why: () => void, ownNotes: () => void}} deps.actions
  */
 export function mountGuide({ root, actions, storage = globalThis.localStorage }) {
   let state = readGuide(storage);
@@ -55,16 +55,17 @@ export function mountGuide({ root, actions, storage = globalThis.localStorage })
       el('span', { class: 'guide-bar', 'aria-hidden': 'true' }, el('i', { style: `width:${(count / GUIDE_STEPS.length) * 100}%` })),
       all
         ? el('div', { class: 'guide-end' },
-          el('p', { text: 'You asked your notes, talked to the mentor, tested yourself and saw your progress. The same works on any syllabus a student uploads.' }),
+          el('p', { text: 'Now try the part students need most: upload just a syllabus, even one word per topic, and Eklavya teaches each topic.' }),
           el('div', { class: 'guide-acts' },
-            el('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: actions.why }, 'Why it matters'),
+            el('button', { class: 'btn btn-primary btn-sm', type: 'button', onclick: actions.sample }, 'Try a sample syllabus'),
+            el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: actions.why }, 'Why it matters'),
             el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: actions.ownNotes }, 'Use my own notes')))
         : el('ol', { class: 'guide-steps' }, GUIDE_STEPS.map((step, index) => {
           const done = Boolean(state.done[step.id]);
           return el('li', { class: `guide-step${done ? ' done' : ''}${step === next ? ' cur' : ''}` },
             el('span', { class: 'guide-mk', 'aria-hidden': 'true', text: done ? '✓' : String(index + 1) }),
             el('span', { class: 'guide-copy' }, el('b', { text: step.title }), step === next ? el('small', { text: step.text }) : null,
-              step === next && step.id === 'talk' ? el('button', { class: 'linkbtn guide-alt', type: 'button', onclick: actions.type }, 'No mic? Type to the mentor instead') : null),
+              step === next && step.id === 'talk' ? el('button', { class: 'linkbtn guide-alt', type: 'button', onclick: actions.skipTalk }, 'No mic here? Skip this step') : null),
             done ? el('span', { class: 'visually-hidden', text: 'done' })
               : el('button', { class: `btn btn-sm ${step === next ? 'btn-primary' : 'btn-secondary'}`, type: 'button', onclick: actions[step.id] }, 'Do it'));
         }))));

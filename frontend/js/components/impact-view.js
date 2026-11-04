@@ -37,7 +37,7 @@ export function mountImpact({ root, loadSummary = null }) {
         el('ul', { class: 'md-list' },
           el('li', { text: 'Answers use at most the 3 passages of your notes that match best, and say which.' }),
           el('li', { text: 'Mastery fades with time, so topics you have not touched come back before the exam.' }),
-          el('li', { text: 'Backed by automated tests on both the server and the page, and a Lite mode for 2G or 3G.' }))),
+          el('li', { text: 'Backed by more than 370 automated tests on the server and the page, and a Lite mode for 2G or 3G.' }))),
       el('div', { class: 'impact-grid' },
         el('div', {}, el('span', { class: 'mono', text: 'Works on slow networks' }),
           el('p', { text: 'Lite mode turns off the 3D scenes and uses the drawn mentor, so the page loads fast and the conversation still works. It switches on by itself on a 2G or 3G connection or when Data Saver is on.' }),
@@ -48,8 +48,8 @@ export function mountImpact({ root, loadSummary = null }) {
             el('li', { text: 'Next: Marathi, Tamil and Bengali (a language is one dictionary of interface text), an installable app that works offline, and the Play Store.' }),
             el('li', { text: 'Then: study groups for a whole college batch, starting with a small pilot.' })))),
       el('div', { class: 'impact-how' }, el('span', { class: 'mono', text: 'What it costs' }),
-        el('p', { text: 'Voice is the main cost: Gemini Live charges about $0.005 a minute for the student’s audio and $0.018 a minute for the mentor’s. A student who talks for 20 minutes, 3 times a week, is about $5.50 a month at most. A written answer from the notes costs a fraction of a cent, so Ask and flashcards add almost nothing.' }),
-        el('p', { class: 'hint', text: 'Google’s published Gemini API prices, checked 3 November 2026. Gemini’s free tier covers a small pilot.' })),
+        el('p', { text: 'Voice is the main cost: Gemini Live charges about $0.005 a minute for the student’s audio and $0.018 a minute for the mentor’s. A student who talks for 20 minutes, 3 times a week, is about $5.50 a month. Each student has a daily limit of 20 voice minutes, which keeps even daily use under about $14 a month. A written answer costs a fraction of a cent, so Ask and flashcards add almost nothing.' }),
+        el('p', { class: 'hint', text: 'Google’s published Gemini API prices, checked 3 November 2026. Gemini also has a free tier.' })),
       el('div', { id: 'impactProof' }));
   }
   async function proof() {

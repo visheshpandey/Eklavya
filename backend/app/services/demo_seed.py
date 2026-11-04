@@ -1,6 +1,6 @@
 """One-click demo data, loaded from demo/demo.json by ONE function (seed_demo): three notes documents with real titles (Operating Systems, DBMS,
 Machine Learning), varied mastery with a week of history, a 4-day streak, flashcards (some due) and curated questions with per-option
-misconceptions, so the demo quiz and diagnosis work even if the LLM is down. It only ever touches the demo student, never a real account.
+misconceptions, so the demo quiz and diagnosis work even if the LLM is down. It only ever touches a guest (the demo student or a private guest), never a real account.
 """
 import json
 from datetime import datetime, timedelta, timezone
@@ -100,7 +100,7 @@ def _wipe(user_id: int):
 
 
 def seed_demo(user_id: int = 1):
-    if user_id != settings.demo_user_id:   # demo data is never mixed into a real account
+    if not db.is_guest(user_id):   # demo data is never mixed into a real account
         raise ForbiddenError("The demo runs in demo mode only. Sign out and choose \"Try the demo\", or upload your own notes.")
     data = fixture()
     db.ensure_user(user_id)

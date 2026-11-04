@@ -95,6 +95,18 @@ def _model_title(text: str) -> str | None:
         return None
 
 
+def _embed(stored) -> int:
+    """Vectors for new chunks. A chunk whose exact text was already embedded (the demo notes, for every guest) reuses that vector instead of calling Gemini."""
+    missing = []
+    for chunk in stored:
+        known = db.one("SELECT e.vector FROM chunk_embeddings e JOIN chunks c ON c.id = e.chunk_id WHERE c.text = ? LIMIT 1", (chunk["text"],))
+        if known:
+            db.execute("INSERT OR REPLACE INTO chunk_embeddings (chunk_id, vector) VALUES (?, ?)", (chunk["id"], known["vector"]))
+        else:
+            missing.append(chunk)
+    return (len(stored) - len(missing)) + embeddings.embed_chunks(missing)
+
+
 def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = True, *, url: str | None = None, metadata_title: str | None = None):
     """Chunk + topics + initial mastery rows. Returns {document_id, status, topics_found}."""
     db.ensure_user(user_id)
@@ -129,7 +141,8 @@ def ingest_document(user_id: int, file_name: str, text: str, use_llm: bool = Tru
             (doc_id, _assign_topic(c, topics, weights), c["heading"], c["text"]),
         )
         stored.append({"id": chunk_id, **c})
-    embedded = embeddings.embed_chunks(stored)   # meaning search; 0 if Gemini embeddings failed (logged)
+    # meaning search; 0 if Gemini embeddings failed (logged). use_llm=False is the demo: the same notes for every guest, so vectors are reused
+    embedded = embeddings.embed_chunks(stored) if use_llm else _embed(stored)
 
     log_agent(user_id, "document_intelligence",
               f"Uploaded {file_name}: {len(chunks)} chunks",

@@ -17,7 +17,7 @@ QUESTIONS = 5
 
 
 def _account(user_id: int) -> None:
-    if user_id == settings.demo_user_id:
+    if db.is_guest(user_id):
         raise BadRequestError("Challenges need your own account. Sign in or create one first.")
 
 

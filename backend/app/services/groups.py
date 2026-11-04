@@ -21,7 +21,7 @@ POINTS = {"correct": 10, "answer": 2, "card": 1, "session": 5}   # weekly leader
 
 
 def _account(user_id: int) -> None:
-    if user_id == settings.demo_user_id:
+    if db.is_guest(user_id):
         raise BadRequestError("Study groups need your own account. Sign in or create one first.")
 
 

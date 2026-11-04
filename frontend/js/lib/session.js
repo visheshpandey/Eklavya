@@ -1,8 +1,9 @@
-// Who is using the app: a login token from the backend, or "guest" (the shared demo student). Kept in this browser only.
+// Who is using the app: a login token from the backend, or "guest" (a private guest for this browser). Kept in this browser only.
 // Every read and write is guarded: storage can be blocked (private windows), and the app must still start as a guest.
 const TOKEN_KEY = 'eklavya.token';
 const USER_KEY = 'eklavya.user';
 const GUEST_KEY = 'eklavya.guest';
+const GUEST_TOKEN_KEY = 'eklavya.guestToken';
 
 function read(key) {
   try { return localStorage.getItem(key); } catch { return null; }
@@ -12,6 +13,11 @@ function write(key, value) {
 }
 
 export const getToken = () => read(TOKEN_KEY);
+/** A guest's private id on the server (one per browser). It is not a login: isSignedIn stays false. */
+export const getGuestToken = () => read(GUEST_TOKEN_KEY);
+export const saveGuestToken = (token) => write(GUEST_TOKEN_KEY, token);
+/** What identifies this browser to the server: the login, else the private guest. */
+export const authToken = () => getToken() ?? getGuestToken();
 
 export function getUser() {
   try { return JSON.parse(read(USER_KEY) ?? 'null'); } catch { return null; }

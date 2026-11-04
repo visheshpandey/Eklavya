@@ -13,7 +13,7 @@ from app import db, lag_monitor
 from app.api import router as api_router
 from app.config import settings
 from app.errors import register_error_handlers
-from app.services import links, retitle
+from app.services import links, retitle, guests
 from app.services.progress_data import use_timezone
 
 
@@ -35,17 +35,26 @@ async def _retitle_old_notes() -> None:
         logging.getLogger(__name__).warning("Could not re-title old notes", exc_info=True)
 
 
+async def _clear_old_guests() -> None:
+    try:
+        await asyncio.to_thread(guests.purge_old)
+    except Exception:  # noqa: BLE001 - housekeeping: they are cleared on the next start
+        logging.getLogger(__name__).warning("Could not clear old guests", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     watcher = asyncio.create_task(lag_monitor.watch())
     renamer = asyncio.create_task(_name_old_videos())
     retitler = asyncio.create_task(_retitle_old_notes())
+    sweeper = asyncio.create_task(_clear_old_guests())
     try:
         yield
     finally:
         watcher.cancel()
         renamer.cancel()
         retitler.cancel()
+        sweeper.cancel()
 
 
 def create_app() -> FastAPI:

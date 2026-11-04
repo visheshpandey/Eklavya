@@ -14,8 +14,22 @@ What you can do:
 * **Exam planner**, **concept map** of your topics, **flashcards** from your notes and mistakes, a printable **study pack**.
 * Hindi interface labels, captions mode, installable on phones.
 
-Gemini is the only model and vendor (text agents + Gemini Live voice). There are no fallback models:
-if Gemini fails, the app shows the error.
+Gemini is the only model and vendor (text agents + Gemini Live voice). There are no fallback models.
+If Gemini fails, the app shows the error, except in Ask, which then shows the best passage of the student's own notes with its citation.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  B["Browser: voice, notes, 3D"] --> API["FastAPI server"]
+  API --> G["Gemini: voice, answers, reads photos"]
+  API --> R["Search over the notes: cites passages"]
+  API --> M["Mastery engine: forgetting curve, revision"]
+  R --> DB[("Postgres / SQLite")]
+  M --> DB
+```
+
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Gemini is called by the backend only; keys live in `.env`.
 
 ## Docs
 

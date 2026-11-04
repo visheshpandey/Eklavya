@@ -19,6 +19,8 @@ function loadGoogle() {
 }
 
 export function mountAuthDialog({ dialog, onSignIn, onSignUp, onGuest, onGoogle, onForgot, onReset, features, mustChoose }) {
+  /** A first-time visitor (a judge): the demo comes first, signing in is still right there. */
+  const firstChoice = () => mustChoose() && mode === 'login';
   let mode = 'login';   // login | signup | forgot | reset
   let resetToken = null;
   let busy = false;
@@ -60,7 +62,7 @@ export function mountAuthDialog({ dialog, onSignIn, onSignUp, onGuest, onGoogle,
     const form = el('form', { class: 'auth-form', novalidate: '' }, ...fields,
       el('p', { class: 'auth-error', role: 'alert', text: message, hidden: message ? null : '' }),
       el('p', { class: 'auth-info', role: 'status', text: info, hidden: info ? null : '' }),
-      el('button', { class: 'btn btn-primary btn-lg', type: 'submit', disabled: busy ? '' : null }, busy ? 'One moment…' : button));
+      el('button', { class: `btn ${firstChoice() ? 'btn-secondary' : 'btn-primary'} btn-lg`, type: 'submit', disabled: busy ? '' : null }, busy ? 'One moment…' : button));
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       const email = value(form, 'auth-email').trim();
@@ -75,8 +77,10 @@ export function mountAuthDialog({ dialog, onSignIn, onSignUp, onGuest, onGoogle,
         submit(() => onReset(resetToken, password));
       }
     });
-    return { title: titles[mode], form };
+    return { title: firstChoice() ? 'Welcome to Eklavya' : titles[mode], form };
   }
+
+  function demoButton(classes) { return el('button', { class: classes, id: 'auth-demo', type: 'button', onclick: onGuest }, 'Try the demo without an account'); }
 
   function draw() {
     const { title, form } = formFor();
@@ -95,13 +99,15 @@ export function mountAuthDialog({ dialog, onSignIn, onSignUp, onGuest, onGoogle,
       el('div', { class: 'auth-card' },
         el('div', { class: 'auth-brand' }, el('span', { class: 'brand-mark', 'aria-hidden': 'true' }, 'E'),
           el('div', {}, el('h2', { id: 'auth-title', text: title }),
-            el('p', { class: 'hint', text: 'Your notes and progress stay with your account.' }))),
+            el('p', { class: 'hint', text: firstChoice() ? 'A study mentor that teaches from your syllabus, out loud, in Hinglish.' : 'Your notes and progress stay with your account.' }))),
+        firstChoice() ? demoButton('btn btn-primary btn-lg') : null,
+        firstChoice() ? el('div', { class: 'auth-or', 'aria-hidden': 'true' }, el('span', { text: 'or sign in' })) : null,
         googleSlot,
         showGoogle ? el('div', { class: 'auth-or', 'aria-hidden': 'true' }, el('span', { text: 'or with email' })) : null,
         form,
         el('div', { class: 'auth-links' }, ...links),
-        mode === 'login' || mode === 'signup' ? el('div', { class: 'auth-or', 'aria-hidden': 'true' }, el('span', { text: 'or' })) : null,
-        mode === 'login' || mode === 'signup' ? el('button', { class: 'btn btn-secondary', type: 'button', onclick: onGuest }, 'Try the demo without an account') : null));
+        !firstChoice() && (mode === 'login' || mode === 'signup') ? el('div', { class: 'auth-or', 'aria-hidden': 'true' }, el('span', { text: 'or' })) : null,
+        !firstChoice() && (mode === 'login' || mode === 'signup') ? demoButton('btn btn-secondary') : null));
 
     if (googleSlot) {
       loadGoogle().then((google) => {
@@ -110,7 +116,7 @@ export function mountAuthDialog({ dialog, onSignIn, onSignUp, onGuest, onGoogle,
         google.accounts.id.renderButton(googleSlot, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', width: 320 });
       }).catch(() => { googleSlot.replaceChildren(el('p', { class: 'hint', text: 'Google sign-in could not load. Use your email instead.' })); });
     }
-    if (!busy) dialog.querySelector(mode === 'signup' ? '#auth-name' : mode === 'reset' ? '#auth-password' : '#auth-email')?.focus();
+    if (!busy) dialog.querySelector(firstChoice() ? '#auth-demo' : mode === 'signup' ? '#auth-name' : mode === 'reset' ? '#auth-password' : '#auth-email')?.focus();
   }
 
   dialog.setAttribute('aria-labelledby', 'auth-title');

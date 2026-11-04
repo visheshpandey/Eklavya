@@ -160,6 +160,7 @@ CREATE TABLE IF NOT EXISTS challenge_attempts (
 MIGRATIONS = (
     ("voice_sessions", "study_mode", "TEXT"),
     ("voice_sessions", "topic_id", "INTEGER"),
+    ("users", "guest_since", "TEXT"),                 # set for a private guest (one per browser), so old ones can be cleared
     ("users", "password_hash", "TEXT"),
     ("users", "google_sub", "TEXT"),                  # Google account id, for "Sign in with Google"
     ("users", "remind_push", "INTEGER"),              # daily reminder channels (NULL/0 = off)
@@ -316,6 +317,14 @@ def execute(sql, args=()):
     """Run a write and return the new row id."""
     with get_conn() as c:
         return c.execute(sql, args).lastrowid
+
+
+def is_guest(user_id) -> bool:
+    """The shared demo student or a private guest: no real account behind this id."""
+    if user_id == settings.demo_user_id:
+        return True
+    row = one("SELECT guest_since FROM users WHERE id = ?", (user_id,))
+    return bool(row and row["guest_since"])
 
 
 def ensure_user(user_id, name="Demo Student"):

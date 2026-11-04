@@ -17,7 +17,7 @@ from app.services.documents import delete_document
 
 # ---------------------------------------------------------------- rate limits (one server process, so memory is enough)
 WINDOW_SECONDS = 15 * 60
-LIMITS = {"login-email": 5, "login-ip": 30, "signup-ip": 10, "forgot-email": 3, "forgot-ip": 10, "google-ip": 30}
+LIMITS = {"guest-ip": 60, "login-email": 5, "login-ip": 30, "signup-ip": 10, "forgot-email": 3, "forgot-ip": 10, "google-ip": 30}
 _hits: dict[str, deque] = defaultdict(deque)
 _hits_lock = threading.Lock()
 
@@ -60,7 +60,7 @@ def signup(name: str, email: str, password: str, ip: str) -> dict:
 
 # ---------------------------------------------------------------- password change, account deletion
 def _user(user_id: int) -> dict:
-    if user_id == settings.demo_user_id:
+    if db.is_guest(user_id):
         raise BadRequestError("Sign in to your own account first.")
     row = db.one("SELECT * FROM users WHERE id = ?", (user_id,))
     if not row:

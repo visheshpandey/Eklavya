@@ -25,7 +25,7 @@ def push_enabled() -> bool:
 
 
 def _account(user_id: int) -> dict:
-    if user_id == settings.demo_user_id:
+    if db.is_guest(user_id):
         raise BadRequestError("Reminders need your own account. Sign in or create one first.")
     return db.one("SELECT id, name, email, remind_push, remind_email FROM users WHERE id = ?", (user_id,))
 

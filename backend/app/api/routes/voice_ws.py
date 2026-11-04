@@ -18,6 +18,7 @@ from fastapi import APIRouter, WebSocket
 from app import auth, db
 from app.agents import quiz
 from app.ai import live
+from app.services import voice_limit
 
 router = APIRouter()
 MAX_MOTION_CHARS = 200
@@ -27,6 +28,10 @@ MAX_MOTION_CHARS = 200
 async def voice(ws: WebSocket, user_id: int = auth.CurrentUser, lang: str = "hinglish", mode: str = "free", topic_id: int = None,
                 side: str = "for", motion: str = "", style: str = "tough", tutor: str = "mentor", resume: str = ""):
     await ws.accept()
+    if await asyncio.to_thread(voice_limit.reached, user_id):
+        await ws.send_json({"type": "error", "code": "daily_limit", "retryable": False, "message": live.ERROR_MESSAGES["daily_limit"]})
+        await ws.close()
+        return
     topics = await asyncio.to_thread(      # the event loop also answers every voice socket's pings: never wait on the database here
         db.query, "SELECT t.id, t.topic_name, t.document_id FROM topics t JOIN documents d ON d.id = t.document_id "
         "WHERE d.user_id = ? ORDER BY d.id DESC, t.id", (user_id,))

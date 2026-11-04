@@ -68,6 +68,7 @@ class Settings:
     cors_origins: tuple[str, ...]
     log_level: str
     max_upload_mb: int
+    daily_voice_minutes: int     # voice time per student per day; protects the Gemini quota and caps the cost
     # --- storage / data
     db_path: Path
     database_url: str           # postgresql://... : use Postgres (Neon) instead of the SQLite file at db_path
@@ -107,6 +108,7 @@ class Settings:
             cors_origins=_csv("CORS_ORIGINS", "*"),
             log_level=_str("LOG_LEVEL", "INFO").upper(),
             max_upload_mb=_int("MAX_UPLOAD_MB", 10, minimum=1),
+            daily_voice_minutes=_int("DAILY_VOICE_MINUTES", 20, minimum=1),
             database_url=_str("DATABASE_URL"),
             db_schema=_str("DB_SCHEMA"),
             db_path=Path(_str("DB_PATH") or BACKEND_DIR / "data" / "eklavya.db"),

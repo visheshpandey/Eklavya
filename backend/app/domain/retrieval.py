@@ -22,6 +22,8 @@ samjhao samjha batao bata do dena kar karo karna simple example ek ye yeh wo woh
 TARGET_WORDS = 200        # merge short paragraphs up to about this many words
 MAX_CHUNK_WORDS = 260     # a single paragraph longer than this is split further
 MAX_HEADING_WORDS = 8
+LIST_MIN_LINES = 3        # this many short lines are a list of items (a syllabus), not a title
+ORPHANS_PER_CHUNK = 40
 # "Unit-I", "UNIT 3", "Module 2", "Chapter IV", "Course Objectives": where a long block of notes naturally splits
 SECTION_MARKER = re.compile(r"\b(?:(?:unit|module|chapter|lesson)\b[\s\-\u2013.:]*(?:[ivx]{1,5}|\d{1,2})\b|course objectives?)", re.I)
 
@@ -79,6 +81,8 @@ def chunk_text(text: str):
     """
     pars = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     chunks, heading, buf, buf_words = [], "", [], 0
+    used = True    # the current heading has text under it; one with nothing under it may be a syllabus item
+    orphans = []
 
     def flush():
         nonlocal buf, buf_words
@@ -86,12 +90,26 @@ def chunk_text(text: str):
             chunks.append({"heading": heading, "text": " ".join(buf)})
         buf, buf_words = [], 0
 
+    def new_heading(title):
+        nonlocal heading, used
+        flush()
+        if not used and heading:
+            orphans.append(heading)
+        heading, used = title, False
+
     for p in pars:
-        p = re.sub(r"\s*\n\s*", " ", p)
-        if _is_heading(p):
-            flush()
-            heading = p
-            continue
+        lines = [line.strip() for line in p.splitlines() if line.strip()]
+        if len(lines) >= LIST_MIN_LINES and all(len(line.split()) <= MAX_HEADING_WORDS for line in lines):   # a list of short items: keep every one
+            if SECTION_MARKER.match(lines[0]):
+                new_heading(lines[0])
+                lines = lines[1:]
+            p = ", ".join(lines)
+        else:
+            p = " ".join(lines)
+            if _is_heading(p):
+                new_heading(p)
+                continue
+        used = True
         n = len(p.split())
         if n > MAX_CHUNK_WORDS:
             flush()
@@ -102,6 +120,12 @@ def chunk_text(text: str):
         buf.append(p)
         buf_words += n
     flush()
+    if not used and heading:
+        orphans.append(heading)
+    # short lines with nothing under them: one or two are titles, but several (or nothing else at all) are a list of topics, and every one counts
+    if orphans and (not chunks or len(orphans) >= LIST_MIN_LINES):
+        for start in range(0, len(orphans), ORPHANS_PER_CHUNK):
+            chunks.append({"heading": "", "text": ", ".join(orphans[start:start + ORPHANS_PER_CHUNK])})
     return chunks
 
 

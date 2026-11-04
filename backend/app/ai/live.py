@@ -68,6 +68,7 @@ ERROR_MESSAGES = {
     "bad_photo": "That photo could not be sent. Use a JPG, PNG or WebP under 4 MB.",
     "need_notes": "Upload your notes first, then start the voice session.",
     "need_topic": "Pick a topic from your notes first.",
+    "daily_limit": "You have used today's voice time. Typed questions in Ask still work, and voice is back tomorrow.",
 }
 LANGUAGE_NAMES = {"english": "English", "hindi": "Hindi", "hinglish": "Hinglish (Hindi and English mixed)"}
 # what the tutor may speak and write, per language (prompts/language_rules.md); also used by the Ask tutor
