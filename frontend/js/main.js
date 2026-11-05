@@ -5,6 +5,9 @@ import { t } from './lib/strings.js';
 import { hydrateIcons } from './lib/icons.js';
 import { SESSION_MODE, VOICE_STATUS } from './lib/protocol.js';
 import { loadLanguage, saveLanguage } from './lib/language.js';
+import { loadCaptions, saveCaptions } from './lib/captions.js';
+import { endsOnLeave } from './lib/voice-phase.js';
+import { mountStudyFocus } from './components/study-focus.js';
 import { loadTheme } from './lib/theme.js';
 import { createSound, loadSound, saveSound } from './lib/sound.js';
 import { initialOf } from './lib/greeting.js';
@@ -14,7 +17,7 @@ import { VoiceClient } from './services/voice-client.js';
 import { createStore } from './state/store.js';
 import { initialState, reducer, VIEWS } from './state/reducer.js';
 import { actions } from './state/actions.js';
-import { selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
+import { selectCaptions, selectSessionActive, selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
 import { createNotifier } from './controllers/notifier.js';
 import { createNotesController } from './controllers/notes-controller.js';
 import { createSessionController } from './controllers/session-controller.js';
@@ -98,6 +101,8 @@ const params = new URLSearchParams(location.search);
 const store = createStore(reducer, initialState);
 store.dispatch(actions.themeChanged(loadTheme()));
 store.dispatch(actions.languageChanged(loadLanguage()));
+if (!loadCaptions()) store.dispatch(actions.captionsToggled());   // captions are on unless the student switched them off
+store.select(selectCaptions, (on) => saveCaptions(on));
 byId('lang').value = selectLanguage(store.getState());            // the selector shows the remembered language
 store.select(selectLanguage, (language) => { saveLanguage(language); byId('lang').value = language; });
 const notifier = createNotifier(store);
@@ -109,7 +114,7 @@ const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(ans
 document.addEventListener('eklavya:mastery', () => feedback.count());   // a flashcard rating
 const notes = createNotesController({ store, backend, notifier, userId: USER_ID, endSession: () => session.stop(),
   onUploaded: (result, name) => showAfterUpload(result.topics_found?.[0], name) });
-session = createSessionController({ store, notes, notifier, userId: USER_ID, getLanguage: () => byId('lang').value, getTutor: () => byId('tutor').value,
+session = createSessionController({ store, notes, notifier, userId: USER_ID, getLanguage: () => byId('lang').value, getTutor: () => byId('tutor').value, backend,
   onProgress: () => { home.refresh(); feedback.count(); }, preparePhoto: shrinkPhoto });
 
 // what the student last started, so finishing it can tick off a step of today's route
@@ -237,7 +242,7 @@ mountCommandMenu({
     { key: 'T', label: 'Teach me this, then test me', needsTopic: true, run: withTopic(SESSION_MODE.LEARN) },
     { key: 'Q', label: 'Just test me', needsTopic: true, run: withTopic(SESSION_MODE.TEST) },
     { key: 'M', label: 'Start or stop talking', hint: 'Voice session', run: () => { showView(VIEWS.STUDY); session.toggle(); } },
-    { key: 'D', label: 'Debate Eklavya on this topic', needsTopic: true, run: () => { showView(VIEWS.STUDY); document.querySelector('.study-details .debate')?.setAttribute('open', ''); byId('studyHeader').scrollIntoView(); } },
+    { key: 'D', label: 'Debate Eklavya on this topic', needsTopic: true, run: () => { showView(VIEWS.STUDY); return session.start(SESSION_MODE.DEBATE, selectSelectedTopicId(store.getState()), { side: 'for', motion: '', style: 'friendly' }); } },
     { key: 'E', label: 'Take a mock exam', hint: 'Timed paper', run: () => { showView(VIEWS.PROGRESS); mockExam.open(); } },
     { key: 'R', label: 'Start a mock round', hint: 'All flashcards, shuffled', run: () => { showView(VIEWS.FLASHCARDS); flashReview.startMock(); } },
     { key: 'U', label: 'Upload notes', hint: 'PDF, text or a photo', run: () => { openNotes(); byId('file').click(); } },
@@ -297,15 +302,7 @@ mountStudyLaunch({
   onStart: (mode, topicId, options) => (mode === 'free' ? session.start(SESSION_MODE.FREE) : startMode(mode, topicId, options)),
   onAddNotes: openNotes,
 });
-mountStudyHeader({
-  store, root: byId('studyHeader'),
-  onLearn: (topicId) => session.start(SESSION_MODE.LEARN, topicId),
-  onTest: (topicId) => session.start(SESSION_MODE.TEST, topicId),
-  onRevise: (topicId) => session.start(SESSION_MODE.REVISE, topicId),
-  onViva: (topicId) => session.start(SESSION_MODE.VIVA, topicId),
-  onDebate: (topicId, options) => session.start(SESSION_MODE.DEBATE, topicId, options),
-  onBrowse: () => store.dispatch(actions.viewChanged(VIEWS.LIBRARY)),
-});
+mountStudyHeader({ store, root: byId('studyHeader'), onBrowse: () => store.dispatch(actions.viewChanged(VIEWS.LIBRARY)) });   // the six mode cards above are the one way to pick a mode
 const orb = mountSessionOrb({ store, orb: byId('orb'), status: byId('status'), onToggle: session.toggle });
 const getTutor = () => byId('tutor').value;
 const avatar = mountAvatar({ store, root: byId('avatar'), getTutor });
@@ -325,6 +322,8 @@ voiceClient = new VoiceClient({
   onInterrupt: () => mentor.interrupt(),
 });
 session.attach(voiceClient);
+// leaving the Study room ends the call: the Live socket closes and the microphone is released
+store.select(selectView, (view) => { if (endsOnLeave(view, selectSessionActive(store.getState()))) session.stop(); });
 mountStageTools({
   store, root: byId('stageTools'), captionRoot: byId('caption'),
   onToggleCaptions: () => store.dispatch(actions.captionsToggled()), onPhoto: session.sendPhoto,
@@ -336,8 +335,9 @@ mountDebateTag({ store, root: byId('debateTag') });
 mountWhiteboard({ store, root: byId('board'), onPick: (index) => store.dispatch(actions.boardPicked(index)) });
 mountVivaCard({ store, root: byId('viva') });
 mountDebateScore({ store, root: byId('debateScore') });
-mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.sendText });
+mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.answer, onNext: session.nextQuestion });
 mountSummaryCard({ store, root: byId('summary') });
+mountStudyFocus({ store, panel: byId('panel-study'), reduceMotion });   // a compact mentor card while a question or board is up, and whatever appears is scrolled into view
 mountMissionCard({ store, root: byId('studyMission'), select: selectSessionMission, heading: 'Your next mission' });
 mountChat({ store, root: byId('chat') });
 mountTextInput({ store, form: byId('textform'), input: byId('textin'), button: byId('textsend'), onSend: session.sendText });

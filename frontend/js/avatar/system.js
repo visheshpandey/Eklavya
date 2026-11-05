@@ -7,11 +7,11 @@
 import { avatarLook } from '../lib/avatar-mood.js';
 import { afterLoad, guardPerformance, isLite, whenEngaged } from '../motion/env.js';
 import { VOICE_STATUS } from '../lib/protocol.js';
-import { selectEmotion, selectResult, selectView, selectVoiceStatus } from '../state/selectors.js';
+import { selectEmotion, selectLive, selectResult, selectView, selectVoiceStatus } from '../state/selectors.js';
 import { SimliProvider } from './simli-provider.js';
 
 const SAMPLE_MODEL = 'assets/avatar/mentor-sample.glb';
-const LABELS = { speaking: '● Live', listening: 'Listening…', thinking: 'Thinking…', concerned: 'Listening…' };
+const LABELS = { speaking: '● Live', listening: 'Listening…', thinking: 'Connecting…', concerned: 'Listening…' };   // 'thinking' is the connecting look: never "Listening…" before Eklavya is ready
 
 /** The avatar state to show (pure): the voice status and the last answer decide it. */
 export function deriveState({ status, emotion = null, result = null, level = 0 }) {
@@ -86,7 +86,11 @@ export function mountMentorFrame({ store, frame, base, config = {}, setPlaybackM
   // ---- follow the app
   const refresh = () => {
     const state = store.getState();
-    derived = deriveState({ status: selectVoiceStatus(state), emotion: selectEmotion(state), result: selectResult(state), level });
+    const live = selectLive(state);
+    let status = selectVoiceStatus(state);
+    if (live.text) status = VOICE_STATUS.IDLE;                                              // text mode: no call is running
+    else if (status === VOICE_STATUS.LISTENING && !live.ready) status = VOICE_STATUS.CONNECTING;   // the socket is open but Eklavya is not up yet
+    derived = deriveState({ status, emotion: selectEmotion(state), result: selectResult(state), level });
     apply();
   };
   store.select(selectVoiceStatus, (status) => {
@@ -94,6 +98,7 @@ export function mountMentorFrame({ store, frame, base, config = {}, setPlaybackM
     if (status === VOICE_STATUS.IDLE) stopPhoto(false);
     else if (status === VOICE_STATUS.CONNECTING) startPhoto();
   });
+  store.select(selectLive, refresh);
   store.select(selectEmotion, refresh);
   store.select(selectResult, refresh);
   store.select(selectView, (view) => {

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 import { dateLine, dayPart, firstName, greetingFor, greetingKey, initialOf } from '../js/lib/greeting.js';
 import { buildRoute, loadRouteDone, routeProgress, saveRouteDone } from '../js/lib/route.js';
-import { frontIndex, orbitPositions, orbitTag, turnBy } from '../js/lib/orbit.js';
+import { angleToFront, easeAngle, frontIndex, helpLine, orbitPositions, orbitTag, pickChoices, turnBy } from '../js/lib/orbit.js';
 import { bestSentences, splitByTerms } from '../js/lib/highlight.js';
 import { coverLetters, groupSubjects, masteryStatus } from '../js/lib/subjects.js';
 import { createSound, loadSound, saveSound } from '../js/lib/sound.js';
@@ -146,4 +146,44 @@ test('a long concept-map name wraps onto two lines and is cut only when it canno
   assert.equal(long.length, 2);
   assert.ok(long[1].endsWith('…'));
   assert.deepEqual(wrapLabel(''), []);
+});
+
+test('the picked topic turns to the front of the ring, by the short way', () => {
+  for (const count of [1, 2, 5, 8]) {
+    for (let index = 0; index < count; index++) {
+      for (const current of [0, 77, -140, 400, -1000]) {
+        const angle = angleToFront(index, count, current);
+        assert.equal(frontIndex(count, angle), index, `${index} of ${count} from ${current}`);
+        assert.ok(Math.abs(angle - current) <= 180.0001, 'never more than half a turn');
+      }
+    }
+  }
+});
+
+test('turning eases toward the target and lands exactly on it', () => {
+  let angle = 0;
+  const target = -135;
+  let steps = 0;
+  while (angle !== target && steps < 500) { angle = easeAngle(angle, target, 16); steps++; }
+  assert.equal(angle, target);
+  assert.ok(steps < 60, `lands within a second (${steps} frames)`);
+  assert.equal(easeAngle(10, 10.1, 16), 10.1);
+});
+
+test('the ring always holds the picked topic, even when it is not among the weakest', () => {
+  const mastery = Array.from({ length: 12 }, (_, i) => ({ topic_id: i + 1, mastery_score: i * 5 }));   // topic 12 is the strongest
+  assert.deepEqual(pickChoices(mastery, null, 8).map((t) => t.topic_id), [1, 2, 3, 4, 5, 6, 7, 8]);
+  const withPicked = pickChoices(mastery, 12, 8).map((t) => t.topic_id);
+  assert.equal(withPicked.length, 8);
+  assert.ok(withPicked.includes(12));
+  assert.deepEqual(pickChoices(mastery, 3, 8).map((t) => t.topic_id), [1, 2, 3, 4, 5, 6, 7, 8]);   // already there: unchanged
+  assert.deepEqual(pickChoices(mastery, 99, 8).length, 8);                                         // an unknown id changes nothing
+  assert.deepEqual(pickChoices(undefined, null, 8), []);
+});
+
+test('the help line above the mode cards names the topic and says what to do', () => {
+  assert.equal(helpLine({ selectedName: 'Precision' }), 'Pick how you want to study Precision. Then talk, or type in the chat.');
+  assert.match(helpLine({ weakestName: 'OS: Paging' }), /OS: Paging \(your weakest topic\)/);
+  assert.match(helpLine({}), /Just talk to Eklavya/);
+  assert.equal(helpLine({ selectedName: 'A', weakestName: 'B' }).includes('B'), false);
 });

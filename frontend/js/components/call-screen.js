@@ -4,13 +4,9 @@
 import { el, render } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { t } from '../lib/strings.js';
-import { VOICE_STATUS } from '../lib/protocol.js';
-import { selectLanguage, selectMessages, selectSessionActive, selectVoiceStatus } from '../state/selectors.js';
+import { selectBoardIndex, selectLanguage, selectLive, selectMessages, selectQuestion, selectSessionActive, selectSummary, selectVoiceStatus } from '../state/selectors.js';
+import { isConnecting, statusKey } from '../lib/voice-phase.js';
 
-const STATUS_KEY = {
-  [VOICE_STATUS.IDLE]: 'stage.idle', [VOICE_STATUS.CONNECTING]: 'stage.connecting',
-  [VOICE_STATUS.LISTENING]: 'stage.listening', [VOICE_STATUS.SPEAKING]: 'stage.speaking',
-};
 const PHONE = '(max-width: 48rem)';
 
 export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto }) {
@@ -25,7 +21,8 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
   const minimise = el('button', { class: 'call-btn', type: 'button', onclick: () => set(false) }, icon('arrow-left', { size: 22 }), label('Back to the study screen'));
   const photo = el('button', { class: 'call-btn', type: 'button', onclick: () => file.click() }, icon('camera', { size: 22 }), label('Show a photo'));
   const end = el('button', { class: 'call-btn call-end', type: 'button', onclick: onEnd }, icon('stop', { size: 26 }), label('End the call'));
-  render(root, el('div', { class: 'call-top' }, minimise, el('span', { class: 'live-tag' }, el('span', { class: 'live-dot', 'aria-hidden': 'true' }), 'Live')),
+  const liveText = document.createTextNode('Live');
+  render(root, el('div', { class: 'call-top' }, minimise, el('span', { class: 'live-tag' }, el('span', { class: 'live-dot', 'aria-hidden': 'true' }), liveText)),
     stage, status, caption, el('div', { class: 'call-actions' }, photo, end), file);
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-label', 'Call with Eklavya');
@@ -41,7 +38,10 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
   function draw() {
     const state = store.getState();
     const language = selectLanguage(state);
-    status.textContent = t(STATUS_KEY[selectVoiceStatus(state)], language);
+    const live = selectLive(state);
+    status.textContent = t(statusKey({ status: selectVoiceStatus(state), live }), language);
+    status.classList.toggle('is-connecting', isConnecting({ status: selectVoiceStatus(state), live }));
+    liveText.textContent = live.ready ? 'Live' : 'Connecting…';
     const last = [...selectMessages(state)].reverse().find((m) => m.role === 'tutor');
     caption.textContent = last?.text ?? '';
     openButton.hidden = !selectSessionActive(state);
@@ -49,12 +49,18 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
 
   let wasActive = false;
   store.select(selectSessionActive, (active) => {
-    if (active && !wasActive && globalThis.matchMedia?.(PHONE).matches) set(true);   // a call on a phone fills the screen
+    if (active && !wasActive && globalThis.matchMedia?.(PHONE).matches && !selectLive(store.getState()).text) set(true);   // a call on a phone fills the screen (text mode is not a call)
     if (!active) set(false);
     wasActive = active;
     draw();
   });
   store.select(selectVoiceStatus, draw);
+  store.select(selectLive, draw);
+  store.select(selectLive, (live) => { if (live.text) set(false); });   // the voice gave way to text mode: there is no call to show full screen
+  // a question, a board or the summary appeared: back to the normal Study screen, where it can be seen and answered (the call carries on)
+  store.select(selectQuestion, (question) => { if (question && open) set(false); });
+  store.select(selectBoardIndex, (index) => { if (index >= 0 && open) set(false); });
+  store.select(selectSummary, (summary) => { if (summary && open) set(false); });
   store.select(selectMessages, draw);
   store.select(selectLanguage, draw);
   openButton.addEventListener('click', () => set(true));

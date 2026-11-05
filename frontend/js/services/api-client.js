@@ -81,6 +81,9 @@ export const backend = {
   resetDeck: () => request('/api/flashcards/reset', { method: 'POST' }),
   importLink: (url) => request('/api/import-link', { method: 'POST', json: { url } }),
   ask: (question, language) => request('/api/tutor/ask', { method: 'POST', json: { question, language } }),
+  /** Test questions without the voice call: stored ones first, topped up by Gemini. Text mode uses these. */
+  quizGenerate: (topicId, count) => request('/api/quiz/generate', { method: 'POST', json: { topic_id: topicId, count } }),
+  quizSubmit: (questionId, answer) => request('/api/quiz/submit', { method: 'POST', json: { question_id: questionId, student_answer: answer } }),
   doubts: (query = '') => request(`/api/doubts${query ? `?q=${encodeURIComponent(query)}` : ''}`),
   deleteDoubt: (id) => request(`/api/doubts/${id}`, { method: 'DELETE' }),
   clearDoubts: () => request('/api/doubts', { method: 'DELETE' }),

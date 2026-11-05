@@ -18,6 +18,7 @@ const emptySession = () => ({
   verdict: null,      // debate: the final verdict
   mission: null,      // the mission Eklavya gave at the end of this session (shown in Study)
   lost: null,         // {code, retryable} when the call dropped and can be picked up again
+  live: { ready: false, text: false },   // ready: the Gemini link is up (the socket alone is not enough); text: the session carries on by typing
 });
 
 export const MAX_BOARDS = 12;
@@ -31,7 +32,7 @@ const initialUi = () => ({
   collapsedDocs: {},          // {documentId: true} for notes whose topic list is folded
   theme: THEMES.SYSTEM,
   language: LANGUAGES.HINGLISH,   // tutor language; Hindi also switches the interface labels to Hindi
-  captions: false,           // big live captions of what Eklavya says
+  captions: true,            // big live captions of what Eklavya says: on until the student turns them off (the choice is remembered)
   onboarding: false,         // the first-run guide is open
   celebration: null,         // {id, text}: the latest win to celebrate
 });
@@ -88,7 +89,7 @@ function showBoard(state, board) {
 }
 
 /** Live transcript: chunks (final=false) grow the open bubble; the final text replaces it. */
-function receiveTranscript(state, { role, text, final, image, replace }) {
+function receiveTranscript(state, { role, text, final, image, replace, local }) {
   // a new bubble from one speaker ends the other speaker's open bubble, so later chunks of that speaker start a new
   // one below instead of growing the old one above (the order of the conversation is the order things happened)
   const other = role === 'user' ? 'tutor' : 'user';
@@ -96,7 +97,9 @@ function receiveTranscript(state, { role, text, final, image, replace }) {
     const i = lastOpenIndex(list, other);
     return i < 0 ? list : list.map((m, k) => (k === i ? { ...m, final: true } : m));
   };
-  const messages = state.session.messages;
+  // the local first line only stands in until Eklavya's own words arrive: then it goes, so the greeting is never said twice
+  const messages = role === 'tutor' && !local && text && !image ? state.session.messages.filter((m) => !m.local) : state.session.messages;
+  if (local) return withSession(state, { messages: [...closeOther(messages), { role, text, final: true, local: true }] });
   if (image) return withSession(state, { messages: [...closeOther(messages), { role, text, final: true, image }] });   // a shared photo
   const open = lastOpenIndex(messages, role);
   if (final && !text) {   // a turn that turned out empty (e.g. only "<no speech>"): remove the bubble it started
@@ -118,7 +121,7 @@ export function reducer(state, action) {
     case A.VOICE_STATUS_CHANGED:
       if (payload === state.voiceStatus) return state;
       return payload === VOICE_STATUS.IDLE
-        ? { ...withSession(state, { phase: null }), voiceStatus: payload }
+        ? { ...withSession(state, { phase: null, live: { ready: false, text: false } }), voiceStatus: payload }   // the call is over: the next one starts not ready, and text mode ends
         : { ...state, voiceStatus: payload };
 
     case A.BANNER_SET:
@@ -148,6 +151,10 @@ export function reducer(state, action) {
     case A.SESSION_STARTED:
       return withUi({ ...state, banner: null, session: { ...emptySession(), mode: payload.mode, topicId: payload.topicId } }, { view: VIEWS.STUDY });
 
+    case A.LIVE_READY:
+      return state.session.live.ready ? state : withSession(state, { live: { ...state.session.live, ready: true } });
+    case A.TEXT_MODE_STARTED:
+      return withSession(state, { live: { ready: false, text: true }, lost: null });
     case A.CONNECTION_LOST:
       return withSession(state, { lost: payload });
     case A.SESSION_RESUMED:
