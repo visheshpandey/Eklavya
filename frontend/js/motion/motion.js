@@ -117,6 +117,25 @@ export async function initMotion({ store }) {
     }
   }
 
+  // ---- confetti stays inside the main content area (never over the sidebar) and is kept small
+  let confettiBurst = null, confettiCanvas = null;
+  function fire(options) {
+    const main = document.getElementById('main');
+    if (!main) return;
+    const area = main.getBoundingClientRect();
+    if (!confettiCanvas) {
+      confettiCanvas = document.createElement('canvas');
+      confettiCanvas.className = 'confetti-layer';
+      confettiCanvas.setAttribute('aria-hidden', 'true');
+      document.body.append(confettiCanvas);
+      confettiBurst = confetti.create(confettiCanvas, { resize: true, useWorker: false });
+    }
+    Object.assign(confettiCanvas.style, { left: `${area.left}px`, top: '0px', width: `${area.width}px`, height: `${innerHeight}px` });
+    const at = options.origin ?? { x: 0.5, y: 0.6 };   // given as a share of the whole window: turn it into a share of the content area
+    const x = Math.min(0.95, Math.max(0.05, (at.x * innerWidth - area.left) / area.width));
+    confettiBurst({ ...options, origin: { x, y: at.y } });
+  }
+
   // ---- confetti when all three steps of the route are done
   let doneBefore = null;
   function watchRoute() {
@@ -128,7 +147,7 @@ export async function initMotion({ store }) {
   function celebrate(near) {
     const box = near?.getBoundingClientRect();
     const origin = box ? { x: (box.left + box.width / 2) / innerWidth, y: Math.min(0.85, (box.top + box.height / 3) / innerHeight) } : { x: 0.5, y: 0.6 };
-    confetti({ particleCount: 90, spread: 70, startVelocity: 38, origin, colors: [PALETTE.terracotta, PALETTE.gold, PALETTE.green, PALETTE.greenSoft], disableForReducedMotion: true, ticks: 160 });
+    fire({ particleCount: 48, spread: 62, startVelocity: 30, scalar: 0.85, origin, colors: [PALETTE.terracotta, PALETTE.gold, PALETTE.green, PALETTE.greenSoft], disableForReducedMotion: true, ticks: 130 });
   }
 
   // ---- flashcards: the card flips with a spring, can be thrown (right = Got it, left = Again, up = Hard), and the Leitner boxes are 3D
@@ -194,7 +213,7 @@ export async function initMotion({ store }) {
     gsap.timeline({ onComplete: () => {
       ghost.remove();
       scene.land(to);
-      if (value === 'known') confetti({ particleCount: 16, spread: 55, startVelocity: 18, scalar: 0.55, gravity: 0.8, ticks: 60, disableForReducedMotion: true, colors: [PALETTE.gold, PALETTE.greenSoft],
+      if (value === 'known') fire({ particleCount: 16, spread: 55, startVelocity: 18, scalar: 0.55, gravity: 0.8, ticks: 60, disableForReducedMotion: true, colors: [PALETTE.gold, PALETTE.greenSoft],
         origin: { x: targetX / innerWidth, y: targetY / innerHeight } });
     } })
       .to(ghost, { duration: 0.85, ease: 'power2.inOut', scale: 0.4, rotation: value === 'again' ? -200 : 200, motionPath: { path: [{ x: dx * 0.35, y: -Math.min(140, Math.abs(dy) * 0.6) - 40 }, { x: dx, y: dy }], curviness: 1.5 } });
