@@ -109,7 +109,9 @@ export class VoiceClient {
       if (!current()) { release(); return; }
       release();
       this._cleanup();
-      throw new Error(err.name === 'NotAllowedError' ? 'Microphone permission was denied.' : `Could not start the microphone: ${err.message}`);
+      const failure = new Error(err.name === 'NotAllowedError' ? 'Microphone permission was denied.' : `Could not start the microphone: ${err.message}`);
+      failure.code = 'mic';   // the Study room carries on in text mode when there is no usable microphone
+      throw failure;
     }
 
     let extra = topicId ? `&mode=${encodeURIComponent(mode)}&topic_id=${topicId}` : '';

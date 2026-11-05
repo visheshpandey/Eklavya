@@ -7,7 +7,7 @@ import { round1, signed } from '../lib/format.js';
 import { createFeedbackHold } from '../lib/feedback-hold.js';
 import { selectMessages, selectQuestion, selectResult } from '../state/selectors.js';
 
-export function mountQuizCard({ store, root, onAnswer, hold = createFeedbackHold() }) {
+export function mountQuizCard({ store, root, onAnswer, onNext = null, hold = createFeedbackHold() }) {
   let shown = { question: null, result: null };   // what the card displays right now
   let picked = null;                              // the option the student tapped (replaced by the graded choice)
   let lastTutorText = null;
@@ -18,7 +18,10 @@ export function mountQuizCard({ store, root, onAnswer, hold = createFeedbackHold
       el('div', { class: 'result-title' }, icon(result.is_correct ? 'check-circle' : 'warning', { size: 20 }), result.is_correct ? 'Correct' : 'Not quite'),
       el('p', { text: `${result.topic} mastery ${result.before}% to ${result.after}% (${signed(delta)})` }),
       result.misconception ? el('p', { text: `Misconception: ${result.misconception.text}` }) : null,
-      result.misconceptions_resolved ? el('p', { class: 'resolved', text: 'Misconception resolved' }) : null);
+      result.misconceptions_resolved ? el('p', { class: 'resolved', text: 'Misconception resolved' }) : null,
+      // the test moves on by itself after a few seconds; this is the same step, now
+      onNext && shown.question?.total && shown.question.number < shown.question.total
+        ? el('button', { class: 'btn btn-primary btn-sm next-q', type: 'button', onclick: onNext }, 'Next question →') : null);
   }
 
   /** The state of one option once the question has been graded: the right one, and the wrong one that was chosen. */

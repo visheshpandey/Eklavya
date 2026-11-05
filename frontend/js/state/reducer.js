@@ -121,7 +121,7 @@ export function reducer(state, action) {
     case A.VOICE_STATUS_CHANGED:
       if (payload === state.voiceStatus) return state;
       return payload === VOICE_STATUS.IDLE
-        ? { ...withSession(state, { phase: null }), voiceStatus: payload }
+        ? { ...withSession(state, { phase: null, live: { ready: false, text: false } }), voiceStatus: payload }   // the call is over: the next one starts not ready, and text mode ends
         : { ...state, voiceStatus: payload };
 
     case A.BANNER_SET:

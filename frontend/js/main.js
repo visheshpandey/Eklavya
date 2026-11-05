@@ -111,7 +111,7 @@ const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(ans
 document.addEventListener('eklavya:mastery', () => feedback.count());   // a flashcard rating
 const notes = createNotesController({ store, backend, notifier, userId: USER_ID, endSession: () => session.stop(),
   onUploaded: (result, name) => showAfterUpload(result.topics_found?.[0], name) });
-session = createSessionController({ store, notes, notifier, userId: USER_ID, getLanguage: () => byId('lang').value, getTutor: () => byId('tutor').value,
+session = createSessionController({ store, notes, notifier, userId: USER_ID, getLanguage: () => byId('lang').value, getTutor: () => byId('tutor').value, backend,
   onProgress: () => { home.refresh(); feedback.count(); }, preparePhoto: shrinkPhoto });
 
 // what the student last started, so finishing it can tick off a step of today's route
@@ -336,7 +336,7 @@ mountDebateTag({ store, root: byId('debateTag') });
 mountWhiteboard({ store, root: byId('board'), onPick: (index) => store.dispatch(actions.boardPicked(index)) });
 mountVivaCard({ store, root: byId('viva') });
 mountDebateScore({ store, root: byId('debateScore') });
-mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.sendText });
+mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.answer, onNext: session.nextQuestion });
 mountSummaryCard({ store, root: byId('summary') });
 mountMissionCard({ store, root: byId('studyMission'), select: selectSessionMission, heading: 'Your next mission' });
 mountChat({ store, root: byId('chat') });
