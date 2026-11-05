@@ -871,3 +871,14 @@ html.wave-gsap .wave i { animation: none; }
 .drop::before { right: 44px; top: -58px; z-index: 0; }
 .drop .drop-acts { position: relative; z-index: 1; }
 @media (max-width: 1100px) { .drop::before { display: none; } }
+/* the decorative circles on "Test the whole deck": person icons, not letters a judge could mistake for text or shortcuts */
+.ppl span { color: var(--ink-3); }
+.ppl span:nth-child(2n) { background: var(--sage); }
+/* leaderboard rows: rank, initial, "Name · streak, mastery" on one line (wrapping if narrow), points */
+.leaderboard li.lb-row { grid-template-columns: 1.6rem 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.leaderboard li.lb-row .lb-who { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 0; min-width: 0; }
+.leaderboard li.lb-row .lb-name { font-weight: 600; }
+.leaderboard li.lb-row .lb-sep { color: var(--ink-3); }
+.leaderboard li.lb-row .hint { grid-column: auto; grid-row: auto; }
+.leaderboard li.lb-row strong { grid-column: auto; grid-row: auto; white-space: nowrap; }
+.leaderboard li.lb-row .lb-av { width: 34px; height: 34px; }
