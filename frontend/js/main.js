@@ -492,10 +492,10 @@ startMotion({ store });
 const tour = createTour({
   showView: (view) => store.dispatch(actions.viewChanged(view)),
   steps: TOUR_STEPS,
-  onEnd: (finished) => {   // the welcome stays: its demo button is the next thing to press
+  onEnd: () => {   // the welcome stays: its demo button is the next thing to press (no toast: the tour can be replayed from the welcome and the ⋯ menu)
     markTourSeen();
     showView(VIEWS.TODAY);
-    if (finished) notifier.success('That was the tour. Replay it any time from the ⋯ menu.');
+    window.scrollTo({ top: 0 });
   },
 });
 // --- the guided demo: four real things to do, each ticked when it really happened
