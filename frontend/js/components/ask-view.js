@@ -1,5 +1,5 @@
 // Ask, from the new design: type a question, get an answer from your notes together with the exact passages it came from, the question's words
-// highlighted, how well the notes match ("Strong match", "Partial match" or "Not in your notes") and how many passages were searched.
+// highlighted, how well the notes match ("From your notes", "Partial match" or "Not in your notes") and how many passages were searched.
 // Ctrl+Enter sends. Every question is saved as a doubt: the list below can be searched and deleted, and recent doubts can be asked again.
 // Data comes through the callbacks (ask, listDoubts, deleteDoubt); this file only draws.
 import { el, render } from '../lib/dom.js';
@@ -9,12 +9,12 @@ import { renderMarkdown } from '../lib/markdown.js';
 import { plural, shortDate } from '../lib/format.js';
 import { icon } from '../lib/icons.js';
 import { createDictation } from '../lib/dictation.js';
+import { matchLabel } from '../lib/match-label.js';
 
 const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
 
 const when = shortDate;   // "2 Nov"
 const DOUBTS_SHOWN = 5;
-const MATCH = { strong: ['Strong match', ''], partial: ['Partial match', ' partial'], none: ['Not in your notes', ' partial'] };
 
 export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWrap, onAsk, onList, onDelete, onClear, topics, subjects, sound, onListen, getLanguage = () => 'hinglish' }) {
   const thread = [];   // this visit's questions and answers, newest first
@@ -56,14 +56,14 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   function answerCard(item) {
     if (item.pending) return el('div', { class: 'answer' }, el('p', { class: 'mono', text: item.question }), el('p', { class: 'ask-wait', role: 'status', text: 'Looking in your notes…' }));
     if (item.error) return el('div', { class: 'answer' }, el('p', { class: 'mono', text: item.question }), el('p', { class: 'auth-error', role: 'alert', text: item.error }));
-    const [word, tone] = MATCH[item.match] ?? MATCH.partial;
+    const { text: word, tone, tip } = matchLabel(item.match);
     return el('div', { class: 'answer' },
-      el('div', { class: 'ahead' }, el('span', { class: `strength${tone}`, text: word }),
+      el('div', { class: 'ahead' }, el('span', { class: `strength${tone}`, text: word, title: tip, tabindex: '0' }),
         el('span', { class: 'mono', text: `Searched ${item.searched ?? 0} passage${item.searched === 1 ? '' : 's'} in ${item.ms ?? 0} ms` })),
       el('p', { class: 'mono', text: item.question }),
       el('div', { class: 'md' }, renderMarkdown(item.answer)),
       item.from_syllabus ? el('p', { class: 'hint ask-note', text: 'Your notes only list this topic, so this explanation is from general knowledge. The passage below is where your syllabus names it.' }) : null,
-      item.fallback ? el('p', { class: 'hint ask-note', text: 'The AI helper was busy, so this is the closest passage of your notes.' }) : null,
+      item.fallback ? el('p', { class: 'hint ask-note', text: 'Answered from your notes only: the AI helper was busy, so this is the closest passage of your notes.' }) : null,
       item.follow_up_question ? el('button', { class: 'chip-action', type: 'button', onclick: () => fill(item.follow_up_question) }, item.follow_up_question) : null,
       ...(item.sources ?? []).map((source) => el('div', { class: 'passage' }, highlighted(bestSentences(source.text, item.terms, 3), item.terms),
         el('span', { class: 'mono', text: `${source.document} · ${source.heading || source.topic}` }))),
@@ -101,7 +101,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
       el('div', { class: 'askcard' }, el('span', { class: 'mono', text: 'English or Hinglish' }),
         el('h2', {}, 'What are you trying', el('br'), 'to understand?'),
         el('p', { text: 'Eklavya searches your notes and shows the exact passages it used.' }),
-        el('div', { class: 'chips' }, exampleChips().map(([label, text]) => el('button', { type: 'button', onclick: () => fill(text) }, label)))),
+        el('div', { class: 'chips' }, exampleChips().map(([label, text]) => el('button', { type: 'button', onclick: () => { if (busy) return; fill(text); run(text); } }, label)))),   // a suggestion asks straight away; the answer can still be edited and asked again
       form,
       el('p', { class: 'err', role: 'alert', text: error }),
       el('div', { id: 'answer', 'aria-live': 'polite' }, thread.map(answerCard)));
