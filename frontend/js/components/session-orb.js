@@ -21,7 +21,7 @@ export function mountSessionOrb({ store, orb, status, onToggle }) {
     sphere.setState(voiceStatus);
     if (voiceStatus === VOICE_STATUS.SPEAKING) orb.replaceChildren(el('span', { class: 'orb-bars', 'aria-hidden': 'true' }, ...[0, 1, 2, 3, 4].map(() => el('span'))));
     else orb.replaceChildren(icon(voiceStatus === VOICE_STATUS.IDLE || voiceStatus === VOICE_STATUS.CONNECTING ? 'microphone' : 'stop', { size: 36 }));
-    document.getElementById('liveTag')?.toggleAttribute('hidden', voiceStatus === VOICE_STATUS.IDLE);   // not shown in text mode
+    document.getElementById('liveTag')?.toggleAttribute('hidden', voiceStatus === VOICE_STATUS.IDLE || !selectLive(store.getState()).ready);   // "Live" only once Eklavya is really there; never in text mode
     orb.setAttribute('aria-label', textMode ? 'Try the voice again' : voiceStatus === VOICE_STATUS.IDLE ? 'Start a voice conversation' : 'End the voice conversation');
     const live = selectLive(store.getState());
     const realStatus = selectVoiceStatus(store.getState());

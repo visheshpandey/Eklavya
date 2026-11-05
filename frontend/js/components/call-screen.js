@@ -21,7 +21,8 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
   const minimise = el('button', { class: 'call-btn', type: 'button', onclick: () => set(false) }, icon('arrow-left', { size: 22 }), label('Back to the study screen'));
   const photo = el('button', { class: 'call-btn', type: 'button', onclick: () => file.click() }, icon('camera', { size: 22 }), label('Show a photo'));
   const end = el('button', { class: 'call-btn call-end', type: 'button', onclick: onEnd }, icon('stop', { size: 26 }), label('End the call'));
-  render(root, el('div', { class: 'call-top' }, minimise, el('span', { class: 'live-tag' }, el('span', { class: 'live-dot', 'aria-hidden': 'true' }), 'Live')),
+  const liveText = document.createTextNode('Live');
+  render(root, el('div', { class: 'call-top' }, minimise, el('span', { class: 'live-tag' }, el('span', { class: 'live-dot', 'aria-hidden': 'true' }), liveText)),
     stage, status, caption, el('div', { class: 'call-actions' }, photo, end), file);
   root.setAttribute('role', 'dialog');
   root.setAttribute('aria-label', 'Call with Eklavya');
@@ -40,6 +41,7 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
     const live = selectLive(state);
     status.textContent = t(statusKey({ status: selectVoiceStatus(state), live }), language);
     status.classList.toggle('is-connecting', isConnecting({ status: selectVoiceStatus(state), live }));
+    liveText.textContent = live.ready ? 'Live' : 'Connecting…';
     const last = [...selectMessages(state)].reverse().find((m) => m.role === 'tutor');
     caption.textContent = last?.text ?? '';
     openButton.hidden = !selectSessionActive(state);

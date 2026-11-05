@@ -912,5 +912,5 @@ html.wave-gsap .wave i { animation: none; }
 @keyframes resultpop { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .result { animation: none; } }
 
-/* the guided-demo card must not sit over the question or the chat while the Study room is at work (it is back as soon as the student leaves) */
-body:has(#panel-study.is-working) .guide-dock .guide { display: none; }
+/* the guided-demo card must not sit over the call, the question or the chat while a session is running (it is back as soon as the student leaves) */
+body:has(#app[data-live="on"]) .guide-dock .guide, html.in-call .guide-dock { display: none; }
