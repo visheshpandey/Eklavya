@@ -75,6 +75,7 @@ import { mountWelcome } from './components/welcome.js';
 import { mountGuide } from './components/guide.js';
 import { createInstaller } from './lib/install.js';
 import { createTour } from './components/tour.js';
+import { TOUR_STEPS, demoLoadedMessage, markTourSeen, pickDemoTopic, shouldAutoTour, tourSeen } from './lib/first-visit.js';
 import { mountImpact } from './components/impact-view.js';
 import { mountFeedbackCard } from './components/feedback-card.js';
 import { mountBehindScenes } from './components/behind-scenes.js';
@@ -195,6 +196,7 @@ const todayHome = mountTodayHome({
   store, head: byId('todayHead'), hero: byId('todayHero'), route: byId('route'), subjects: byId('subjects'), quote: byId('quote'),
   talkButton: byId('talkIt'), mapButton: byId('seeMap'), getName: () => getUser()?.name ?? '', reduceMotion, mountScene: mountHeroScene,
   onStartSession: (mode, topicId) => startMode(mode, topicId),
+  onDemo: () => tryDemoNotes(),
   onReviewCards: reviewCards, onAddNotes: openNotes,
   onSubject: (topicId) => { showView(VIEWS.PROGRESS); conceptMap.select(topicId); },
   onTalk: () => { showView(VIEWS.STUDY); session.start(SESSION_MODE.FREE); },
@@ -214,6 +216,7 @@ mountExamPlanner({
 });
 /** Nobody has used the welcome on this browser yet: a judge's first look. */
 function firstVisit() { try { return localStorage.getItem('eklavya.welcome.done') !== '1'; } catch { return false; } }
+const arrivedByLink = Boolean(params.get('view') || params.get('reset') || location.hash.slice(1));   // read before the address is rewritten
 // the opening animation plays once per visit (not for a link to a specific screen, not with reduced motion)
 const intro = mountIntro({
   intro: byId('intro'), frame: document.querySelector('.frame'), nav: byId('mtabs'), skip: byId('skip'),
@@ -488,14 +491,12 @@ startMotion({ store });
 // --- first impression: the welcome line, the guided tour, the Demo pill, the help menu (tour, about, lite mode) and the impact section
 const tour = createTour({
   showView: (view) => store.dispatch(actions.viewChanged(view)),
-  steps: [
-    { view: VIEWS.TODAY, target: '#desk', fallback: '#todayHero', title: 'Your next topic, as a 3D book', text: 'Eklavya reads your notes and picks what to study next. The book shows that topic and how well you know it.' },
-    { view: VIEWS.STUDY, target: '#mentorFrame', title: 'Talk to your mentor', text: 'Tap the microphone and speak in English, Hindi or Hinglish. As it explains, a whiteboard draws the idea, and you can interrupt any time.' },
-    { view: VIEWS.ASK, target: '#askForm', fallback: '#askChat', title: 'Ask your notes', text: 'Type or speak a question. The answer comes from your own notes, with the exact passages it used cited underneath.' },
-    { view: VIEWS.FLASHCARDS, target: '.fcstage', fallback: '#fcReview', title: 'Flip, rate, watch mastery move', text: 'Press Space to flip a card, then 1, 2 or 3. A message tells you how that topic\'s mastery changed, and the card drops into its box on the shelf.' },
-    { view: VIEWS.PROGRESS, target: '#graph3d', fallback: '#conceptMap', title: 'See how your ideas connect', text: 'Every topic is a sphere: green is strong, gold is growing, terracotta needs a look. Click one to fly to it and study it.' },
-  ],
-  onEnd: (finished) => { welcome.done(); showView(VIEWS.TODAY); if (finished) notifier.success('That was the tour. Replay it any time from the ⋯ menu.'); },
+  steps: TOUR_STEPS,
+  onEnd: (finished) => {   // the welcome stays: its demo button is the next thing to press
+    markTourSeen();
+    showView(VIEWS.TODAY);
+    if (finished) notifier.success('That was the tour. Replay it any time from the ⋯ menu.');
+  },
 });
 // --- the guided demo: four real things to do, each ticked when it really happened
 const DEMO_QUESTION = 'Precision aur recall mein kya difference hai?';
@@ -527,9 +528,22 @@ async function startGuide() {
     await home.refresh();
   }
 }
+/** "Try the demo notes": load the demo, land in the Study room on a topic, say what to press, and dock the guided demo as a small pill. */
+async function tryDemoNotes() {
+  if (!(selectDashboard(store.getState())?.mastery?.length)) {   // already has notes: nothing to reload
+    notifier.info('Loading the demo notes…');
+    await notes.loadDemo({ quiet: true });
+    await home.refresh();
+  }
+  const topic = pickDemoTopic(topicsOf());
+  if (topic) await notes.openTopic(topic.topic_id);
+  showView(VIEWS.STUDY);
+  notifier.success(demoLoadedMessage(topic?.topic_name));
+  guide.open({ min: true });
+}
 const welcome = mountWelcome({
   root: byId('welcome'), isGuest: !signedIn,
-  onDemo: startGuide,   // the guided demo: load the demo notes if needed, then the four-step checklist
+  onDemo: tryDemoNotes,   // one click: demo loaded, on a topic in the Study room
   onUpload: openNotes, onTour: () => tour.start(),
 });
 byId('demoPill').hidden = signedIn;
@@ -544,9 +558,14 @@ const aboutDialog = byId('about');
 let aboutShown = false;
 byId('helpAbout').addEventListener('click', () => {
   setMenu(false);
-  if (!aboutShown) { aboutShown = true; mountImpact({ root: byId('aboutBody') }); }
+  if (!aboutShown) { aboutShown = true; mountImpact({ root: byId('aboutBody'), loadSummary: () => backend.feedbackSummary() }); }
   aboutDialog.showModal();
 });
 byId('aboutClose').addEventListener('click', () => aboutDialog.close());
 mountImpact({ root: byId('impactBody'), loadSummary: () => backend.feedbackSummary() });
+if (firstVisit()) byId('impact').open = true;   // a first look sees the explanation, not a closed fold
+// the tour offers itself once, after the login choice and with nothing else open; the guided demo only docks after the demo is loaded
+if (shouldAutoTour({ seen: tourSeen(), needsLogin: needsLogin(), arrivedByLink, onboardingPending: signedIn && !onboardingDone(), reduceMotion })) {
+  intro.whenDone(() => setTimeout(() => { if (!tour.running()) tour.start(); }, 1200));
+}
 mountBehindScenes({ root: byId('behindBody'), details: byId('behindScenes'), load: () => backend.behindTheScenes() });

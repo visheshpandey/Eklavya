@@ -865,3 +865,12 @@ html.wave-gsap .wave i { animation: none; }
 .replan-note { display: grid; gap: 4px; margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--terracotta); border-radius: 12px; background: var(--paper-hi); font-size: 14px; line-height: 1.45; color: var(--ink); }
 .replan-note .mono { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--terracotta); }
 .planner-agent { margin: 10px 0 0; max-width: 60ch; }
+
+/* first visit: the "What is Eklavya?" strip and the hero's demo button */
+.what-strip { display: grid; gap: 10px; margin: 16px 0 4px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-hi); }
+.what-strip ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.what-strip li { display: grid; gap: 2px; font-size: 14px; line-height: 1.45; }
+.what-strip li b { font: 400 18px var(--font-serif); }
+.what-strip li span { color: var(--ink-3); }
+@media (max-width: 800px) { .what-strip ol { grid-template-columns: 1fr; gap: 10px; } }
+.hero-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

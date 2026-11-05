@@ -46,12 +46,12 @@ export function createNotesController({ store, backend, notifier, userId, endSes
     refresh: () => guarded(loadDashboard),
 
     /** One demo load at a time: a second click while it is running joins the first instead of loading twice. */
-    loadDemo: () => (demoLoad ??= guarded(async () => {
+    loadDemo: ({ quiet = false } = {}) => (demoLoad ??= guarded(async () => {
       endSession();
       await backend.seedDemo(userId);
       store.dispatch(actions.notesReset());
       await loadDashboard();
-      notifier.success('Demo notes loaded. Tap a topic to start learning.');
+      if (!quiet) notifier.success('Demo notes loaded. Tap a topic to start learning.');
     }).finally(() => { demoLoad = null; })),
 
     /** Notes from a YouTube video or a web article. Resolves true when the notes were added. */

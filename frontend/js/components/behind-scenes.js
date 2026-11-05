@@ -10,6 +10,7 @@ export function mountBehindScenes({ root, details, load }) {
     let report;
     try { report = await load(); } catch { render(root, el('p', { class: 'hint', text: 'Could not load this right now. Try again in a moment.' })); return; }
     render(root,
+      el('p', { class: 'hint', text: 'Live log of what each AI agent saw, decided and did.' }),
       el('div', { class: 'bts-stats' }, describeUsage(report).map((stat) => el('div', { class: 'bts-stat' },
         el('span', { class: 'mono', text: stat.label }), el('b', { text: stat.value }), el('small', { text: stat.note })))),
       el('div', { class: 'impact-how' }, el('span', { class: 'mono', text: 'What the agents decided for you, newest first' }),

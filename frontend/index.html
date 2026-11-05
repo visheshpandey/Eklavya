@@ -97,7 +97,7 @@
               <button class="menu-item" type="button" id="helpInstall" hidden>Install Eklavya on this device</button>
               <button class="menu-item" type="button" id="helpGuide">Start the guided demo</button>
               <button class="menu-item" type="button" id="helpTour">Replay the tour</button>
-              <button class="menu-item" type="button" id="helpAbout">About Eklavya and its impact</button>
+              <button class="menu-item" type="button" id="helpAbout">About / How it works</button>
               <button class="menu-item" type="button" id="helpLite">Lite mode</button>
               <button class="menu-item" type="button" id="helpExit" hidden>Exit demo (sign in)</button>
             </div>
@@ -123,6 +123,14 @@
           <!-- TODAY -->
           <section id="panel-today" class="panel" role="tabpanel" aria-labelledby="tab-today">
             <div id="welcome" class="welcome-wrap" hidden></div>
+            <aside id="whatIs" class="what-strip" aria-label="What is Eklavya?">
+              <span class="mono">What is Eklavya?</span>
+              <ol>
+                <li><b>The problem</b><span>Students study from scattered PDFs and videos, mostly in English, with nobody to ask.</span></li>
+                <li><b>The fix</b><span>Eklavya teaches from your own notes or syllabus, out loud, in Hinglish.</span></li>
+                <li><b>The proof</b><span>Answers cite your notes · Talks in Hinglish · 370+ tests · Works on 2G</span></li>
+              </ol>
+            </aside>
             <div id="todayHead"></div>
             <div id="todayHero"></div>
             <div class="section"><div><span class="mono">Today's route</span><h2 class="section-title">One step at a time.</h2></div></div>
@@ -140,7 +148,7 @@
               <div id="todayMore" class="today"></div>
               <section id="planner" class="block planner" aria-label="Exam planner"></section>
             </details>
-            <details class="fold" id="behindScenes"><summary><span class="mono">Behind the scenes</span><b>What the agents really did</b></summary><div id="behindBody"></div></details>
+            <details class="fold" id="behindScenes"><summary title="Live log of what each AI agent saw, decided and did."><span class="mono">Behind the scenes</span><b>What the agents really did</b></summary><div id="behindBody"></div></details>
             <details class="fold" id="impact"><summary><span class="mono">Why Eklavya</span><b>Built for how Indian students study</b></summary><div id="impactBody"></div></details>
           </section>
 

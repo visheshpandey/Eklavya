@@ -73,8 +73,8 @@ export function mountGuide({ root, actions, storage = globalThis.localStorage })
 
   draw();
   return {
-    /** Open the guide (from the welcome or the menu). */
-    open() { state.open = true; state.min = false; save(); draw(); },
+    /** Open the guide (from the welcome or the menu). `min` opens it as the small pill. */
+    open({ min = false } = {}) { state.open = true; state.min = min; save(); draw(); },
     /** A step really happened: tick it (only while the guide is in use). */
     mark(id) {
       if (!state.open || state.done[id]) return;

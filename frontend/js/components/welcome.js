@@ -22,8 +22,9 @@ export function mountWelcome({ root, isGuest, onDemo, onUpload, onTour, storage 
         el('p', { class: 'lead', text: 'Upload full notes or just a syllabus, then ask or talk. Eklavya explains each topic, cites your notes, tests you, and tracks what you are forgetting.' }),
         el('ul', { class: 'hero-chips', 'aria-label': 'What makes Eklavya different' }, ['Speaks Hinglish', 'Cites your own notes', 'Knows what you are forgetting'].map((text) => el('li', { text }))),
         el('div', { class: 'welcome-acts' },
-          isGuest ? el('button', { class: 'btn btn-primary btn-lg', type: 'button', id: 'btnTryDemo', onclick: async () => { done(); await onDemo(); } }, 'Start the 2-minute guided demo ↗') : el('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { done(); onTour(); } }, 'Take the tour'),
+          isGuest ? el('button', { class: 'btn btn-primary btn-lg', type: 'button', id: 'btnTryDemo', onclick: async () => { done(); await onDemo(); } }, 'Try the demo notes ↗') : el('button', { class: 'btn btn-primary btn-lg', type: 'button', onclick: () => { done(); onTour(); } }, 'Take the tour'),
           el('button', { class: 'btn btn-secondary btn-lg', type: 'button', onclick: () => { done(); onUpload(); } }, 'Use my own notes or syllabus'),
+          isGuest ? el('button', { class: 'linkbtn', type: 'button', onclick: () => { done(); onTour(); } }, 'New here? Take the 30-second tour') : null,
           el('button', { class: 'linkbtn', type: 'button', onclick: done }, 'Skip'))),
       el('ol', { class: 'welcome-steps', 'aria-label': 'How it works' }, STEPS.map(([name, title, sub], i) => el('li', { style: `--i:${i}` },
         el('span', { class: 'ws-icon' }, icon(name, { size: 26 })), el('b', { text: title }), el('small', { class: 'mono', text: sub }))))));
