@@ -346,7 +346,7 @@ mountMissionCard({ store, root: byId('mission') });
 mountMasteryChart({ store, root: byId('chart') });
 mountMasteryRows({ store, root: byId('masteryRows') });
 mountMasteryRing({ store, root: byId('masteryRing') });
-const graph3d = mountGraph(byId('graph3d'), (id) => conceptMap.select(id));   // the 3D version of the map; the page's own cards and list stay
+const graph3d = mountGraph(byId('graph3d'), (id) => { conceptMap.select(id); document.getElementById('mapDetail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });   // a click opens the topic's card (Learn this, Test me, Ask about it) and brings it into view   // the 3D version of the map; the page's own cards and list stay
 const conceptMap = mountConceptMap({
   store, root: byId('conceptMap'), onSelected: (id) => graph3d.focus(id), onAddNotes: openNotes,
   onTest: (topicId) => { showView(VIEWS.STUDY); startMode(SESSION_MODE.TEST, topicId); },

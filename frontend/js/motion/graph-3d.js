@@ -1,9 +1,11 @@
 // The concept map in 3D (3d-force-graph + three-spritetext). One sphere per topic: its size follows how many notes it is built from, its colour the
 // mastery scale (terracotta under 60, gold 60-79, green 80 and up; paper grey for a topic not started yet), weak topics pulse softly. Topics of one
 // subject gather around the subject's own label even when nothing links them. Hover shows the full name and mastery, a click flies the camera to the
-// topic and selects it (the detail card with "Learn this" and "Test me" is the page's own). The whole graph turns slowly until the student takes hold.
+// topic and selects it (the detail card with "Learn this", "Test me" and "Ask about it" is the page's own). The biggest spheres always carry their name, the rest
+// show it on hover or tap, and a subject's title is placed above its highest sphere so it never covers a dot. The whole graph turns slowly until the student takes hold.
 import { PALETTE, reducedMotion } from './env.js';
 import { THREE } from './scene-kit.js';
+import { permanentLabelIds, subjectLabelSpot } from '../lib/graph-labels.js';
 
 export const colorFor = (mastery, started = true) => (!started ? '#b9b2a0' : mastery < 60 ? PALETTE.terracotta : mastery < 80 ? PALETTE.gold : PALETTE.greenSoft);
 export const radiusFor = (notes = 1) => 6 + ((Math.min(Math.max(notes, 1), 12) - 1) / 11) * 8;   // 6 to 14 by how many notes a topic is built from
@@ -23,7 +25,7 @@ export async function createGraph(host, initialMap, { onPick }) {
   const { ForceGraph3D, SpriteText } = await import('../../vendor/force-graph.js');
   if (!host.clientWidth || !host.clientHeight) throw new Error('the map container has no size yet');
   const calm = reducedMotion();
-  let anchors = new Map(), selectedId = null;
+  let anchors = new Map(), selectedId = null, permanent = new Set(), subjectSprites = new Map();
   const graph = ForceGraph3D({ controlType: 'orbit', rendererConfig: { antialias: true, alpha: true } })(host)
     .backgroundColor('rgba(0,0,0,0)')
     .showNavInfo(false)
@@ -41,7 +43,7 @@ export async function createGraph(host, initialMap, { onPick }) {
         new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.18, roughness: 0.55, metalness: 0.05 })));
       const text = new SpriteText(labelFor(node), 6, PALETTE.ink);   // about 6 world units tall: readable at the fitted zoom
       text.fontFace = 'DM Sans, sans-serif'; text.fontWeight = '600'; text.backgroundColor = 'rgba(250,248,242,0.96)'; text.padding = 2.4; text.borderRadius = 3;
-      text.position.y = radius + 9; text.visible = node.id === selectedId; text.material.depthTest = false; text.renderOrder = 10;
+      text.position.y = radius + 9; text.visible = node.id === selectedId || permanent.has(node.id); text.material.depthTest = false; text.renderOrder = 10;
       group.add(text);
       node.__label = text;
       return group;
@@ -64,7 +66,7 @@ export async function createGraph(host, initialMap, { onPick }) {
   resizer.observe(host); size();
 
   let hovered = null;
-  const showLabels = () => { for (const n of graph.graphData().nodes) if (n.__label) n.__label.visible = n === hovered || n.id === selectedId; };   // only the hovered and the selected topic carry a label
+  const showLabels = () => { for (const n of graph.graphData().nodes) if (n.__label) n.__label.visible = n === hovered || n.id === selectedId || permanent.has(n.id); };   // the biggest spheres, the hovered and the selected topic carry a name
   graph.onNodeHover((node) => {
     hovered = node;
     showLabels();
@@ -99,18 +101,29 @@ export async function createGraph(host, initialMap, { onPick }) {
   const toData = (map) => {
     const nodes = (map?.nodes ?? []).map((n) => ({ id: n.id, name: n.topic, mastery: n.mastery, started: n.started !== false, notes: n.notes ?? 1, subject: n.subject ?? 'Notes' }));
     anchors = subjectAnchors(nodes.map((n) => n.subject), 62);
+    permanent = new Set(permanentLabelIds(nodes));
     for (const old of subjectLabels) { graph.scene().remove(old); old.material.map?.dispose(); old.material.dispose(); }
+    subjectSprites = new Map();
     subjectLabels = [...anchors].map(([name, p]) => {
       const sprite = new SpriteText(name.toUpperCase(), 11, '#5f564a');   // large: the subjects are what the eye should find first
       sprite.fontFace = 'DM Mono, monospace'; sprite.fontWeight = '600'; sprite.material.depthWrite = false; sprite.material.depthTest = false; sprite.renderOrder = 5; sprite.material.opacity = 0.9;
       sprite.position.set(p.x, p.y + 40, p.z);
       graph.scene().add(sprite);
+      subjectSprites.set(name, sprite);
       return sprite;
     });
     return { nodes, links: (map?.links ?? []).map((l) => ({ source: l.source, target: l.target, weight: l.weight })) };
   };
+  const placeSubjectTitles = () => {   // above the highest sphere of each subject, so a title never lands on a dot
+    const placed = graph.graphData().nodes.filter((n) => Number.isFinite(n.x));
+    for (const [name, sprite] of subjectSprites) {
+      const spot = subjectLabelSpot(placed.filter((n) => (n.subject ?? 'Notes') === name).map((n) => ({ x: n.x, y: n.y, z: n.z, r: radiusFor(n.notes) })));
+      if (spot) sprite.position.set(spot.x, spot.y, spot.z);
+    }
+  };
+  graph.onEngineTick(placeSubjectTitles);
   let framed = false;
-  graph.onEngineStop(() => { if (!framed) { framed = true; fit(600); } });   // once the layout settles, fit the whole map in view
+  graph.onEngineStop(() => { placeSubjectTitles(); if (!framed) { framed = true; fit(600); } });   // once the layout settles, fit the whole map in view
   const onShown = () => { if (!document.hidden) fit(300); };
   document.addEventListener('visibilitychange', onShown);
   graph.graphData(toData(initialMap));
