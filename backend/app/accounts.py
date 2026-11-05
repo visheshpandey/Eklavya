@@ -17,7 +17,8 @@ from app.services.documents import delete_document
 
 # ---------------------------------------------------------------- rate limits (one server process, so memory is enough)
 WINDOW_SECONDS = 15 * 60
-LIMITS = {"guest-ip": 60, "login-email": 5, "login-ip": 30, "signup-ip": 10, "forgot-email": 3, "forgot-ip": 10, "google-ip": 30}
+# "guest-ip" is high on purpose: a hall of judges or students may share one network address
+LIMITS = {"guest-ip": 600, "login-email": 5, "login-ip": 30, "signup-ip": 10, "forgot-email": 3, "forgot-ip": 10, "google-ip": 30}
 _hits: dict[str, deque] = defaultdict(deque)
 _hits_lock = threading.Lock()
 

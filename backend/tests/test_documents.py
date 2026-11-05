@@ -124,5 +124,6 @@ def test_dashboard_progress_rows_carry_what_the_chart_needs(two_documents):
         db.execute("INSERT INTO quiz_attempts (user_id, topic_id, question_id, question, student_answer, is_correct, confidence, mastery_before, mastery_after) "
                    "VALUES (1, ?, 1, 'q', 'A', ?, 0.5, ?, ?)", (tid, ok, before, after))
     rows = [r for r in client.get("/api/dashboard").json()["progress"] if r["topic_name"] == "Precision"]
+    rows = rows[-2:]   # the demo seeds earlier real answers on this topic; the two just added are the newest
     assert [(r["mastery_before"], r["mastery_after"], r["is_correct"]) for r in rows] == [(38, 30, 0), (30, 40.5, 1)]
     assert rows[0]["attempt_id"] < rows[1]["attempt_id"]                       # oldest first
