@@ -1,5 +1,5 @@
 {
-  "_about": "Everything the demo student starts with. Loaded by app.services.demo_seed.seed_demo (one function). history is [days ago, mastery] oldest first; flashcard box 0 = due now.",
+  "_about": "Everything the demo student starts with. Loaded by app.services.demo_seed.seed_demo (one function). history is [days ago, mastery] oldest first; flashcard box 0 = due now. The most recent points (3 days ago or newer) are seeded as real answers, so Recent answers, the Mastery over time chart and each topic's mastery always agree; a dip is a wrong answer.",
   "documents": [
     {
       "title": "Operating Systems Notes",
@@ -60,6 +60,10 @@
             [
               2,
               47
+            ],
+            [
+              1,
+              43
             ],
             [
               0,
@@ -154,6 +158,10 @@
               64
             ],
             [
+              1,
+              61
+            ],
+            [
               0,
               70
             ]
@@ -208,6 +216,10 @@
             [
               2,
               39
+            ],
+            [
+              1,
+              36
             ],
             [
               0,
