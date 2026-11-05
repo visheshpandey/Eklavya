@@ -516,7 +516,9 @@ const guide = mountGuide({
 });
 document.addEventListener('eklavya:guide', (event) => guide.mark(event.detail));
 document.addEventListener('eklavya:mastery', () => guideMark('cards'));
-store.select(selectView, (view) => { if (view === VIEWS.PROGRESS) guideMark('progress'); });
+// the guide card is a small pill in the Study room (it would cover the chat box) and on a phone (it would cover half the screen); tap it to open
+const phone = globalThis.matchMedia?.('(max-width: 700px)');
+store.select(selectView, (view) => { guide.setSqueezed(view === VIEWS.STUDY || Boolean(phone?.matches)); if (view === VIEWS.PROGRESS) guideMark('progress'); });
 store.select(selectVoiceStatus, (status) => { if (status === VOICE_STATUS.LISTENING || status === VOICE_STATUS.SPEAKING) guideMark('talk'); });
 byId('textform').addEventListener('submit', () => { if (byId('textin').value.trim()) guideMark('talk'); });
 async function startGuide() {

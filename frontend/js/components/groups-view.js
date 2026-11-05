@@ -1,6 +1,7 @@
 // Study groups: make one or join with a code, share notes with friends, and see this week's leaderboard.
 // Needs a real account; a guest sees a sign-in prompt. Data comes through `api`, this file only draws.
 import { el, render } from '../lib/dom.js';
+import { leaderboardRow } from '../lib/leaderboard-row.js';
 
 export function mountGroups({ root, api, signedIn, onSignIn, myDocuments, onNotesAdded, notify, guestRoot = null }) {
   let list = [];
@@ -55,11 +56,7 @@ export function mountGroups({ root, api, signedIn, onSignIn, myDocuments, onNote
         el('strong', { class: 'group-code', text: group.code }),
         el('button', { class: 'btn btn-quiet btn-sm', type: 'button', onclick: () => copy(group.code) }, 'Copy')),
       el('h4', { text: 'This week' }),
-      el('ol', { class: 'leaderboard' }, group.leaderboard.map((r) => el('li', { class: r.you ? 'is-you' : '' },
-        el('span', { class: 'lb-rank', text: String(r.rank) }),
-        el('span', { class: 'lb-name', text: r.you ? `${r.name} (you)` : r.name }),
-        el('span', { class: 'hint', text: `${r.streak}-day streak, ${r.mastery}% mastery` }),
-        el('strong', { text: `${r.points} pts` })))),
+      el('ol', { class: 'leaderboard' }, group.leaderboard.map((r) => leaderboardRow(r, `${r.points} pts`))),
       el('p', { class: 'hint', text: `Points this week: ${group.points.correct} for a right answer, ${group.points.answer} for any answer, ${group.points.card} per flashcard, ${group.points.session} per voice session.` }),
       el('h4', { text: 'Shared notes' }),
       group.notes.length ? el('ul', { class: 'list' }, group.notes.map((n) => el('li', { class: 'shared-note' },

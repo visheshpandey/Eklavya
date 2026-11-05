@@ -5,7 +5,7 @@ import { t } from '../lib/strings.js';
 import { selectCaptions, selectLanguage, selectMessages, selectSessionActive } from '../state/selectors.js';
 
 export function mountStageTools({ store, root, captionRoot, onToggleCaptions, onPhoto }) {
-  const file = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true,
+  const file = el('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true, 'aria-label': 'Take or choose a photo to show Eklavya',
     onchange: async () => { const chosen = file.files[0]; file.value = ''; if (chosen) await onPhoto(chosen); } });
   const captionsButton = el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: onToggleCaptions });
   const photoButton = el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => file.click() });

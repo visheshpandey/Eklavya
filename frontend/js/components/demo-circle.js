@@ -4,6 +4,7 @@
 // the shared book (motion layer) draws from them.
 import { el, render } from '../lib/dom.js';
 import { masteryHistory } from '../lib/mastery-history.js';
+import { leaderboardRow } from '../lib/leaderboard-row.js';
 import { canScene } from '../motion/index.js';
 import { selectDashboard, selectToday } from '../state/selectors.js';
 
@@ -94,11 +95,7 @@ export function mountDemoCircle({ store, root, api, onSignIn, onNotes }) {
         el('div', { class: 'group-code-row' }, el('strong', { text: circle.name }), el('span', { class: 'hint', text: 'Invite code' }), el('strong', { class: 'group-code', text: circle.code })),
         el('div', { class: 'gc-cols' }, el('section', { class: 'card gc-card' },
         el('h4', { text: 'This week: mastery gained' }),
-        el('ol', { class: 'leaderboard' }, rows.map((r) => el('li', { class: r.you ? 'is-you' : '' },
-          el('span', { class: 'lb-rank', text: String(r.rank) }), el('span', { class: 'lb-av', 'aria-hidden': 'true', text: r.name.slice(0, 1) }),
-          el('span', { class: 'lb-name', text: r.you ? `${r.name} (you)` : r.name }),
-          el('span', { class: 'hint', text: `${r.streak}-day streak, ${r.mastery}% mastery` }),
-          el('strong', { text: `${r.gain >= 0 ? '+' : ''}${r.gain} pts` })))),
+        el('ol', { class: 'leaderboard' }, rows.map((r) => leaderboardRow(r, `${r.gain >= 0 ? '+' : ''}${r.gain} pts`))),
         el('p', { class: 'hint', text: 'Points are the average mastery gained across topics this week.' })),
         el('div', { class: 'gc-stack' }, el('section', { class: 'card gc-card' },
         el('h4', { text: 'Shared notes' }),

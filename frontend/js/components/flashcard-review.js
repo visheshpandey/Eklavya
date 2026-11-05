@@ -6,6 +6,7 @@
 import { el, render, svgEl } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { dueCount } from '../lib/cards.js';
+import { flashcardKey } from '../lib/shortcut-guard.js';
 import { selectToday, selectView } from '../state/selectors.js';
 import { CIRCUMFERENCE, ringColor } from './mastery-ring.js';
 
@@ -182,10 +183,13 @@ export function mountFlashcardReview({ store, root, onLoadDue, onLoadAll, onRate
   }
 
   document.addEventListener('keydown', (event) => {
-    if (store.getState().ui.view !== 'flashcards' || isTyping(event.target) || document.querySelector('dialog[open]')) return;
-    if (event.key === ' ') { event.preventDefault(); flip(); return; }
-    const value = { 1: 'again', 2: 'hard', 3: 'known' }[event.key];
-    if (value && flipped && !summary) { event.preventDefault(); rate_(value); }
+    const action = flashcardKey(event, {
+      view: store.getState().ui.view, editable: isTyping(event.target) || isTyping(document.activeElement),
+      dialogOpen: Boolean(document.querySelector('dialog[open]')), flipped, summary,
+    });
+    if (!action) return;
+    event.preventDefault();
+    if (action === 'flip') flip(); else rate_(action);
   });
   store.select(selectView, (view) => { if (view === 'flashcards') refresh(); });
   store.select(selectToday, () => { const count = root.querySelector('.duepill b'); if (count && !mock) count.textContent = String(dueCount(store.getState())); });   // the header follows the same number as the sidebar badge

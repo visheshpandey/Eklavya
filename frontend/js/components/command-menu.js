@@ -2,8 +2,9 @@
 // Also owns the one-letter shortcuts (T, Q, M, D, U), which only fire when you are not typing in a field.
 import { el, render } from '../lib/dom.js';
 import { selectDashboard, selectSelectedTopicId } from '../state/selectors.js';
+import { createShortcutGuard, isEditable as isTyping } from '../lib/shortcut-guard.js';
 
-const isTyping = (target) => target instanceof Element && Boolean(target.closest('input, textarea, select, [contenteditable]'));
+const guard = createShortcutGuard();
 
 export function mountCommandMenu({ store, dialog, trigger, actions, topics, pages, onNoMatch }) {
   const input = el('input', {
@@ -115,11 +116,17 @@ export function mountCommandMenu({ store, dialog, trigger, actions, topics, page
       if (dialog.open) dialog.close(); else open();
       return;
     }
-    if (event.ctrlKey || event.metaKey || event.altKey || dialog.open || isTyping(event.target) || document.querySelector('dialog[open]')) return;
     const action = actions.find((a) => a.key.toLowerCase() === event.key.toLowerCase());
-    if (!action || (action.needsTopic && selectSelectedTopicId(store.getState()) == null)) return;
-    event.preventDefault();
-    action.run();
+    if (!action) { guard.note(event, { editable: isTyping(event.target) || isTyping(document.activeElement) }); return; }   // other letters still count as typing
+    // the guard keeps a typed sentence from firing shortcuts: not in a field, no dialog, no modifier, no burst of letters
+    guard.press(event, {
+      editable: isTyping(event.target) || isTyping(document.activeElement),
+      dialogOpen: dialog.open || Boolean(document.querySelector('dialog[open]')),
+      run() {
+        if (action.needsTopic && selectSelectedTopicId(store.getState()) == null) return;
+        action.run();
+      },
+    });
   });
 
   return { open };

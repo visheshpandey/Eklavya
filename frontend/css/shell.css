@@ -874,3 +874,24 @@ html.wave-gsap .wave i { animation: none; }
 .what-strip li span { color: var(--ink-3); }
 @media (max-width: 800px) { .what-strip ol { grid-template-columns: 1fr; gap: 10px; } }
 .hero-acts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+/* ===== Workstream 2: judge-readiness polish (stray decorations, confetti, mobile, focus, contrast) ===== */
+/* the floating page on the My notes drop zone: it sat on "Try the demo notes" once there were four buttons. Now above the box, behind the buttons, and gone on narrow screens */
+.drop::before { right: 44px; top: -58px; z-index: 0; }
+.drop .drop-acts { position: relative; z-index: 1; }
+@media (max-width: 1100px) { .drop::before { display: none; } }
+/* the decorative circles on "Test the whole deck": person icons, not letters a judge could mistake for text or shortcuts */
+.ppl span { color: var(--ink-3); }
+.ppl span:nth-child(2n) { background: var(--sage); }
+/* leaderboard rows: rank, initial, "Name · streak, mastery" on one line (wrapping if narrow), points */
+.leaderboard li.lb-row { grid-template-columns: 1.6rem 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.leaderboard li.lb-row .lb-who { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 0; min-width: 0; }
+.leaderboard li.lb-row .lb-name { font-weight: 600; }
+.leaderboard li.lb-row .lb-sep { color: var(--ink-3); }
+.leaderboard li.lb-row .hint { grid-column: auto; grid-row: auto; }
+.leaderboard li.lb-row strong { grid-column: auto; grid-row: auto; white-space: nowrap; }
+.leaderboard li.lb-row .lb-av { width: 34px; height: 34px; }
+/* the confetti canvas covers only the main content area (its box is set from the page when a burst fires) */
+.confetti-layer { position: fixed; z-index: 100; pointer-events: none; }
+/* focus rings: cream on the dark green cards (terracotta was 1.6:1 there), and a ring around the whole Ask box because its textarea has none of its own */
+.hero :focus-visible, .welcome :focus-visible, .studyhead :focus-visible { outline-color: var(--on-accent); }
+.askbox:focus-within { outline: 3px solid var(--accent-text); outline-offset: 2px; }
