@@ -10,6 +10,8 @@ export const ActionType = Object.freeze({
   TOPIC_LOADED: 'topic/loaded',
   NOTES_RESET: 'data/notesReset',
   SESSION_STARTED: 'session/started',
+  LIVE_READY: 'session/liveReady',
+  TEXT_MODE_STARTED: 'session/textMode',
   CONNECTION_LOST: 'session/connectionLost',
   SESSION_RESUMED: 'session/resumed',
   TRANSCRIPT_RECEIVED: 'session/transcript',
@@ -54,7 +56,9 @@ export const actions = {
   topicLoaded: make(ActionType.TOPIC_LOADED),                  // GET /api/topics/{id} payload
   notesReset: make(ActionType.NOTES_RESET),                    // new notes loaded: clear everything tied to the old ones
   sessionStarted: make(ActionType.SESSION_STARTED),            // {mode, topicId}
-  transcriptReceived: make(ActionType.TRANSCRIPT_RECEIVED),    // {role, text, final}
+  liveReady: make(ActionType.LIVE_READY),                      // the server says the Gemini link is up: Eklavya can really hear and speak
+  textModeStarted: make(ActionType.TEXT_MODE_STARTED),         // the voice would not connect: the session carries on by typing
+  transcriptReceived: make(ActionType.TRANSCRIPT_RECEIVED),    // {role, text, final, replace?, local?}
   turnInterrupted: make(ActionType.TURN_INTERRUPTED),
   emotionReported: make(ActionType.EMOTION_REPORTED),          // server `emotion` event
   phaseChanged: make(ActionType.PHASE_CHANGED),                // server `phase` event

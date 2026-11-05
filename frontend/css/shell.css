@@ -865,3 +865,8 @@ html.wave-gsap .wave i { animation: none; }
 .replan-note { display: grid; gap: 4px; margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--terracotta); border-radius: 12px; background: var(--paper-hi); font-size: 14px; line-height: 1.45; color: var(--ink); }
 .replan-note .mono { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--terracotta); }
 .planner-agent { margin: 10px 0 0; max-width: 60ch; }
+
+/* Study room: honest connection state (a spinner until Eklavya is really ready) */
+.stage-status.is-connecting::before, .call-status.is-connecting::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; border: 2px solid var(--line); border-top-color: var(--terracotta); border-radius: 50%; animation: studyspin .8s linear infinite; }
+@keyframes studyspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .stage-status.is-connecting::before, .call-status.is-connecting::before { animation: none; } }

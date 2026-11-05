@@ -4,6 +4,8 @@ import { actions } from '../state/actions.js';
 import { SERVER_EVENT as EVENT, SESSION_MODE, VOICE_STATUS } from '../lib/protocol.js';
 import { round1 } from '../lib/format.js';
 import { t } from '../lib/strings.js';
+import { firstLine } from '../lib/voice-phase.js';
+import { selectDashboard, selectTopicDetail } from '../state/selectors.js';
 
 /** Server events carry `type`; state keeps only the payload. */
 const stripType = ({ type: _type, ...rest }) => rest;
@@ -37,6 +39,11 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
   }
 
   const active = () => voice.status !== VOICE_STATUS.IDLE;
+  function topicName(topicId) {
+    if (topicId == null) return '';
+    const state = store.getState();
+    return (selectDashboard(state)?.mastery ?? []).find((m) => m.topic_id === topicId)?.topic_name ?? (selectTopicDetail(state)?.topic_id === topicId ? selectTopicDetail(state).topic_name : '');
+  }
 
   function handleStatus(status) {
     store.dispatch(actions.voiceStatusChanged(status));
@@ -49,7 +56,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
         break;
       case EVENT.INTERRUPTED: store.dispatch(actions.turnInterrupted()); break;
       case EVENT.RECONNECTING: notifier.info(t('conn.reconnecting', language())); break;   // the server is retrying by itself
-      case EVENT.SESSION: break;                                                        // the voice client keeps the id for resuming
+      case EVENT.SESSION: store.dispatch(actions.liveReady()); break;                   // the Gemini link is up (the voice client also keeps the id for resuming)
       case EVENT.CONNECTION_LOST:
         store.dispatch(actions.connectionLost({ code: 'upstream_unavailable', retryable: true }));
         break;
@@ -105,6 +112,8 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
   async function start(mode = SESSION_MODE.FREE, topicId = null, debate = {}) {
     if (active()) voice.stop();
     store.dispatch(actions.sessionStarted({ mode, topicId }));
+    // shown at once, in text, while the voice connects; Eklavya's own greeting replaces it when it arrives
+    store.dispatch(actions.transcriptReceived({ role: 'tutor', text: firstLine({ mode, language: getLanguage(), topic: topicName(topicId) }), final: true, local: true }));
     lastStart = { mode, topicId, debate };
     unconfirmed = queued = null;
     try {

@@ -20,8 +20,9 @@ const EN = {
   'progress.title': 'Your progress', 'progress.chart': 'Mastery over time', 'progress.mistakes': 'Misconceptions',
   'progress.recent': 'Recent answers', 'progress.why': 'Why the tutor did that', 'progress.map': 'How your topics connect',
   'progress.cards': 'Flashcards', 'progress.results': 'Viva and debate results', 'progress.pack': 'Download study pack',
-  'stage.idle': 'Tap to talk to Eklavya', 'stage.connecting': 'Connecting...', 'stage.listening': 'Listening. Just talk.',
-  'stage.speaking': 'Eklavya is speaking. Talk to interrupt.', 'stage.hint': 'Headphones work best.',
+  'stage.idle': 'Tap to talk to Eklavya', 'stage.connecting': 'Connecting to Eklavya…', 'stage.listening': 'Listening. Just talk.',
+  'stage.yourTurn': 'Your turn: speak or type', 'stage.text': 'Text mode: type your answer',
+  'stage.speaking': 'Eklavya is speaking', 'stage.hint': 'Headphones work best.',
   'stage.captions': 'Captions', 'stage.photo': 'Show a photo',
   'composer.placeholder': 'Or type a message to Eklavya', 'composer.send': 'Send',
 
@@ -98,8 +99,9 @@ const HI = {
   'progress.title': 'आपकी प्रगति', 'progress.chart': 'समय के साथ महारत', 'progress.mistakes': 'गलतफ़हमियाँ',
   'progress.recent': 'हाल के जवाब', 'progress.why': 'ट्यूटर ने ऐसा क्यों किया', 'progress.map': 'आपके टॉपिक कैसे जुड़े हैं',
   'progress.cards': 'फ़्लैशकार्ड', 'progress.results': 'वाइवा और बहस के नतीजे', 'progress.pack': 'स्टडी पैक डाउनलोड करें',
-  'stage.idle': 'एकलव्य से बात करने के लिए टैप करें', 'stage.connecting': 'जुड़ रहा है...', 'stage.listening': 'सुन रहा हूँ। बस बोलिए।',
-  'stage.speaking': 'एकलव्य बोल रहा है। बीच में बोल सकते हैं।', 'stage.hint': 'हेडफ़ोन से सबसे अच्छा काम करता है।',
+  'stage.idle': 'एकलव्य से बात करने के लिए टैप करें', 'stage.connecting': 'एकलव्य से जुड़ रहा है…', 'stage.listening': 'सुन रहा हूँ। बस बोलिए।',
+  'stage.yourTurn': 'आपकी बारी: बोलिए या लिखिए', 'stage.text': 'टेक्स्ट मोड: अपना जवाब लिखिए',
+  'stage.speaking': 'एकलव्य बोल रहा है', 'stage.hint': 'हेडफ़ोन से सबसे अच्छा काम करता है।',
   'stage.captions': 'कैप्शन', 'stage.photo': 'फ़ोटो दिखाएँ',
   'composer.placeholder': 'या एकलव्य को संदेश लिखें', 'composer.send': 'भेजें',
 

@@ -5,6 +5,7 @@ import { t } from './lib/strings.js';
 import { hydrateIcons } from './lib/icons.js';
 import { SESSION_MODE, VOICE_STATUS } from './lib/protocol.js';
 import { loadLanguage, saveLanguage } from './lib/language.js';
+import { loadCaptions, saveCaptions } from './lib/captions.js';
 import { loadTheme } from './lib/theme.js';
 import { createSound, loadSound, saveSound } from './lib/sound.js';
 import { initialOf } from './lib/greeting.js';
@@ -14,7 +15,7 @@ import { VoiceClient } from './services/voice-client.js';
 import { createStore } from './state/store.js';
 import { initialState, reducer, VIEWS } from './state/reducer.js';
 import { actions } from './state/actions.js';
-import { selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
+import { selectCaptions, selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
 import { createNotifier } from './controllers/notifier.js';
 import { createNotesController } from './controllers/notes-controller.js';
 import { createSessionController } from './controllers/session-controller.js';
@@ -97,6 +98,8 @@ const params = new URLSearchParams(location.search);
 const store = createStore(reducer, initialState);
 store.dispatch(actions.themeChanged(loadTheme()));
 store.dispatch(actions.languageChanged(loadLanguage()));
+if (!loadCaptions()) store.dispatch(actions.captionsToggled());   // captions are on unless the student switched them off
+store.select(selectCaptions, (on) => saveCaptions(on));
 byId('lang').value = selectLanguage(store.getState());            // the selector shows the remembered language
 store.select(selectLanguage, (language) => { saveLanguage(language); byId('lang').value = language; });
 const notifier = createNotifier(store);

@@ -50,10 +50,10 @@ test('debate scores pile up and the verdict is kept; a new session clears both',
 
 test('language, captions, onboarding and celebrations live in ui state', () => {
   let s = run(actions.languageChanged('hindi'), actions.captionsToggled(), actions.onboardingSet(true), actions.celebrated({ id: 1, text: 'x' }));
-  assert.deepEqual([s.ui.language, s.ui.captions, s.ui.onboarding, s.ui.celebration.text], ['hindi', true, true, 'x']);
+  assert.deepEqual([s.ui.language, s.ui.captions, s.ui.onboarding, s.ui.celebration.text], ['hindi', false, true, 'x']);   // captions start ON, so one toggle turns them off
   assert.equal(reducer(s, actions.languageChanged('klingon')), s);
   s = reducer(s, actions.captionsToggled());
-  assert.equal(s.ui.captions, false);
+  assert.equal(s.ui.captions, true);
 });
 
 test('the app opens on Today; new notes clear the old concept map and flashcards', () => {

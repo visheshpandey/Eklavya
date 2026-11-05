@@ -3,7 +3,8 @@ import { VOICE_STATUS } from '../lib/protocol.js';
 
 export const selectVoiceStatus = (s) => s.voiceStatus;
 export const selectSessionActive = (s) => s.voiceStatus !== VOICE_STATUS.IDLE;
-export const selectTextInputEnabled = (s) => s.voiceStatus === VOICE_STATUS.LISTENING || s.voiceStatus === VOICE_STATUS.SPEAKING;
+export const selectTextInputEnabled = (s) => s.voiceStatus === VOICE_STATUS.LISTENING || s.voiceStatus === VOICE_STATUS.SPEAKING || (s.session.live.text && s.voiceStatus !== VOICE_STATUS.IDLE);
+export const selectLive = (s) => s.session.live;
 export const selectDashboard = (s) => s.dashboard;
 export const selectSelectedTopicId = (s) => s.selectedTopicId;
 export const selectTopicDetail = (s) => s.topicDetail;

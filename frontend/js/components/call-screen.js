@@ -4,13 +4,9 @@
 import { el, render } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { t } from '../lib/strings.js';
-import { VOICE_STATUS } from '../lib/protocol.js';
-import { selectLanguage, selectMessages, selectSessionActive, selectVoiceStatus } from '../state/selectors.js';
+import { selectLanguage, selectLive, selectMessages, selectSessionActive, selectVoiceStatus } from '../state/selectors.js';
+import { isConnecting, statusKey } from '../lib/voice-phase.js';
 
-const STATUS_KEY = {
-  [VOICE_STATUS.IDLE]: 'stage.idle', [VOICE_STATUS.CONNECTING]: 'stage.connecting',
-  [VOICE_STATUS.LISTENING]: 'stage.listening', [VOICE_STATUS.SPEAKING]: 'stage.speaking',
-};
 const PHONE = '(max-width: 48rem)';
 
 export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto }) {
@@ -41,7 +37,9 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
   function draw() {
     const state = store.getState();
     const language = selectLanguage(state);
-    status.textContent = t(STATUS_KEY[selectVoiceStatus(state)], language);
+    const live = selectLive(state);
+    status.textContent = t(statusKey({ status: selectVoiceStatus(state), live }), language);
+    status.classList.toggle('is-connecting', isConnecting({ status: selectVoiceStatus(state), live }));
     const last = [...selectMessages(state)].reverse().find((m) => m.role === 'tutor');
     caption.textContent = last?.text ?? '';
     openButton.hidden = !selectSessionActive(state);
@@ -55,6 +53,7 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
     draw();
   });
   store.select(selectVoiceStatus, draw);
+  store.select(selectLive, draw);
   store.select(selectMessages, draw);
   store.select(selectLanguage, draw);
   openButton.addEventListener('click', () => set(true));
