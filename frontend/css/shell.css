@@ -870,3 +870,47 @@ html.wave-gsap .wave i { animation: none; }
 .stage-status.is-connecting::before, .call-status.is-connecting::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; border: 2px solid var(--line); border-top-color: var(--terracotta); border-radius: 50%; animation: studyspin .8s linear infinite; }
 @keyframes studyspin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .stage-status.is-connecting::before, .call-status.is-connecting::before { animation: none; } }
+
+/* Study room, at work (a question, a result, a board or a summary is up): the mentor card shrinks and the header folds away, so the avatar,
+   the question and the conversation fit one laptop screen. The coloured result is big and the mastery number counts up. */
+#panel-study.is-working .study-header .study-crumb,
+#panel-study.is-working .study-header .study-meta,
+#panel-study.is-working .study-header .study-details { display: none; }
+#panel-study.is-working .study-header .study-title { font-size: 1.25rem; }
+#panel-study.is-working .study-grid { gap: var(--s-3); }
+#panel-study.is-working .study-main { gap: var(--s-3); }
+#panel-study.is-working .stage { padding: 10px; gap: 8px; }
+#panel-study.is-working .mentor-frame { aspect-ratio: auto; height: clamp(150px, 26vh, 210px); min-width: 0; }
+#panel-study.is-working .mentor-frame .mf-static { inset: 8px; }
+#panel-study.is-working .mentor-frame .avatar { max-height: none; }
+#panel-study.is-working .mentor-frame .caption { bottom: 8px; padding: 5px 12px; font-size: 13px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#panel-study.is-working .call-bar { padding: 6px 12px; gap: 12px; }
+#panel-study.is-working .call-bar .orb, #panel-study.is-working .call-bar > .orb { width: 52px; height: 52px; }
+#panel-study.is-working .call-bar .orb svg { width: 22px; height: 22px; }
+#panel-study.is-working .call-bar-text .stage-hint { display: none; }
+#panel-study.is-working .call-bar-text .stage-status { font-size: 15px; }
+#panel-study.is-working .stage-text { gap: 4px; }
+#panel-study.is-working .quiz { padding: 14px 16px; gap: 10px; }
+#panel-study.is-working .quiz .q-text { font-size: 1.05rem; }
+#panel-study.is-working .quiz .opt { padding: 8px 12px; min-height: 40px; }
+#panel-study.is-working .quiz .hint { display: none; }
+#panel-study.is-working .study-side .convo { height: min(34rem, calc(100vh - 9rem)); }
+@media (min-width: 70rem) { #panel-study.is-working .study-side { top: var(--s-3); } }
+.result { border: 1.5px solid transparent; animation: resultpop .35s ease-out; }
+.result.ok { border-color: var(--ok-fill); }
+.result.bad { border-color: var(--bad-text); }
+.result-main { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 18px; }
+.result-title { font-size: 1.7rem; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; }
+.result.ok .result-title { color: var(--ok-text); }
+.result.bad .result-title { color: var(--bad-text); }
+.result-mastery { margin: 0; font-size: 1rem; }
+.result .mastery-num { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.result .delta { font-weight: 650; }
+.result .delta.up { color: var(--ok-text); }
+.result .delta.down { color: var(--bad-text); }
+.result .next-q { justify-self: start; margin-top: 4px; }
+@keyframes resultpop { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .result { animation: none; } }
+
+/* the guided-demo card must not sit over the question or the chat while the Study room is at work (it is back as soon as the student leaves) */
+body:has(#panel-study.is-working) .guide-dock .guide { display: none; }

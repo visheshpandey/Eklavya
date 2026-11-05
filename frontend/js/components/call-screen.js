@@ -4,7 +4,7 @@
 import { el, render } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
 import { t } from '../lib/strings.js';
-import { selectLanguage, selectLive, selectMessages, selectSessionActive, selectVoiceStatus } from '../state/selectors.js';
+import { selectBoardIndex, selectLanguage, selectLive, selectMessages, selectQuestion, selectSessionActive, selectSummary, selectVoiceStatus } from '../state/selectors.js';
 import { isConnecting, statusKey } from '../lib/voice-phase.js';
 
 const PHONE = '(max-width: 48rem)';
@@ -47,13 +47,18 @@ export function mountCallScreen({ store, root, frame, openButton, onEnd, onPhoto
 
   let wasActive = false;
   store.select(selectSessionActive, (active) => {
-    if (active && !wasActive && globalThis.matchMedia?.(PHONE).matches) set(true);   // a call on a phone fills the screen
+    if (active && !wasActive && globalThis.matchMedia?.(PHONE).matches && !selectLive(store.getState()).text) set(true);   // a call on a phone fills the screen (text mode is not a call)
     if (!active) set(false);
     wasActive = active;
     draw();
   });
   store.select(selectVoiceStatus, draw);
   store.select(selectLive, draw);
+  store.select(selectLive, (live) => { if (live.text) set(false); });   // the voice gave way to text mode: there is no call to show full screen
+  // a question, a board or the summary appeared: back to the normal Study screen, where it can be seen and answered (the call carries on)
+  store.select(selectQuestion, (question) => { if (question && open) set(false); });
+  store.select(selectBoardIndex, (index) => { if (index >= 0 && open) set(false); });
+  store.select(selectSummary, (summary) => { if (summary && open) set(false); });
   store.select(selectMessages, draw);
   store.select(selectLanguage, draw);
   openButton.addEventListener('click', () => set(true));

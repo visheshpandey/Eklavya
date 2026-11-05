@@ -7,6 +7,7 @@ import { SESSION_MODE, VOICE_STATUS } from './lib/protocol.js';
 import { loadLanguage, saveLanguage } from './lib/language.js';
 import { loadCaptions, saveCaptions } from './lib/captions.js';
 import { endsOnLeave } from './lib/voice-phase.js';
+import { mountStudyFocus } from './components/study-focus.js';
 import { loadTheme } from './lib/theme.js';
 import { createSound, loadSound, saveSound } from './lib/sound.js';
 import { initialOf } from './lib/greeting.js';
@@ -333,6 +334,7 @@ mountVivaCard({ store, root: byId('viva') });
 mountDebateScore({ store, root: byId('debateScore') });
 mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.answer, onNext: session.nextQuestion });
 mountSummaryCard({ store, root: byId('summary') });
+mountStudyFocus({ store, panel: byId('panel-study'), reduceMotion });   // a compact mentor card while a question or board is up, and whatever appears is scrolled into view
 mountMissionCard({ store, root: byId('studyMission'), select: selectSessionMission, heading: 'Your next mission' });
 mountChat({ store, root: byId('chat') });
 mountTextInput({ store, form: byId('textform'), input: byId('textin'), button: byId('textsend'), onSend: session.sendText });

@@ -111,8 +111,8 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
     const { mode, topicId, phase } = store.getState().session;
     switching = true;
     try { if (active()) voice.stop(); } finally { switching = false; }
+    store.dispatch(actions.textModeStarted());                            // first: so nothing treats the next line as a call that just began
     store.dispatch(actions.voiceStatusChanged(VOICE_STATUS.LISTENING));   // the room stays open: the student can type
-    store.dispatch(actions.textModeStarted());
     if (phase) store.dispatch(actions.phaseChanged(phase));
     notifier.info(TEXT_MODE_NOTICE[reason] ?? TEXT_MODE_NOTICE.slow);
     await typed.begin({ mode, topicId, topic: topicName(topicId), carry: progress });
