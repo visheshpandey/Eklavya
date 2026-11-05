@@ -539,7 +539,8 @@ async function tryDemoNotes() {
   if (topic) await notes.openTopic(topic.topic_id);
   showView(VIEWS.STUDY);
   notifier.success(demoLoadedMessage(topic?.topic_name));
-  guide.open({ min: true });
+  setTimeout(() => byId('modes')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 500);   // the Learn and Test cards the message mentions
+  setTimeout(() => guide.open({ min: true }), 5000);   // after the toast has gone: one thing at a time
 }
 const welcome = mountWelcome({
   root: byId('welcome'), isGuest: !signedIn,
