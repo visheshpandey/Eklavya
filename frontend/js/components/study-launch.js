@@ -3,6 +3,7 @@
 // real voice session on it. The weakest topic is the default so a mode always has something to work on.
 import { el, render } from '../lib/dom.js';
 import { frontIndex, orbitPositions, orbitRadius, orbitTag, turnBy } from '../lib/orbit.js';
+import { MASTERY_HELP } from '../lib/progress-text.js';
 import { selectDashboard, selectSelectedTopicId, selectView } from '../state/selectors.js';
 
 const MAX_TOPICS = 8;
@@ -65,6 +66,7 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
     const id = selectSelectedTopicId(store.getState());
     nodes.forEach((node) => node.setAttribute('aria-pressed', String(node.dataset.topic === String(id))));
     const topic = topics.find((t) => t.topic_id === id) ?? (id != null ? (selectDashboard(store.getState())?.mastery ?? []).find((t) => t.topic_id === id) : null);
+    studyFor.title = MASTERY_HELP;
     studyFor.textContent = topic ? `Studying: ${topic.topic_name} · ${Math.round(topic.mastery_score)}% mastery` : topics.length ? `No topic picked: modes use ${topics[0].topic_name}, your weakest.` : 'Just talk to Eklavya, or add notes to study a topic.';
   }
 

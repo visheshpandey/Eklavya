@@ -62,7 +62,7 @@
 
         <div class="streakcard">
           <span class="mono" data-i18n="rail.streak">Learning streak</span>
-          <strong class="tnum"><span id="streakDays">00</span> <small id="streakUnit">days</small></strong>
+          <strong class="tnum"><span id="streakDays">0</span> <small id="streakUnit">days</small></strong>
           <p id="streakNote">Study today to start a streak.</p>
           <div class="week" id="weekDots" role="img" aria-label="Active 0 of the last 7 days"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         </div>
@@ -311,7 +311,8 @@
               </div>
             </div>
             <div class="fcmain" id="fcReview"></div>
-            <div id="fcShelf" class="fc-shelf" aria-hidden="true"></div>
+            <div id="fcShelf" class="fc-shelf" aria-hidden="true" title="Cards move right when you get them right, so you see them less often. A card you miss goes back to NEW."></div>
+            <p class="hint fc-boxes-help">NEW, 1D, 3D, 7D, 14D, 30D are the boxes. Cards move right when you get them right, so you see them less often. A card you miss goes back to NEW.</p>
             <div class="lb lb-sr" role="list" aria-label="Cards by box"><div role="listitem"><b>0</b><small>NEW</small></div><div role="listitem"><b>1</b><small>1 DAY</small></div><div role="listitem"><b>2</b><small>3 DAYS</small></div><div role="listitem"><b>3</b><small>7 DAYS</small></div><div role="listitem"><b>4</b><small>14 DAYS</small></div><div role="listitem"><b>5</b><small>30 DAYS</small></div></div>
             <details class="block fc-decks"><summary id="h-cards"><span data-i18n="progress.cards">Your decks</span> <small class="hint">Make cards from your notes</small></summary><div id="fcDecks" class="flashcards"></div></details>
           </section>

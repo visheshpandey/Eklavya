@@ -2,6 +2,7 @@
 // and the study streak. All from the real dashboard and Today data.
 import { el, render } from '../lib/dom.js';
 import { t } from '../lib/strings.js';
+import { MASTERY_HELP, plainCount } from '../lib/progress-text.js';
 import { groupSubjects } from '../lib/subjects.js';
 import { selectDashboard, selectLanguage, selectToday } from '../state/selectors.js';
 
@@ -23,15 +24,15 @@ export function mountStatTiles({ store, root }) {
     const cardsTotal = today?.cards_total ?? 0;
     const cardsKnown = Math.max(0, cardsTotal - (today?.cards_due ?? 0));
 
-    const tile = (label, value, note, tone) => el('div', { class: 'stat' },
+    const tile = (label, value, note, tone, help = null) => el('div', { class: 'stat', title: help },
       el('span', { class: 'mono', text: label }),
       el('strong', { class: 'tnum', style: tone ? `color:var(--${tone})` : null, text: value }),
       el('p', { text: note }));
     render(root,
-      tile(t('stat.mastery', language), average === null ? 'New' : `${average}%`, !mastery.length ? 'Add notes to begin' : average === null ? 'Answer a question or rate a card to start' : `${begun.length} of ${mastery.length} topics started, ${subjects} subject${subjects === 1 ? '' : 's'}`),
+      tile(t('stat.mastery', language), average === null ? 'New' : `${average}%`, !mastery.length ? 'Add notes to begin' : average === null ? 'Answer a question or rate a card to start' : `${begun.length} of ${mastery.length} topics started, ${subjects} subject${subjects === 1 ? '' : 's'}`, null, MASTERY_HELP),
       tile(t('stat.answers', language), String(attempts.length), attempts.length ? `${right} correct · ${attempts.length - right} to revisit` : 'Answer a question to see this'),
       tile('Cards known today', `${cardsKnown} / ${cardsTotal}`, cardsTotal ? 'From your flashcard decks' : 'Make cards in the Flashcards tab'),
-      tile('Open misconceptions', open ? String(open).padStart(2, '0') : '00', open ? 'Worth clearing up next' : 'None open right now', open ? 'accent-text' : null),
+      tile('Open misconceptions', plainCount(open), open ? 'Worth clearing up next' : 'None open right now', open ? 'accent-text' : null),
       tile(t('stat.fixed', language), String(fixed), fixed ? 'Cleared by getting it right' : 'None cleared yet', fixed ? 'ok-text' : null),
       tile(t('stat.streak', language), t(streak === 1 ? 'stat.day' : 'stat.days', language, { n: streak }), streak ? t('stat.streakNote', language) : 'Study today to start one'));
   }
