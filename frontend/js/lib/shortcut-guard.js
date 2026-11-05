@@ -45,3 +45,16 @@ export function createShortcutGuard({ quietMs = 1500, settleMs = 300, now = () =
     cancel,
   };
 }
+
+/**
+ * What a key does on the Flashcards page (pure): 'flip' for Space, or a rating ('again' for 1, 'hard' for 2, 'known' for 3).
+ * Only while that page is showing, no field is focused, no dialog is open, no Ctrl/Meta/Alt is held, and (for a rating) the card is flipped.
+ * @returns {'flip' | 'again' | 'hard' | 'known' | null}
+ */
+export function flashcardKey(event, { view, editable, dialogOpen, flipped, summary }) {
+  if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return null;
+  if (view !== 'flashcards' || editable || dialogOpen) return null;
+  if (event.key === ' ') return 'flip';
+  const rating = { 1: 'again', 2: 'hard', 3: 'known' }[event.key];
+  return rating && flipped && !summary ? rating : null;
+}

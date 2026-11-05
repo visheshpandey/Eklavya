@@ -86,6 +86,6 @@ export function mountGuide({ root, actions, storage = globalThis.localStorage })
     },
     isOpen: () => state.open,
     /** Called when the screen changes: in the Study room the card collapses to its pill (not remembered), elsewhere it is as the student left it. */
-    setSqueezed(on) { if (squeezed === on) return; squeezed = on; peek = false; draw(); },
+    setSqueezed(on) { squeezed = on; peek = false; draw(); },
   };
 }
