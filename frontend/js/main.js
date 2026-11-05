@@ -6,6 +6,7 @@ import { hydrateIcons } from './lib/icons.js';
 import { SESSION_MODE, VOICE_STATUS } from './lib/protocol.js';
 import { loadLanguage, saveLanguage } from './lib/language.js';
 import { loadCaptions, saveCaptions } from './lib/captions.js';
+import { endsOnLeave } from './lib/voice-phase.js';
 import { loadTheme } from './lib/theme.js';
 import { createSound, loadSound, saveSound } from './lib/sound.js';
 import { initialOf } from './lib/greeting.js';
@@ -15,7 +16,7 @@ import { VoiceClient } from './services/voice-client.js';
 import { createStore } from './state/store.js';
 import { initialState, reducer, VIEWS } from './state/reducer.js';
 import { actions } from './state/actions.js';
-import { selectCaptions, selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
+import { selectCaptions, selectSessionActive, selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
 import { createNotifier } from './controllers/notifier.js';
 import { createNotesController } from './controllers/notes-controller.js';
 import { createSessionController } from './controllers/session-controller.js';
@@ -325,6 +326,8 @@ voiceClient = new VoiceClient({
   onInterrupt: () => mentor.interrupt(),
 });
 session.attach(voiceClient);
+// leaving the Study room ends the call: the Live socket closes and the microphone is released
+store.select(selectView, (view) => { if (endsOnLeave(view, selectSessionActive(store.getState()))) session.stop(); });
 mountStageTools({
   store, root: byId('stageTools'), captionRoot: byId('caption'),
   onToggleCaptions: () => store.dispatch(actions.captionsToggled()), onPhoto: session.sendPhoto,

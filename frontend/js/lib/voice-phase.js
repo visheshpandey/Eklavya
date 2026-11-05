@@ -17,6 +17,9 @@ export function statusKey({ status, live = {} }) {
 /** True while the call is up but the student should still wait (shows the small spinner). */
 export const isConnecting = ({ status, live = {} }) => status !== VOICE_STATUS.IDLE && !live.text && (status === VOICE_STATUS.CONNECTING || !live.ready);
 
+/** Leaving the Study room ends a running call: the Live socket closes and the microphone is released (a call must never listen from another page). */
+export const endsOnLeave = (view, callActive) => callActive && view !== 'study';
+
 const LINES = {
   [SESSION_MODE.TEST]: {
     hinglish: (t) => `Chaliye, shuru karte hain aapka test on ${t}.`,

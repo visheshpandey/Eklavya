@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { actions } from '../js/state/actions.js';
 import { initialState, reducer } from '../js/state/reducer.js';
 import { selectTextInputEnabled } from '../js/state/selectors.js';
-import { firstLine, isConnecting, statusKey } from '../js/lib/voice-phase.js';
+import { endsOnLeave, firstLine, isConnecting, statusKey } from '../js/lib/voice-phase.js';
 import { loadCaptions, saveCaptions } from '../js/lib/captions.js';
 import { SESSION_MODE, VOICE_STATUS } from '../js/lib/protocol.js';
 import { t } from '../js/lib/strings.js';
@@ -90,4 +90,12 @@ test('text mode lets the student type even though no voice is running, and keeps
   assert.equal(s.session.question.question_id, 4);
   assert.equal(selectTextInputEnabled(s), true);
   assert.equal(selectTextInputEnabled({ ...s, voiceStatus: VOICE_STATUS.IDLE }), false);   // ended: nothing to type into
+});
+
+test('leaving the Study room ends a running call, and only then', () => {
+  assert.equal(endsOnLeave('today', true), true);
+  assert.equal(endsOnLeave('ask', true), true);
+  assert.equal(endsOnLeave('library', true), true);
+  assert.equal(endsOnLeave('study', true), false);
+  assert.equal(endsOnLeave('today', false), false);
 });
