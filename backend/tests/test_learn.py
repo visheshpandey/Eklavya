@@ -44,6 +44,7 @@ def test_next_question_skips_asked_ones_and_runs_out():
 
 def test_learn_mode_plan_and_full_teach_then_test_flow(monkeypatch):
     tid = topic_id("Precision")
+    answers_before = db.one("SELECT COUNT(*) AS n FROM quiz_attempts")["n"]   # the demo seeds its own answers; only this test's three are counted below
     script = [
         [call("search_notes", {"query": "Precision"}, "t1"), sc(turn_complete=True)],      # teaching
         [call("ask_quiz_question", {"topic": "Recall"}, "q1"), sc(turn_complete=True)],    # asks (topic arg must be ignored)
@@ -80,7 +81,7 @@ def test_learn_mode_plan_and_full_teach_then_test_flow(monkeypatch):
     assert by_id["g3"]["test_complete"] is True and "get_mission" in by_id["g3"]["instruction"]
     assert "test_complete" not in by_id["g2"]
     assert by_id["q4"]["available"] is False and by_id["q4"]["test_complete"] is True
-    assert db.one("SELECT COUNT(*) AS n FROM quiz_attempts WHERE question <> 'Demo practice'")["n"] == 3   # the demo's own streak rows are not answers
+    assert db.one("SELECT COUNT(*) AS n FROM quiz_attempts")["n"] - answers_before == 3
 
 
 def test_test_mode_skips_teaching(monkeypatch):

@@ -895,3 +895,8 @@ html.wave-gsap .wave i { animation: none; }
 /* focus rings: cream on the dark green cards (terracotta was 1.6:1 there), and a ring around the whole Ask box because its textarea has none of its own */
 .hero :focus-visible, .welcome :focus-visible, .studyhead :focus-visible { outline-color: var(--on-accent); }
 .askbox:focus-within { outline: 3px solid var(--accent-text); outline-offset: 2px; }
+/* ===== workstream 3: data consistency, Ask labels, help text ===== */
+.strength[title] { cursor: help; }
+.strength:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 2px; }
+.fc-boxes-help { max-width: 62ch; margin: 10px 0 0; }
+.ask-note { margin: 8px 0 0; }

@@ -349,7 +349,7 @@ mountMissionCard({ store, root: byId('mission') });
 mountMasteryChart({ store, root: byId('chart') });
 mountMasteryRows({ store, root: byId('masteryRows') });
 mountMasteryRing({ store, root: byId('masteryRing') });
-const graph3d = mountGraph(byId('graph3d'), (id) => conceptMap.select(id));   // the 3D version of the map; the page's own cards and list stay
+const graph3d = mountGraph(byId('graph3d'), (id) => { conceptMap.select(id); document.getElementById('mapDetail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });   // a click opens the topic's card (Learn this, Test me, Ask about it) and brings it into view   // the 3D version of the map; the page's own cards and list stay
 const conceptMap = mountConceptMap({
   store, root: byId('conceptMap'), onSelected: (id) => graph3d.focus(id), onAddNotes: openNotes,
   onTest: (topicId) => { showView(VIEWS.STUDY); startMode(SESSION_MODE.TEST, topicId); },
@@ -359,7 +359,7 @@ const conceptMap = mountConceptMap({
 store.select(selectConceptMap, (map) => graph3d.update(map));
 mountResultsList({ store, root: byId('results') });
 mountStudyPack({
-  store, button: byId('btnPack'), packRoot: byId('printPack'),
+  store, button: byId('btnPack'), packRoot: byId('printPack'), onNotice: (text) => notifier.info(text),
   loadPackData: async () => {
     const [cards, boards] = await Promise.allSettled([backend.flashcards(null, USER_ID), backend.boardsToday(USER_ID)]);
     return { cards: cards.value?.cards ?? [], boards: boards.value?.boards ?? null };

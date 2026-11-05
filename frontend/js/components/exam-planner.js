@@ -63,7 +63,10 @@ export function mountExamPlanner({ store, root, onSave, onClear, onOpenItem }) {
       event.preventDefault();
       if (!date.value) { date.focus(); return; }
       draft = null;
-      onSave(date.value, Number(minutes.value));
+      const button = form.querySelector('button[type="submit"]');   // the plan is built on the server: say so while it works
+      const label = [...button.childNodes];
+      button.disabled = true; button.textContent = 'Planning…';
+      Promise.resolve(onSave(date.value, Number(minutes.value))).finally(() => { button.disabled = false; button.replaceChildren(...label); });
     } },
     el('label', { class: 'field-label', for: 'exam-date', text: t('planner.date', language) }), date,
     el('label', { class: 'field-label', for: 'exam-minutes', text: t('planner.minutes', language) }), minutes,

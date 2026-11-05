@@ -256,6 +256,11 @@ def relevant_sources(question: str, chunks, limit: int = SOURCE_LIMIT):
     return kept[:limit]
 
 
+# Words that tell Eklavya WHAT TO DO, not what the topic is ("Explain Precision in simple words"): notes never contain them,
+# so counting them would make a question that names a topic exactly look like a weak match.
+ASK_WORDS = frozenset("explain describe define tell words word meaning mean means about understand give show revise first".split())
+
+
 def coverage(question: str, chunks) -> float:
     """Share (0 to 1) of the question's meaningful words that appear in the given passages: how well the notes answer it.
     A word and its plural or "-ing" form count as the same."""
@@ -264,7 +269,7 @@ def coverage(question: str, chunks) -> float:
             if len(word) > len(ending) + 2 and word.endswith(ending):
                 return word[: -len(ending)]
         return word
-    wanted = {stem(t) for t in tokenize(question)}
+    wanted = {stem(t) for t in tokenize(question) if t not in ASK_WORDS}
     if not wanted:
         return 0.0
     found = {stem(t) for c in chunks for t in tokenize(f"{c.get('heading') or ''} {c['text']}")}

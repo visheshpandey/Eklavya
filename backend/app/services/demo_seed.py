@@ -93,6 +93,57 @@ def _stamp(days_ago: int, hour: int = 9) -> str:
     return moment.strftime("%Y-%m-%d %H:%M:%S")
 
 
+RECENT_DAYS = 3   # history points this recent are real answers (they also make the streak); older ones are earlier practice
+MINUTES_APART = 10
+
+
+def _answer_time(days_ago: int, position: int, total: int, now: datetime) -> str:
+    """When a seeded answer happened. Today's are spread backwards from now (never in the future); earlier days start at 9:00."""
+    if days_ago == 0:
+        moment = max(now - timedelta(minutes=MINUTES_APART * (total - position)), now.replace(hour=0, minute=0, second=1, microsecond=0))
+    else:
+        moment = (now - timedelta(days=days_ago)).replace(hour=min(9 + position, 22), minute=0, second=0, microsecond=0)
+    return moment.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _seed_history(user_id: int, plans: dict, asked: dict, now: datetime | None = None) -> int:
+    """Write each topic's history as ONE chain: every step starts where the last one ended and the last step ends at the topic's stored mastery.
+
+    Steps from RECENT_DAYS ago until today are real answers (quiz_attempts: they feed Recent answers, the Mastery over time chart and the streak);
+    older steps are earlier practice (mastery events). A step that lowers mastery is a wrong answer. Returns how many answers were written.
+    """
+    now = now or datetime.now(timezone.utc)
+    answers = []   # (days ago, topic name, topic id, before, after)
+    for name, (topic_id, history) in plans.items():
+        previous = 50.0   # a topic starts at 50 until there is evidence
+        for days_ago, value in history:
+            value = float(value)
+            if days_ago > RECENT_DAYS:
+                mastery_log.record(user_id, topic_id, "demo", previous, value, at=_stamp(days_ago))
+            else:
+                answers.append((days_ago, name, topic_id, previous, value))
+            previous = value
+        db.execute("UPDATE learner_mastery SET mastery_score = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ? AND topic_id = ?", (previous, user_id, topic_id))
+    answers.sort(key=lambda a: (-a[0], a[1]))   # oldest first, so the newest answer has the highest id and tops Recent answers
+    per_day, used = {}, {}
+    for days_ago, *_ in answers:
+        per_day[days_ago] = per_day.get(days_ago, 0) + 1
+    seen_today = {}
+    for days_ago, name, topic_id, before, after in answers:
+        position = seen_today.get(days_ago, 0)
+        seen_today[days_ago] = position + 1
+        right = after >= before
+        pool = asked.get(topic_id, [])
+        turn = used.get(topic_id, 0)
+        used[topic_id] = turn + 1
+        question_id, text, correct = pool[turn % len(pool)] if pool else (None, f"Practice question on {name}", "B")
+        given = correct if right else next(letter for letter in "ABCD" if letter != correct)
+        db.execute("INSERT INTO quiz_attempts (user_id, topic_id, question_id, question, student_answer, is_correct, confidence, mastery_before, mastery_after, answered_at) "
+                   "VALUES (?, ?, ?, ?, ?, ?, 0.6, ?, ?, ?)",
+                   (user_id, topic_id, question_id, text, given, 1 if right else 0, before, after, _answer_time(days_ago, position, per_day[days_ago], now)))
+    return len(answers)
+
+
 def _wipe(user_id: int):
     """Remove the previous demo documents (and the progress on their topics); the student's own uploads stay."""
     for doc in db.query("SELECT id FROM documents WHERE user_id = ? AND (source_url LIKE 'demo:%' OR file_name = ?)", (user_id, NOTES_FILE)):
@@ -105,7 +156,7 @@ def seed_demo(user_id: int = 1):
     data = fixture()
     db.ensure_user(user_id)
     _wipe(user_id)
-    by_name, documents, ml = {}, [], None
+    by_name, documents, ml, plans = {}, [], None, {}
     for spec in data["documents"]:
         path = (FIXTURE.parent / spec["file"]).resolve()
         if not path.is_file():
@@ -117,20 +168,10 @@ def seed_demo(user_id: int = 1):
         documents.append({"document_id": res["document_id"], "title": spec["title"], "topics": [t["topic_name"] for t in res["topics_found"]]})
         if spec["marker"] == "demo:ml":
             ml = res
-        for name, plan in spec["topics"].items():   # mastery with a week of history behind it
-            topic_id = by_name.get(name)
-            if topic_id is None:
-                continue
-            previous = 50.0
-            for days_ago, value in plan["history"]:
-                mastery_log.record(user_id, topic_id, "demo", previous, float(value), at=_stamp(days_ago))
-                previous = float(value)
-            db.execute("UPDATE learner_mastery SET mastery_score = ?, last_updated = CURRENT_TIMESTAMP WHERE user_id = ? AND topic_id = ?", (previous, user_id, topic_id))
+        for name, plan in spec["topics"].items():   # mastery with a week of history behind it (written below, once the questions exist)
+            if name in by_name:
+                plans[name] = (by_name[name], plan["history"])
 
-    first_topic = next(iter(by_name.values()))
-    for days_ago in data["active_days_ago"]:   # a 4-day streak: practice on today and the three days before
-        db.execute("INSERT INTO quiz_attempts (user_id, topic_id, question_id, question, student_answer, is_correct, confidence, mastery_before, mastery_after, answered_at) "
-                   "VALUES (?, ?, NULL, 'Demo practice', 'B', 1, 0.6, 50, 52, ?)", (user_id, first_topic, _stamp(days_ago, 18)))
     today = datetime.now(timezone.utc).date()
     for card in data["flashcards"]:
         topic_id = by_name.get(card["topic"])
@@ -141,6 +182,7 @@ def seed_demo(user_id: int = 1):
         db.execute("INSERT INTO flashcards (user_id, topic_id, front, back, source, box, due_on) VALUES (?, ?, ?, ?, 'notes', ?, ?)", (user_id, topic_id, card["front"], card["back"], box, due))
 
     count = 0
+    asked = {}   # topic id -> [(question id, question, correct letter)], used by the seeded answers below
     questions = {**QUESTIONS, **data.get("questions", {})}
     for name, qs in questions.items():
         topic_id = by_name.get(name)
@@ -149,9 +191,11 @@ def seed_demo(user_id: int = 1):
         for q in qs:
             options = q["misconceptions"]
             misconceptions = {k: (v if "label" in v else {"label": v.get("label", "definition_mixup"), "text": v.get("text", "")}) for k, v in options.items()}
-            db.execute("INSERT INTO quiz_questions (topic_id, question, options, correct, explanation, misconceptions) VALUES (?, ?, ?, ?, ?, ?)",
-                       (topic_id, q["question"], db.dumps(q["options"]), q["correct"], q["explanation"], db.dumps(misconceptions)))
+            question_id = db.execute("INSERT INTO quiz_questions (topic_id, question, options, correct, explanation, misconceptions) VALUES (?, ?, ?, ?, ?, ?)",
+                                     (topic_id, q["question"], db.dumps(q["options"]), q["correct"], q["explanation"], db.dumps(misconceptions)))
+            asked.setdefault(topic_id, []).append((question_id, q["question"], q["correct"]))
             count += 1
+    answers = _seed_history(user_id, plans, asked)
     log_agent(user_id, "learner_profile", "Demo seed", "Student starts at 38% on Precision, with a 4-day streak",
-              f"Loaded {len(documents)} notes documents with {count} curated questions", 1.0)
+              f"Loaded {len(documents)} notes documents with {count} curated questions and {answers} answers from the last days", 1.0)
     return {"seeded": True, "user_id": user_id, "document_id": ml["document_id"], "topics": ml["topics_found"], "questions": count, "documents": documents}

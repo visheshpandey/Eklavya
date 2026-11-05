@@ -3,6 +3,7 @@
 import { dueCount } from '../lib/cards.js';
 import { selectLanguage, selectToday, selectView } from '../state/selectors.js';
 import { t } from '../lib/strings.js';
+import { plainCount } from '../lib/progress-text.js';
 
 const VIEW_KEYS = { today: 'tab.today', library: 'tab.notes', study: 'tab.study', ask: 'tab.ask', progress: 'tab.progress', flashcards: 'tab.flashcards', groups: 'tab.groups' };
 
@@ -16,7 +17,7 @@ export function streakNote(days) {
 export function mountRail({ store, streakDays, streakUnit, streakText, weekDots, dueBadge, crumb }) {
   store.select(selectToday, (today) => {
     const days = today?.streak ?? 0;
-    streakDays.textContent = String(days).padStart(2, '0');
+    streakDays.textContent = plainCount(days);
     streakUnit.textContent = days === 1 ? 'day' : 'days';
     streakText.textContent = streakNote(days);
     const week = today?.week ?? Array(7).fill(false);
