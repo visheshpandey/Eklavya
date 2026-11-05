@@ -865,3 +865,9 @@ html.wave-gsap .wave i { animation: none; }
 .replan-note { display: grid; gap: 4px; margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--terracotta); border-radius: 12px; background: var(--paper-hi); font-size: 14px; line-height: 1.45; color: var(--ink); }
 .replan-note .mono { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--terracotta); }
 .planner-agent { margin: 10px 0 0; max-width: 60ch; }
+
+/* ===== Workstream 2: judge-readiness polish (stray decorations, confetti, mobile, focus, contrast) ===== */
+/* the floating page on the My notes drop zone: it sat on "Try the demo notes" once there were four buttons. Now above the box, behind the buttons, and gone on narrow screens */
+.drop::before { right: 44px; top: -58px; z-index: 0; }
+.drop .drop-acts { position: relative; z-index: 1; }
+@media (max-width: 1100px) { .drop::before { display: none; } }
