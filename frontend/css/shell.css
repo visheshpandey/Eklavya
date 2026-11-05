@@ -884,3 +884,6 @@ html.wave-gsap .wave i { animation: none; }
 .leaderboard li.lb-row .lb-av { width: 34px; height: 34px; }
 /* the confetti canvas covers only the main content area (its box is set from the page when a burst fires) */
 .confetti-layer { position: fixed; z-index: 100; pointer-events: none; }
+/* focus rings: cream on the dark green cards (terracotta was 1.6:1 there), and a ring around the whole Ask box because its textarea has none of its own */
+.hero :focus-visible, .welcome :focus-visible, .studyhead :focus-visible { outline-color: var(--on-accent); }
+.askbox:focus-within { outline: 3px solid var(--accent-text); outline-offset: 2px; }
