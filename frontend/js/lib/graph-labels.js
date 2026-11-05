@@ -33,3 +33,24 @@ export function subjectLabelSpot(spheres, rise = 26) {
   const mean = (key) => spheres.reduce((sum, s) => sum + s[key], 0) / spheres.length;
   return { x: mean('x'), y: Math.max(...spheres.map((s) => s.y + s.r)) + rise, z: mean('z') };
 }
+
+/**
+ * Which name tags can show without lying on top of each other (pure). `items` are screen boxes {id, x, y, w, h} (centre x and y, width, height)
+ * in priority order; `forced` ids (the hovered and the selected topic) always show and are placed first. Any other tag that would overlap a
+ * tag already placed is left out until the camera or the layout moves it clear.
+ * @returns {Set<number>} the ids that may show
+ */
+export function visibleLabelIds(items, forced = []) {
+  const forcedSet = new Set(forced);
+  const ordered = [...items.filter((item) => forcedSet.has(item.id)), ...items.filter((item) => !forcedSet.has(item.id))];
+  const placed = [];
+  const shown = new Set();
+  const overlaps = (a, b) => Math.abs(a.x - b.x) * 2 < a.w + b.w && Math.abs(a.y - b.y) * 2 < a.h + b.h;
+  for (const item of ordered) {
+    if (forcedSet.has(item.id) || !placed.some((other) => overlaps(item, other))) {
+      placed.push(item);
+      shown.add(item.id);
+    }
+  }
+  return shown;
+}

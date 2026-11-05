@@ -5,7 +5,7 @@
 // show it on hover or tap, and a subject's title is placed above its highest sphere so it never covers a dot. The whole graph turns slowly until the student takes hold.
 import { PALETTE, reducedMotion } from './env.js';
 import { THREE } from './scene-kit.js';
-import { permanentLabelIds, subjectLabelSpot } from '../lib/graph-labels.js';
+import { permanentLabelIds, subjectLabelSpot, visibleLabelIds } from '../lib/graph-labels.js';
 
 export const colorFor = (mastery, started = true) => (!started ? '#b9b2a0' : mastery < 60 ? PALETTE.terracotta : mastery < 80 ? PALETTE.gold : PALETTE.greenSoft);
 export const radiusFor = (notes = 1) => 6 + ((Math.min(Math.max(notes, 1), 12) - 1) / 11) * 8;   // 6 to 14 by how many notes a topic is built from
@@ -66,7 +66,18 @@ export async function createGraph(host, initialMap, { onPick }) {
   resizer.observe(host); size();
 
   let hovered = null;
-  const showLabels = () => { for (const n of graph.graphData().nodes) if (n.__label) n.__label.visible = n === hovered || n.id === selectedId || permanent.has(n.id); };   // the biggest spheres, the hovered and the selected topic carry a name
+  const showLabels = () => {
+    const nodes = graph.graphData().nodes;
+    const forced = nodes.filter((n) => n === hovered || n.id === selectedId).map((n) => n.id);
+    const candidates = nodes.filter((n) => n.__label && (permanent.has(n.id) || forced.includes(n.id)));
+    // two names that would land on each other: only the first (the biggest sphere) shows; the hovered and selected names always do
+    const boxes = candidates.flatMap((n) => {
+      const spot = Number.isFinite(n.x) ? graph.graph2ScreenCoords(n.x, n.y, n.z) : null;
+      return spot ? [{ id: n.id, x: spot.x, y: spot.y - 16, w: String(labelFor(n)).length * 8.5, h: 22 }] : [];
+    });
+    const allowed = boxes.length === candidates.length ? visibleLabelIds(boxes, forced) : null;
+    for (const n of nodes) if (n.__label) n.__label.visible = (n === hovered || n.id === selectedId) || (permanent.has(n.id) && (!allowed || allowed.has(n.id)));
+  };   // the biggest spheres, the hovered and the selected topic carry a name
   graph.onNodeHover((node) => {
     hovered = node;
     showLabels();
@@ -90,9 +101,10 @@ export async function createGraph(host, initialMap, { onPick }) {
   })();
   graph.d3Force('cluster', clusterForce);
 
-  let frame = 0, alive = true;
+  let frame = 0, alive = true, ticks = 0;
   const pulse = (time) => {   // weak topics (started, under 60) breathe
     if (!alive) return;
+    if (++ticks % 30 === 0) showLabels();   // the camera turns and the spheres settle: re-check which names fit
     if (!calm) for (const node of graph.graphData().nodes) if (node.started !== false && node.mastery < 60 && node.__threeObj) node.__threeObj.scale.setScalar(1 + 0.14 * Math.sin(time / 330 + node.id));
     frame = requestAnimationFrame(pulse);
   };

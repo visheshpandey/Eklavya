@@ -948,3 +948,5 @@ html.wave-gsap .wave i { animation: none; }
 
 /* the guided-demo card must not sit over the call, the question or the chat while a session is running (it is back as soon as the student leaves) */
 body:has(#app[data-live="on"]) .guide-dock .guide, html.in-call .guide-dock { display: none; }
+
+.tour-card[hidden] { display: none; }

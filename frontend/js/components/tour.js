@@ -35,6 +35,7 @@ export function createTour({ steps, showView, onEnd = () => {} }) {
         index > 0 ? el('button', { class: 'btn btn-secondary btn-sm', type: 'button', onclick: () => show(index - 1) }, 'Back') : null,
         el('button', { class: 'btn btn-primary btn-sm', type: 'button', id: 'tourNext', onclick: () => (index + 1 < steps.length ? show(index + 1) : stop(true)) },
           index + 1 < steps.length ? 'Next →' : 'Done')));
+    card.hidden = false;
     place();
     card.querySelector('#tourNext')?.focus({ preventScroll: true });
   }
@@ -48,7 +49,7 @@ export function createTour({ steps, showView, onEnd = () => {} }) {
   function start() {
     if (index >= 0) return;
     spot = el('div', { class: 'tour-spot' });
-    card = el('div', { class: 'tour-card', role: 'dialog', 'aria-label': 'Guided tour', 'aria-live': 'polite' });
+    card = el('div', { class: 'tour-card', role: 'dialog', 'aria-label': 'Guided tour', 'aria-live': 'polite', hidden: '' });   // shown once its first step is written, so no empty box flashes
     layer = el('div', { class: 'tour-layer' }, spot, card);
     document.body.append(layer);
     document.addEventListener('keydown', onKey);

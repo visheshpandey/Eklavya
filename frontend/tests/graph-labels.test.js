@@ -42,3 +42,14 @@ test('the title never lands on a sphere: it is above every sphere top', () => {
   const spot = subjectLabelSpot(spheres);
   assert.ok(spheres.every((s) => spot.y > s.y + s.r));
 });
+
+
+test('names that would land on each other: only the first shows, the hovered one always does', async () => {
+  const { visibleLabelIds } = await import('../js/lib/graph-labels.js');
+  const a = { id: 1, x: 100, y: 100, w: 120, h: 20 };
+  const near = { id: 2, x: 140, y: 104, w: 120, h: 20 };       // overlaps a
+  const far = { id: 3, x: 400, y: 100, w: 120, h: 20 };
+  assert.deepEqual([...visibleLabelIds([a, near, far])].sort(), [1, 3]);
+  assert.deepEqual([...visibleLabelIds([a, near, far], [2])].sort(), [2, 3]);   // the hovered one wins its place, the other makes way
+  assert.deepEqual([...visibleLabelIds([])], []);
+});
