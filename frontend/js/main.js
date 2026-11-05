@@ -515,7 +515,7 @@ const guide = mountGuide({
 });
 document.addEventListener('eklavya:guide', (event) => guide.mark(event.detail));
 document.addEventListener('eklavya:mastery', () => guideMark('cards'));
-store.select(selectView, (view) => { if (view === VIEWS.PROGRESS) guideMark('progress'); });
+store.select(selectView, (view) => { guide.setSqueezed(view === VIEWS.STUDY); if (view === VIEWS.PROGRESS) guideMark('progress'); });
 store.select(selectVoiceStatus, (status) => { if (status === VOICE_STATUS.LISTENING || status === VOICE_STATUS.SPEAKING) guideMark('talk'); });
 byId('textform').addEventListener('submit', () => { if (byId('textin').value.trim()) guideMark('talk'); });
 async function startGuide() {

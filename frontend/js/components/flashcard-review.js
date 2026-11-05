@@ -182,7 +182,8 @@ export function mountFlashcardReview({ store, root, onLoadDue, onLoadAll, onRate
   }
 
   document.addEventListener('keydown', (event) => {
-    if (store.getState().ui.view !== 'flashcards' || isTyping(event.target) || document.querySelector('dialog[open]')) return;
+    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (store.getState().ui.view !== 'flashcards' || isTyping(event.target) || isTyping(document.activeElement) || document.querySelector('dialog[open]')) return;
     if (event.key === ' ') { event.preventDefault(); flip(); return; }
     const value = { 1: 'again', 2: 'hard', 3: 'known' }[event.key];
     if (value && flipped && !summary) { event.preventDefault(); rate_(value); }

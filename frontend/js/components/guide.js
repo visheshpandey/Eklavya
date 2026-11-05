@@ -33,15 +33,17 @@ export const doneCount = (state) => GUIDE_STEPS.filter((step) => state.done[step
 export function mountGuide({ root, actions, storage = globalThis.localStorage }) {
   let state = readGuide(storage);
   const save = () => writeGuide(storage, state);
+  let squeezed = false;   // the Study room: the card would cover the chat box, so it shows as its small pill there
+  let peek = false;       // the student tapped the pill in the Study room: show the card until they leave
 
   function draw() {
     root.hidden = !state.open;
     if (!state.open) { root.replaceChildren(); return; }
     const count = doneCount(state);
     const all = count === GUIDE_STEPS.length;
-    if (state.min) {
+    if (state.min || (squeezed && !peek)) {
       render(root, el('button', { class: 'guide-pill', type: 'button', 'aria-label': `Open the guided demo, ${count} of ${GUIDE_STEPS.length} done`,
-        onclick: () => { state.min = false; save(); draw(); } }, el('span', { class: 'mono', text: 'Guided demo' }), el('b', { text: `${count}/${GUIDE_STEPS.length}` })));
+        onclick: () => { if (state.min) { state.min = false; save(); } else peek = true; draw(); } }, el('span', { class: 'mono', text: 'Guided demo' }), el('b', { text: `${count}/${GUIDE_STEPS.length}` })));
       return;
     }
     const next = GUIDE_STEPS.find((step) => !state.done[step.id]);
@@ -83,5 +85,7 @@ export function mountGuide({ root, actions, storage = globalThis.localStorage })
       draw();
     },
     isOpen: () => state.open,
+    /** Called when the screen changes: in the Study room the card collapses to its pill (not remembered), elsewhere it is as the student left it. */
+    setSqueezed(on) { if (squeezed === on) return; squeezed = on; peek = false; draw(); },
   };
 }
