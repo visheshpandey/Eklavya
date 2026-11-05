@@ -950,3 +950,7 @@ html.wave-gsap .wave i { animation: none; }
 body:has(#app[data-live="on"]) .guide-dock .guide, html.in-call .guide-dock { display: none; }
 
 .tour-card[hidden] { display: none; }
+
+/* Today before the app has started: the welcome block is drawn by script and lands above these, so they stay invisible (but keep their place)
+   until it has. Nothing visible moves, which is what the layout-shift score measures. */
+body:not(.ready) #panel-today > :not(#welcome) { visibility: hidden; }
