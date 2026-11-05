@@ -356,7 +356,7 @@ const conceptMap = mountConceptMap({
 store.select(selectConceptMap, (map) => graph3d.update(map));
 mountResultsList({ store, root: byId('results') });
 mountStudyPack({
-  store, button: byId('btnPack'), packRoot: byId('printPack'),
+  store, button: byId('btnPack'), packRoot: byId('printPack'), onNotice: (text) => notifier.info(text),
   loadPackData: async () => {
     const [cards, boards] = await Promise.allSettled([backend.flashcards(null, USER_ID), backend.boardsToday(USER_ID)]);
     return { cards: cards.value?.cards ?? [], boards: boards.value?.boards ?? null };

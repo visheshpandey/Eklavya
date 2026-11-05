@@ -33,13 +33,21 @@ export function buildPack({ dashboard, mission, boards, cards, date = new Date()
   ];
 }
 
-export function mountStudyPack({ store, button, packRoot, loadPackData }) {
+export function mountStudyPack({ store, button, packRoot, loadPackData, onNotice = () => {} }) {
   store.select(selectLanguage, (language) => {
     replaceContent(button, icon('printer', { size: 18 }), t('progress.pack', language));
   });
   button.addEventListener('click', async () => {
+    if (button.disabled) return;
     const state = store.getState();
-    const data = await loadPackData().catch(() => ({ cards: [], boards: null }));
+    const label = [...button.childNodes];   // the pack is gathered from the server first: show that, then give the buttons back
+    button.disabled = true;
+    button.textContent = 'Preparing your pack…';
+    let failed = false;
+    const data = await loadPackData().catch(() => { failed = true; return { cards: [], boards: null }; });
+    button.disabled = false;
+    button.replaceChildren(...label);
+    if (failed) onNotice('Could not load your flashcards for the pack, so it has your mastery and mistakes only.');
     // all of today's whiteboards from the backend (every session); this session's boards if that could not be loaded
     const boards = data.boards ?? selectBoards(state);
     replaceContent(packRoot, buildPack({ dashboard: selectDashboard(state), mission: selectMission(state), boards, cards: data.cards }));
