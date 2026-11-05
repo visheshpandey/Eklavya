@@ -238,7 +238,7 @@ mountCommandMenu({
     { key: 'T', label: 'Teach me this, then test me', needsTopic: true, run: withTopic(SESSION_MODE.LEARN) },
     { key: 'Q', label: 'Just test me', needsTopic: true, run: withTopic(SESSION_MODE.TEST) },
     { key: 'M', label: 'Start or stop talking', hint: 'Voice session', run: () => { showView(VIEWS.STUDY); session.toggle(); } },
-    { key: 'D', label: 'Debate Eklavya on this topic', needsTopic: true, run: () => { showView(VIEWS.STUDY); document.querySelector('.study-details .debate')?.setAttribute('open', ''); byId('studyHeader').scrollIntoView(); } },
+    { key: 'D', label: 'Debate Eklavya on this topic', needsTopic: true, run: () => { showView(VIEWS.STUDY); return session.start(SESSION_MODE.DEBATE, selectSelectedTopicId(store.getState()), { side: 'for', motion: '', style: 'friendly' }); } },
     { key: 'E', label: 'Take a mock exam', hint: 'Timed paper', run: () => { showView(VIEWS.PROGRESS); mockExam.open(); } },
     { key: 'R', label: 'Start a mock round', hint: 'All flashcards, shuffled', run: () => { showView(VIEWS.FLASHCARDS); flashReview.startMock(); } },
     { key: 'U', label: 'Upload notes', hint: 'PDF, text or a photo', run: () => { openNotes(); byId('file').click(); } },
@@ -298,15 +298,7 @@ mountStudyLaunch({
   onStart: (mode, topicId, options) => (mode === 'free' ? session.start(SESSION_MODE.FREE) : startMode(mode, topicId, options)),
   onAddNotes: openNotes,
 });
-mountStudyHeader({
-  store, root: byId('studyHeader'),
-  onLearn: (topicId) => session.start(SESSION_MODE.LEARN, topicId),
-  onTest: (topicId) => session.start(SESSION_MODE.TEST, topicId),
-  onRevise: (topicId) => session.start(SESSION_MODE.REVISE, topicId),
-  onViva: (topicId) => session.start(SESSION_MODE.VIVA, topicId),
-  onDebate: (topicId, options) => session.start(SESSION_MODE.DEBATE, topicId, options),
-  onBrowse: () => store.dispatch(actions.viewChanged(VIEWS.LIBRARY)),
-});
+mountStudyHeader({ store, root: byId('studyHeader'), onBrowse: () => store.dispatch(actions.viewChanged(VIEWS.LIBRARY)) });   // the six mode cards above are the one way to pick a mode
 const orb = mountSessionOrb({ store, orb: byId('orb'), status: byId('status'), onToggle: session.toggle });
 const getTutor = () => byId('tutor').value;
 const avatar = mountAvatar({ store, root: byId('avatar'), getTutor });

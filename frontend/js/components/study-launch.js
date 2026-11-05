@@ -2,7 +2,7 @@
 // (learn, test, revise, viva, debate, free talk). Picking a topic selects it (the topic card below shows its notes); a mode starts a
 // real voice session on it. The weakest topic is the default so a mode always has something to work on.
 import { el, render } from '../lib/dom.js';
-import { frontIndex, orbitPositions, orbitRadius, orbitTag, turnBy } from '../lib/orbit.js';
+import { angleToFront, easeAngle, frontIndex, helpLine, orbitPositions, orbitRadius, orbitTag, pickChoices, turnBy } from '../lib/orbit.js';
 import { selectDashboard, selectSelectedTopicId, selectView } from '../state/selectors.js';
 
 const MAX_TOPICS = 8;
@@ -18,8 +18,9 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
   let lastDragX = 0, lastDragAt = 0;
   let nodes = [];
   let topics = [];
+  let target = null;   // the angle that puts the picked topic in front; null while nothing is picked or the student is turning the ring by hand
 
-  const choices = () => [...(selectDashboard(store.getState())?.mastery ?? [])].sort((a, b) => a.mastery_score - b.mastery_score).slice(0, MAX_TOPICS);
+  const choices = () => pickChoices(selectDashboard(store.getState())?.mastery, selectSelectedTopicId(store.getState()), MAX_TOPICS);
 
   function layout() {
     const radius = orbitRadius(orbit.clientWidth || 600);
@@ -36,7 +37,8 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
   function tick(time) {
     const dt = last ? Math.min(64, time - last) : 16;
     last = time;
-    if (!drag && Math.abs(velocity) > 0.0004) { angle += velocity * dt; velocity *= 0.94 ** (dt / 16); }
+    if (!drag && Math.abs(velocity) > 0.0004) { angle += velocity * dt; velocity *= 0.94 ** (dt / 16); target = null; }   // a flick: the student is in charge
+    else if (target !== null && !drag) angle = reduceMotion ? target : easeAngle(angle, target, dt);   // the picked topic turns to the front and stays there
     else if (!paused && !drag && !reduceMotion) angle -= dt * 0.012;
     layout();
     frame = requestAnimationFrame(tick);
@@ -49,7 +51,7 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
     const selected = selectSelectedTopicId(store.getState());
     nodes = topics.map((topic, index) => el('button', { class: 'onode', type: 'button', 'data-topic': String(topic.topic_id), 'aria-pressed': String(topic.topic_id === selected),
       onclick: () => onPick(topic.topic_id) },
-    el('small', { text: orbitTag(topic.mastery_score, index === 0 && topics.length > 1 && topic.mastery_score < 60) }), topic.topic_name));
+    el('small', { text: topic.topic_id === selected ? 'Studying' : orbitTag(topic.mastery_score, selected == null && index === 0 && topics.length > 1 && topic.mastery_score < 60) }), topic.topic_name));   // "Start here" only while nothing is picked
     render(ring, nodes);
     orbit.querySelector('.orbit-empty')?.remove();
     if (!nodes.length) {
@@ -64,8 +66,10 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
   function drawSelected() {
     const id = selectSelectedTopicId(store.getState());
     nodes.forEach((node) => node.setAttribute('aria-pressed', String(node.dataset.topic === String(id))));
+    const index = topics.findIndex((t) => t.topic_id === id);
+    target = index >= 0 ? angleToFront(index, topics.length, angle) : null;   // turn the picked topic to the front
     const topic = topics.find((t) => t.topic_id === id) ?? (id != null ? (selectDashboard(store.getState())?.mastery ?? []).find((t) => t.topic_id === id) : null);
-    studyFor.textContent = topic ? `Studying: ${topic.topic_name} · ${Math.round(topic.mastery_score)}% mastery` : topics.length ? `No topic picked: modes use ${topics[0].topic_name}, your weakest.` : 'Just talk to Eklavya, or add notes to study a topic.';
+    studyFor.textContent = helpLine({ selectedName: topic?.topic_name, weakestName: topics[0]?.topic_name });
   }
 
   const chosenTopic = () => selectSelectedTopicId(store.getState()) ?? topics[0]?.topic_id ?? null;
@@ -86,7 +90,7 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
   orbit.addEventListener('pointerleave', (event) => { if (event.pointerType === 'mouse') paused = false; });
   orbit.addEventListener('focusin', () => { paused = true; });
   orbit.addEventListener('focusout', () => { paused = false; });
-  orbit.addEventListener('pointerdown', (event) => { drag = { x: event.clientX, from: angle }; moved = false; velocity = 0; lastDragX = event.clientX; lastDragAt = performance.now(); });
+  orbit.addEventListener('pointerdown', (event) => { target = null; drag = { x: event.clientX, from: angle }; moved = false; velocity = 0; lastDragX = event.clientX; lastDragAt = performance.now(); });
   globalThis.addEventListener('pointermove', (event) => {
     if (!drag) return;
     const dx = event.clientX - drag.x;
@@ -102,13 +106,14 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
     const step = turnBy(nodes.length, event.key);
     if (!step) return;
     event.preventDefault();
+    target = null;
     angle += step;
     layout();
     nodes[frontIndex(nodes.length, angle)]?.focus();
   });
 
   store.select(selectDashboard, drawTopics);
-  store.select(selectSelectedTopicId, drawSelected);
-  store.select(selectView, (view) => { if (view === 'study') { layout(); start(); } else stop(); });
+  store.select(selectSelectedTopicId, (id) => { if (id != null && !topics.some((t) => t.topic_id === id)) drawTopics(); else drawSelected(); });   // a topic outside the weakest eight joins the ring
+  store.select(selectView, (view) => { if (view === 'study') { if (target !== null) angle = target; layout(); start(); } else stop(); });   // arriving with a topic picked: it is already in front
   return { redraw: drawTopics };
 }
