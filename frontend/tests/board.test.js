@@ -79,3 +79,12 @@ test('the board list is capped, and a new session starts with a clean board', ()
   state = reducer(state, actions.sessionStarted({ mode: 'free', topicId: null }));
   assert.deepEqual([state.session.boards, state.session.boardIndex], [[], -1]);
 });
+
+
+test('the whiteboard folds away only while a test question is open, and is back for the summary', async () => {
+  const { boardFoldedFor } = await import('../js/components/whiteboard.js');
+  assert.equal(boardFoldedFor({ phase: 'test', topic: 'Precision' }), true);
+  assert.equal(boardFoldedFor({ phase: 'teaching' }), false);
+  assert.equal(boardFoldedFor({ phase: 'summary' }), false);
+  assert.equal(boardFoldedFor(null), false);
+});

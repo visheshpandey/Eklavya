@@ -176,6 +176,15 @@ export class VoiceClient {
     return true;
   }
 
+  /** "Next question →": the server puts the next question on screen itself (nothing is typed into the chat), and what Eklavya
+   *  was still saying about the old question is cut off. Returns false when no call is open. */
+  nextQuestion() {
+    if (this.ws?.readyState !== WebSocket.OPEN) return false;
+    this._flushPlayback();
+    this.ws.send(JSON.stringify({ type: 'next_question' }));
+    return true;
+  }
+
   /** Show Eklavya a photo during the call: {mime, data (base64)}. Returns false when no call is open. */
   sendPhoto({ mime, data, note = '' }) {
     if (this.ws?.readyState !== WebSocket.OPEN) return false;

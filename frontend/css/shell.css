@@ -954,3 +954,7 @@ body:has(#app[data-live="on"]) .guide-dock .guide, html.in-call .guide-dock { di
 /* Today before the app has started: the welcome block is drawn by script and lands above these, so they stay invisible (but keep their place)
    until it has. Nothing visible moves, which is what the layout-shift score measures. */
 body:not(.ready) #panel-today > :not(#welcome) { visibility: hidden; }
+
+/* the whiteboard folded away while a test question is open: a thin bar, so the answer is not on screen */
+.board-folded { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border: 1px dashed var(--line); border-radius: 12px; background: var(--paper-hi); }
+.board-folded .board-label { color: var(--ink-3); }

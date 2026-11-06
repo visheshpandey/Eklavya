@@ -24,7 +24,7 @@ from google.genai import types
 
 from app import db
 from app.ai import prompts
-from app.ai.tools import ToolContext, dispatch, tools_for
+from app.ai.tools import ToolContext, ask_quiz_question, dispatch, tools_for
 from app.domain import language_check
 from app.domain.scoring import VIVA_QUESTIONS
 from app.config import settings
@@ -91,7 +91,9 @@ def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
                 'wait for their answer, and adapt if they are confused.\n'
                 f'2. When the topic is covered, say you will now take a short voice test ({total} questions) and check they are ready.\n'
                 '3. Test: call ask_quiz_question (it stays on this topic), read the question and the four options, wait for the spoken '
-                'answer, call grade_answer, then react as described in Quiz mode. Then ask the next question.\n'
+                'answer, call grade_answer, then react as described in Quiz mode. The app moves to the next question by itself after a few '
+                'seconds, or when the student presses Next: if a message says the next question is already on screen, read it aloud; '
+                'otherwise call ask_quiz_question yourself.\n'
                 '4. When a tool result says test_complete, give a short warm spoken summary of how they did, then call get_mission '
                 'and tell them what to do next.\n'
                 'Do not skip steps and do not start the test before teaching.')
@@ -421,6 +423,27 @@ class LiveTutorSession:
                     await session.send_realtime_input(text=text)
                 elif kind == "photo":
                     await self._send_photo(session, data)
+                elif kind == "next_question":
+                    await self._advance_test(session)
+
+    async def _advance_test(self, session):
+        """The "Next question" button: the server picks the next question itself and puts it on the screen at once, then tells the tutor
+        to read it. The screen never waits for the tutor to decide to ask. Ignored unless a focused test question has been graded."""
+        ctx = self.ctx
+        if ctx.focus_topic_id is None or ctx.mode not in ("learn", "test", "revise"):
+            return
+        if ctx.current_question_id and not any(r["question_id"] == ctx.current_question_id for r in ctx.results):
+            return   # that question has no grade yet: nothing to move on from
+        out = await ask_quiz_question(ctx)
+        if out.get("available"):
+            options = " ".join(out["options"])
+            note = (f'[The student pressed Next. Question {out.get("question_number")} of {out.get("of")} is already on their screen: '
+                    f'"{out["question"]}" Options: {options}. The previous question is finished and its right answer was shown, so never go back to it '
+                    'and never say "try again". Say one short line to move on, then read this question and its four options aloud.]')
+        else:
+            note = ("[The student pressed Next but there are no more questions. The test is finished: give the short spoken summary now, "
+                    "then call get_mission.]")
+        await session.send_realtime_input(text=note)
 
     async def _send_photo(self, session, data: dict):
         """A photo from the student's camera or files ("snap a doubt"), sent as a normal user turn (image + instruction).

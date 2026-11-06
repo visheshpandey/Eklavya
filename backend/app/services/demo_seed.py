@@ -10,6 +10,7 @@ from app import db
 from app.agents.document_intelligence import ingest_document
 from app.agents.logger import log_agent
 from app.config import settings
+from app.domain.quizmix import mix_question
 from app.agents.flashcards import BOX_DAYS
 from app.errors import ForbiddenError, NotFoundError
 from app.services import mastery_log
@@ -24,12 +25,12 @@ M = lambda label, text: {"label": label, "text": text}  # noqa: E731
 
 QUESTIONS = {
     "Precision": [
-        {"question": "A spam filter marks 10 emails as spam and 8 of them really are spam. In total 20 spam emails exist. What is its precision?",
-         "options": ["A. 40%", "B. 80%", "C. 20%", "D. 60%"], "correct": "B",
-         "explanation": "Precision = TP / (TP + FP) = 8 / 10 = 80%. It only looks at the emails the model flagged.",
+        {"question": "A spam filter flags 12 emails as spam and 9 of them really are spam. In total 30 spam emails exist. What is its precision?",
+         "options": ["A. 30%", "B. 75%", "C. 40%", "D. 25%"], "correct": "B",
+         "explanation": "Precision = TP / (TP + FP) = 9 / 12 = 75%. It only looks at the emails the model flagged.",
          "misconceptions": {
-             "A": M("definition_mixup", "Confuses precision with recall: divides by all real spam emails (20) instead of by the emails the model flagged as spam (10)."),
-             "C": M("calculation_error", "Divides by the wrong total and ignores which emails were flagged as spam.")}},
+             "A": M("definition_mixup", "Confuses precision with recall: divides by all real spam emails (30) instead of by the emails the model flagged as spam (12)."),
+             "C": M("calculation_error", "Divides the flagged emails by the real spam emails, turning the formula upside down.")}},
         {"question": "Which confusion-matrix cell is an email the model called spam that was actually fine?",
          "options": ["A. True Positive", "B. False Positive", "C. False Negative", "D. True Negative"], "correct": "B",
          "explanation": "The model predicted positive (spam) but the real condition is negative (fine) - a False Positive.",
@@ -44,11 +45,11 @@ QUESTIONS = {
              "D": M("definition_mixup", "Gives the accuracy formula instead of precision.")}},
     ],
     "Recall": [
-        {"question": "20 spam emails exist and the filter catches 8 of them. What is its recall?",
-         "options": ["A. 40%", "B. 80%", "C. 20%", "D. 8%"], "correct": "A",
-         "explanation": "Recall = TP / (TP + FN) = 8 / 20 = 40%. It looks at all the real spam emails.",
+        {"question": "30 spam emails exist. The filter flags 40 emails, and 24 of them really are spam. What is its recall?",
+         "options": ["A. 80%", "B. 60%", "C. 24%", "D. 40%"], "correct": "A",
+         "explanation": "Recall = TP / (TP + FN) = 24 / 30 = 80%. It looks at all the real spam emails.",
          "misconceptions": {
-             "B": M("definition_mixup", "Confuses recall with precision: divides by the emails flagged as spam instead of by all real spam.")}},
+             "B": M("definition_mixup", "Confuses recall with precision: divides by the emails flagged as spam (40) instead of by all real spam (30).")}},
         {"question": "When does recall matter most?",
          "options": ["A. When false alarms are costly", "B. When missing a positive case is costly", "C. When classes are perfectly balanced", "D. Never"], "correct": "B",
          "explanation": "High recall means few missed cases, which matters in things like disease screening.",
@@ -191,9 +192,10 @@ def seed_demo(user_id: int = 1):
         for q in qs:
             options = q["misconceptions"]
             misconceptions = {k: (v if "label" in v else {"label": v.get("label", "definition_mixup"), "text": v.get("text", "")}) for k, v in options.items()}
+            shown, correct, misconceptions = mix_question(q["options"], q["correct"], misconceptions)   # each guest gets the options in their own order
             question_id = db.execute("INSERT INTO quiz_questions (topic_id, question, options, correct, explanation, misconceptions) VALUES (?, ?, ?, ?, ?, ?)",
-                                     (topic_id, q["question"], db.dumps(q["options"]), q["correct"], q["explanation"], db.dumps(misconceptions)))
-            asked.setdefault(topic_id, []).append((question_id, q["question"], q["correct"]))
+                                     (topic_id, q["question"], db.dumps(shown), correct, q["explanation"], db.dumps(misconceptions)))
+            asked.setdefault(topic_id, []).append((question_id, q["question"], correct))
             count += 1
     answers = _seed_history(user_id, plans, asked)
     log_agent(user_id, "learner_profile", "Demo seed", "Student starts at 38% on Precision, with a 4-day streak",

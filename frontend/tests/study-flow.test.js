@@ -97,7 +97,8 @@ function setup({ withBackend = true, askFails = false } = {}) {
   const voice = { status: 'idle', started: [], stopped: 0, sent: [], failWith: null,
     async start(opts) { if (this.failWith) throw this.failWith; this.started.push(opts); this.status = 'listening'; session.handleStatus('listening'); },
     stop() { this.stopped++; this.status = 'idle'; session.handleStatus('idle'); },
-    sendText(text) { this.sent.push(text); return true; } };
+    sendText(text) { this.sent.push(text); return true; },
+    nexts: 0, nextQuestion() { this.nexts++; return true; } };
   session.attach(voice);
   const idle = [];
   store.select((s) => s.voiceStatus, (status) => idle.push(status));
@@ -222,35 +223,53 @@ test('live test: after a graded answer, silence for 3 s makes the next question 
   session.handleEvent({ type: 'session', id: 'abc' });
   ask(1); grade(1);
   clock.tick(2999); assert.deepEqual(voice.sent, []);
-  clock.tick(2); assert.deepEqual(voice.sent, ['Next question, please.']);
+  clock.tick(2); assert.equal(voice.nexts, 1); assert.deepEqual(voice.sent, []);
 });
 
 test('live test: nothing is sent if the next question arrived by itself, while Eklavya is speaking, or after the last question', async () => {
   const a = setup();
   await a.session.start('test', 5); a.session.handleEvent({ type: 'session', id: 'x' });
   a.ask(1); a.grade(1); a.clock.tick(1000); a.ask(2); a.clock.tick(60000);
-  assert.deepEqual(a.voice.sent, []);                                        // Q2 came by itself
+  assert.equal(a.voice.nexts, 0);                                            // Q2 came by itself
 
   const b = setup();
   await b.session.start('test', 5); b.session.handleEvent({ type: 'session', id: 'x' });
   b.ask(1); b.grade(1); b.voice.status = 'speaking';
-  b.clock.tick(3001); assert.deepEqual(b.voice.sent, []);                    // still talking: wait
-  b.voice.status = 'listening'; b.clock.tick(1501); assert.deepEqual(b.voice.sent, ['Next question, please.']);
+  b.clock.tick(3001); assert.equal(b.voice.nexts, 0);                         // still talking: wait
+  b.voice.status = 'listening'; b.clock.tick(1501); assert.equal(b.voice.nexts, 1);
 
   const c = setup();
   await c.session.start('test', 5); c.session.handleEvent({ type: 'session', id: 'x' });
   c.ask(3); c.grade(3); c.clock.tick(60000);
-  assert.deepEqual(c.voice.sent, []);                                        // that was the last one: the summary comes from the server
+  assert.equal(c.voice.nexts, 0);                                            // that was the last one: the summary comes from the server
 });
 
-test('"Next question →" in a live call asks for it at once', async () => {
-  const { clock, session, voice, ask, grade } = setup();
+test('"Next question →" in a live call is ONE signal to the server: no chat message, no second click, no double send', async () => {
+  const { clock, session, voice, texts, ask, grade } = setup();
   await session.start('test', 5); session.handleEvent({ type: 'session', id: 'x' });
-  ask(1); grade(1);
+  ask(2); grade(2, false);                                                   // a wrong answer: the red "Not quite" card is up
   session.nextQuestion();
-  assert.deepEqual(voice.sent, ['Next question, please.']);
+  assert.equal(voice.nexts, 1);
+  assert.deepEqual(voice.sent, []);                                          // nothing is typed to the tutor
+  assert.ok(!texts().some((x) => /Next question, please/.test(x)));          // and nothing lands in the chat history
   clock.tick(60000);
-  assert.deepEqual(voice.sent, ['Next question, please.']);                  // the timer was cancelled: not asked twice
+  assert.equal(voice.nexts, 1);                                              // the timer was cancelled: not asked twice
+});
+
+test('text mode: a wrong answer, then ONE click on "Next question" shows Question 3', async () => {
+  const { session, state, ask, grade, voice } = setup();
+  voice.failWith = Object.assign(new Error('Microphone permission was denied.'), { code: 'mic' });
+  await session.start('test', 5);
+  await flush();
+  assert.equal(state().session.question.number, 1);
+  session.answer('B'); await flush();                                        // wrong (the right letter is A)
+  assert.equal(state().session.result.is_correct, false);
+  session.nextQuestion(); await flush();
+  assert.equal(state().session.question.number, 2);
+  session.answer('B'); await flush();
+  session.nextQuestion(); await flush();
+  assert.equal(state().session.question.number, 3);                          // one click each time, no second click needed
+  assert.equal(state().session.result, null);
 });
 
 test('the reply bubble is filled from the notes when Eklavya\'s words never arrive', async () => {

@@ -19,7 +19,6 @@ import { createTextSession, letterFrom } from './text-session.js';
 const stripType = ({ type: _type, ...rest }) => rest;
 
 const FOCUSED = new Set([SESSION_MODE.LEARN, SESSION_MODE.TEST, SESSION_MODE.REVISE]);   // the modes with a graded test
-const NEXT_PROMPT = 'Next question, please.';
 const TEXT_MODE_NOTICE = {
   slow: 'Voice is slow right now, switching to text mode.',
   stalled: 'Voice is not answering, switching to text mode.',
@@ -81,7 +80,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
   function nudgeNext() {
     const { question, result } = store.getState().session;
     if (!question || !result || result.question_id !== question.question_id || !question.total || question.number >= question.total) return;   // already moved on, or that was the last one
-    if (active() && !textMode()) voice.sendText(NEXT_PROMPT);
+    if (active() && !textMode()) voice.nextQuestion();
   }
 
   function clearTimers() {
@@ -280,7 +279,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
     nextQuestion() {
       advancer.disarm();
       if (textMode() && typed) return typed.next();
-      if (active()) voice.sendText(NEXT_PROMPT);
+      if (active()) voice.nextQuestion();   // one click, one question: the server shows it at once; no chat message is sent
       return undefined;
     },
 

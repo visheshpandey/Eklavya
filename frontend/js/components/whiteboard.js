@@ -1,7 +1,7 @@
 // The whiteboard: what Eklavya is explaining, drawn while it talks (formula, steps or table), with earlier boards one tap away.
 import { el, render as replaceContent } from '../lib/dom.js';
 import { parseFormula } from '../lib/formula.js';
-import { selectBoardIndex, selectBoards } from '../state/selectors.js';
+import { selectBoardIndex, selectBoards, selectPhase } from '../state/selectors.js';
 
 /** "A = B / C" as big type, with each fraction stacked. */
 function formulaLine(text, className) {
@@ -41,18 +41,28 @@ function tableBody(board) {
 
 const BODIES = { formula: formulaBody, steps: stepsBody, table: tableBody };
 
+/** The board explains the answer, so it folds away while a test is running (phase 'test') and is back for the summary and afterwards. */
+export const boardFoldedFor = (phase) => phase?.phase === 'test';
+
 export function mountWhiteboard({ store, root, onPick }) {
+  let peek = false;      // the student chose "Show whiteboard" during the test
   let shownKey = null;   // replay the reveal only when a different board appears, not on every redraw
   let drawn = null;      // {boards, index} last drawn: one dispatch changes both, so the second call is skipped
 
   function draw() {
     const boards = selectBoards(store.getState());
     const index = selectBoardIndex(store.getState());
-    if (drawn && drawn.boards === boards && drawn.index === index) return;
-    drawn = { boards, index };
+    const folded = boardFoldedFor(selectPhase(store.getState())) && !peek;
+    if (drawn && drawn.boards === boards && drawn.index === index && drawn.folded === folded) return;
+    drawn = { boards, index, folded };
     const board = boards[index];
     root.hidden = !board;
     if (!board) { replaceContent(root); shownKey = null; return; }
+    if (folded) {   // the test is running: only a small bar, so the answer is not on screen
+      replaceContent(root, el('div', { class: 'board-folded' }, el('span', { class: 'board-label', text: 'Whiteboard hidden during the test' }),
+        el('button', { class: 'linkbtn', type: 'button', onclick: () => { peek = true; draw(); } }, 'Show whiteboard')));
+      return;
+    }
 
     const key = `${index}:${board.title}:${board.kind}`;
     const card = el('div', { class: `board-card board-${board.kind}${key !== shownKey ? ' is-new' : ''}` },
@@ -77,4 +87,5 @@ export function mountWhiteboard({ store, root, onPick }) {
 
   store.select(selectBoards, draw);
   store.select(selectBoardIndex, draw);
+  store.select(selectPhase, () => { peek = false; draw(); });   // a new phase: the test folds the board away, the summary brings it back
 }

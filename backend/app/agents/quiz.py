@@ -10,6 +10,7 @@ from app import db
 from app.agents.logger import log_agent
 from app.ai.gemini import extract_list, llm_json
 from app.domain import retrieval
+from app.domain.quizmix import mix_question
 from app.domain.misconceptions import LABELS
 from app.errors import AppError, LLMError, NotFoundError
 
@@ -55,6 +56,7 @@ Return JSON:
   "misconceptions": {{"B": {{"label": "<one of {', '.join(LABELS)}>", "text": "the wrong belief that makes a student choose B"}}}}
 }}]}}
 Every wrong option must have a misconceptions entry. Make wrong options plausible, each reflecting a different wrong belief.
+Use DIFFERENT numbers and examples from the ones in the notes (a question must not repeat a worked example from the notes, or the student only has to copy it). Ask about the idea, with fresh values.
 
 Notes:
 {context}"""
@@ -65,11 +67,12 @@ Notes:
             opts, correct = q["options"], str(q["correct"]).strip().upper()[:1]
             if len(opts) != 4 or correct not in "ABCD":
                 continue
+            opts, correct, miscon = mix_question(opts, correct, q.get("misconceptions", {}))   # the right answer is not always the same letter
             ids.append(db.execute(
                 "INSERT INTO quiz_questions (topic_id, question, options, correct, explanation, misconceptions, difficulty)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (topic_id, q["question"], db.dumps(opts), correct, q.get("explanation", ""),
-                 db.dumps(q.get("misconceptions", {})), difficulty)))
+                 db.dumps(miscon), difficulty)))
         except (KeyError, TypeError):
             continue
     if not ids:
