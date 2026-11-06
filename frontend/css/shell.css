@@ -958,3 +958,19 @@ body:not(.ready) #panel-today > :not(#welcome) { visibility: hidden; }
 /* the whiteboard folded away while a test question is open: a thin bar, so the answer is not on screen */
 .board-folded { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border: 1px dashed var(--line); border-radius: 12px; background: var(--paper-hi); }
 .board-folded .board-label { color: var(--ink-3); }
+/* guided demo, tidied: a small card docked bottom-right (max 280px wide, 40vh tall), the pill clickable, and never under a toast or a call */
+.guide-dock { left: auto; right: 20px; bottom: 20px; }
+.guide { width: min(280px, calc(100vw - 32px)); max-height: 40vh; overflow-y: auto; padding: 14px 16px; }
+.guide-head b { font-size: 19px; }
+.guide-pill { cursor: pointer; }
+@media (max-width: 700px) { .guide-dock { left: auto; right: 12px; bottom: 76px; } .guide { width: min(280px, calc(100vw - 24px)); } }
+/* toasts: bottom-left of the content on wide screens, so the pill at the bottom-right never sits under one */
+@media (min-width: 64rem) { .toasts { left: calc(var(--rail-w) + var(--s-5)); right: auto; justify-items: start; } }
+/* on a phone a toast spans the width: the pill steps up above it while one shows */
+@media (max-width: 700px) { body:has(.toasts .toast) .guide-dock { bottom: 150px; } }
+/* nothing of the guide over a running call or the "How you sound" panel */
+body:has(#app[data-live="on"]) .guide-dock { display: none; }
+
+/* the feedback card sits bottom-left too: while it is up, toasts start to its right; on a phone the pill steps aside for it */
+@media (min-width: 64rem) { body:has(.fb-card) .toasts { left: calc(20px + min(360px, 100vw - 32px) + var(--s-4)); } .toast { max-width: min(30rem, calc(100vw - var(--rail-w) - 420px)); } }
+@media (max-width: 700px) { body:has(.fb-card) .guide-dock { display: none; } }
