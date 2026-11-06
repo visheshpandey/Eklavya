@@ -79,8 +79,9 @@ def test_after_the_last_question_the_tutor_is_told_to_summarise(test_session):
     assert "finished" in gemini.sent[0]["text"]
 
 
-def test_the_demo_test_uses_new_numbers_and_the_right_answer_moves():
+def test_the_demo_test_uses_new_numbers_and_the_right_answer_moves(monkeypatch):
     """Question 1 of the Precision demo test must not repeat the worked example (8 of 10) and must grade correctly after mixing."""
+    monkeypatch.delenv("QUIZ_MIX", raising=False)   # the real behaviour: options are mixed for each guest
     letters = set()
     for n in range(12):
         user_id = auth.read_token(guests.create("203.0.113.%d" % (20 + n))["token"])
@@ -95,3 +96,27 @@ def test_the_demo_test_uses_new_numbers_and_the_right_answer_moves():
         finally:
             accounts.erase_user(user_id)
     assert len(letters) > 1   # the right answer does not always sit on the same letter
+
+
+def test_grading_follows_the_mixed_options(monkeypatch):
+    """With the options mixed, the right letter and each misconception still belong to the right option."""
+    from fastapi.testclient import TestClient
+    monkeypatch.delenv("QUIZ_MIX", raising=False)
+    client = TestClient(app)
+    token = guests.create("203.0.113.77")["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    user_id = auth.read_token(token)
+    try:
+        seeded = client.post("/api/demo/seed", headers=headers).json()
+        precision = next(t for t in seeded["topics"] if t["topic_name"] == "Precision")
+        questions = client.post("/api/quiz/generate", headers=headers, json={"topic_id": precision["id"], "count": 3}).json()["questions"]
+        assert len(questions) == 3
+        for q in questions:
+            row = db.one("SELECT correct, misconceptions FROM quiz_questions WHERE id = ?", (q["question_id"],))
+            right = client.post("/api/quiz/submit", headers=headers, json={"question_id": q["question_id"], "student_answer": row["correct"], "confidence": 0.8}).json()
+            assert right["is_correct"] is True
+        wrong_letter = next(iter(db.loads(row["misconceptions"], {})))
+        wrong = client.post("/api/quiz/submit", headers=headers, json={"question_id": questions[-1]["question_id"], "student_answer": wrong_letter, "confidence": 0.8}).json()
+        assert wrong["is_correct"] is False and wrong["misconception"]["label"]   # the wrong option still names its own misconception
+    finally:
+        accounts.erase_user(user_id)

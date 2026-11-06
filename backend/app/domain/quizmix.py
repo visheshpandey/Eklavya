@@ -3,6 +3,7 @@
 Questions are stored with letters ("A. text"), the right letter, and a misconception per wrong letter. Mixing re-letters the options and
 moves the right letter and the misconception keys with them, so grading and the misconception diagnosis stay exactly right.
 """
+import os
 import random
 import re
 
@@ -21,7 +22,8 @@ def mix_question(options, correct, misconceptions=None, rng=None):
     Questions whose options refer to each other, or that do not have 3 or 4 options, are returned unchanged."""
     misconceptions = dict(misconceptions or {})
     correct = str(correct).strip().upper()[:1]
-    if not can_mix(options):
+    # QUIZ_MIX=off keeps the stored order (the older tests script their answers by letter); an explicit `rng` always mixes
+    if not can_mix(options) or (rng is None and os.environ.get("QUIZ_MIX", "").lower() == "off"):
         return list(options), correct, misconceptions
     rng = rng or random
     letters = "ABCD"[:len(options)]

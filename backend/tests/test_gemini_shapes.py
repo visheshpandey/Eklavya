@@ -39,8 +39,10 @@ def test_questions_are_accepted_in_every_shape(monkeypatch, topic_id, shape):
     reply(monkeypatch, shape)
     created = quiz._generate_with_llm(topic_id, 1, "Medium")
     assert len(created) == 1
-    stored = db.one("SELECT correct, misconceptions FROM quiz_questions WHERE id = ?", (created[0],))
-    assert stored["correct"] == "A" and "tape" in stored["misconceptions"]
+    stored = db.one("SELECT options, correct, misconceptions FROM quiz_questions WHERE id = ?", (created[0],))
+    options = db.loads(stored["options"], [])
+    right = next(o for o in options if o[0] == stored["correct"]).split(". ", 1)[1]   # options may be mixed: the right letter follows its option
+    assert right == QUESTION["options"][0].split(". ", 1)[1] and "tape" in stored["misconceptions"]
 
 
 @pytest.mark.parametrize("bad", [{}, [], {"questions": []}, {"questions": [{"question": "no options"}]}, {"questions": ["text"]}])
