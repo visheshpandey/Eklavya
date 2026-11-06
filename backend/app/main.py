@@ -3,6 +3,7 @@
 Run from ``backend/``:  ``uvicorn main:app --port 5000``  (or ``python main.py``).
 """
 import asyncio
+import os
 import logging
 from contextlib import asynccontextmanager
 
@@ -79,7 +80,8 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     def health():
         """Answers instantly without touching the database: the page and the keep-alive job use it to see that the server is awake."""
-        return {"ok": True}
+        commit = os.environ.get("RENDER_GIT_COMMIT", "")   # set by Render: lets anyone see which version is live
+        return {"ok": True, **({"version": commit[:7]} if commit else {})}
 
     @app.get("/")
     def root():
