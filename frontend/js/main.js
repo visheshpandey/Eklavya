@@ -17,7 +17,7 @@ import { VoiceClient } from './services/voice-client.js';
 import { createStore } from './state/store.js';
 import { initialState, reducer, VIEWS } from './state/reducer.js';
 import { actions } from './state/actions.js';
-import { selectCaptions, selectSessionActive, selectDashboard, selectLanguage, selectSelectedTopicId, selectSessionMission, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
+import { selectCaptions, selectSessionActive, selectDashboard, selectLanguage, selectMessages, selectSelectedTopicId, selectSessionMission, selectSummary, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
 import { createNotifier } from './controllers/notifier.js';
 import { createNotesController } from './controllers/notes-controller.js';
 import { createSessionController } from './controllers/session-controller.js';
@@ -76,6 +76,7 @@ import { mountGroups } from './components/groups-view.js';
 import { mountDemoCircle } from './components/demo-circle.js';
 import { mountWelcome } from './components/welcome.js';
 import { mountGuide } from './components/guide.js';
+import { testFinished, tutorReplied } from './lib/guide-events.js';
 import { createInstaller } from './lib/install.js';
 import { createTour } from './components/tour.js';
 import { TOUR_STEPS, demoLoadedMessage, markTourSeen, pickDemoTopic, shouldAutoTour, tourSeen } from './lib/first-visit.js';
@@ -508,21 +509,24 @@ const guide = mountGuide({
     talk: () => { const first = demoTopics().find((t) => t.topic_name === 'Precision') ?? demoTopics()[0]; showView(VIEWS.STUDY); if (first) startMode(SESSION_MODE.LEARN, first.topic_id); else session.start(SESSION_MODE.FREE); },
     skipTalk: () => guideMark('talk'),
     sample: trySampleSyllabus,
-    cards: () => { showView(VIEWS.FLASHCARDS); document.activeElement?.blur(); },   // Space flips the card, not this button again
+    test: () => { const first = pickDemoTopic(demoTopics()); showView(VIEWS.STUDY); if (first) startMode(SESSION_MODE.TEST, first.topic_id); },
     progress: () => showView(VIEWS.PROGRESS),
     why: () => { showView(VIEWS.TODAY); const fold = byId('impact'); fold.open = true; setTimeout(() => fold.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); },
     ownNotes: openNotes,
   },
 });
 document.addEventListener('eklavya:guide', (event) => guide.mark(event.detail));
-document.addEventListener('eklavya:mastery', () => guideMark('cards'));
-// the guide card is a small pill in the Study room (it would cover the chat box) and on a phone (it would cover half the screen); tap it to open
+// the guide card is a small pill everywhere but Today (it would cover the question, the chat, the stat cards or a flashcard) and on a phone; tap it to open
 const phone = globalThis.matchMedia?.('(max-width: 700px)');
-store.select(selectView, (view) => { guide.setSqueezed(view === VIEWS.STUDY || Boolean(phone?.matches)); if (view === VIEWS.PROGRESS) guideMark('progress'); });
-store.select(selectVoiceStatus, (status) => { if (status === VOICE_STATUS.LISTENING || status === VOICE_STATUS.SPEAKING) guideMark('talk'); });
-byId('textform').addEventListener('submit', () => { if (byId('textin').value.trim()) guideMark('talk'); });
+store.select(selectView, (view) => {
+  guide.setSqueezed(view !== VIEWS.TODAY || Boolean(phone?.matches));   // the full card only on Today; elsewhere a small pill that never covers content
+  if (view === VIEWS.PROGRESS) guideMark('progress');
+});
+// real events only: the mentor answered the student (live or typed), and a test reached its summary
+store.select(selectMessages, (messages) => { if (tutorReplied(messages)) guideMark('talk'); });
+store.select(selectSummary, (summary) => { if (testFinished(summary)) guideMark('test'); });
 async function startGuide() {
-  guide.open();
+  guide.open({ force: true });   // the student asked for it (the menu): this also undoes an earlier close
   showView(VIEWS.TODAY);
   if (!(selectDashboard(store.getState())?.mastery?.length)) {   // already has notes: nothing to reload
     notifier.info('Loading the demo notes…');
