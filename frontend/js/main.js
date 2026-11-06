@@ -17,7 +17,7 @@ import { VoiceClient } from './services/voice-client.js';
 import { createStore } from './state/store.js';
 import { initialState, reducer, VIEWS } from './state/reducer.js';
 import { actions } from './state/actions.js';
-import { selectCaptions, selectSessionActive, selectDashboard, selectLanguage, selectMessages, selectSelectedTopicId, selectSessionMission, selectSummary, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
+import { selectCaptions, selectSessionActive, selectDashboard, selectLanguage, selectMessages, selectResult, selectSelectedTopicId, selectSessionMission, selectSummary, selectToday, selectVoiceStatus, selectView } from './state/selectors.js';
 import { createNotifier } from './controllers/notifier.js';
 import { createNotesController } from './controllers/notes-controller.js';
 import { createSessionController } from './controllers/session-controller.js';
@@ -523,7 +523,9 @@ store.select(selectView, (view) => {
   if (view === VIEWS.PROGRESS) guideMark('progress');
 });
 // real events only: the mentor answered the student (live or typed), and a test reached its summary
-store.select(selectMessages, (messages) => { if (tutorReplied(messages)) guideMark('talk'); });
+const mentorReplied = () => { const state = store.getState(); if (tutorReplied(selectMessages(state), Boolean(selectResult(state)))) guideMark('talk'); };
+store.select(selectMessages, mentorReplied);
+store.select(selectResult, mentorReplied);   // a tapped answer in the text-mode test: no "You" bubble, but the mentor's feedback is the reply
 store.select(selectSummary, (summary) => { if (testFinished(summary)) guideMark('test'); });
 async function startGuide() {
   guide.open({ force: true });   // the student asked for it (the menu): this also undoes an earlier close

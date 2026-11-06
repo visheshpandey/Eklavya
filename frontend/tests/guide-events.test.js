@@ -28,3 +28,11 @@ test('a test counts as finished when its summary exists', () => {
   assert.equal(testFinished(undefined), false);
   assert.equal(testFinished({ correct: 2, total: 3 }), true);
 });
+
+
+test('a tapped answer that was graded makes the mentor feedback a reply (text-mode test: no "You" bubble)', () => {
+  const noYou = [say('tutor', 'Question 1 of 3. Tap an option.'), say('tutor', 'Not quite. The answer is B.')];
+  assert.equal(tutorReplied(noYou), false);          // no answer given yet: just the mentor talking
+  assert.equal(tutorReplied(noYou, true), true);     // an answer was graded: the feedback is a reply
+  assert.equal(tutorReplied([say('tutor', 'Chaliye.', { local: true })], true), false);   // the instant local line still does not count
+});
