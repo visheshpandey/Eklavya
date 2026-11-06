@@ -974,3 +974,14 @@ body:has(#app[data-live="on"]) .guide-dock { display: none; }
 /* the feedback card sits bottom-left too: while it is up, toasts start to its right; on a phone the pill steps aside for it */
 @media (min-width: 64rem) { body:has(.fb-card) .toasts { left: calc(20px + min(360px, 100vw - 32px) + var(--s-4)); } .toast { max-width: min(30rem, calc(100vw - var(--rail-w) - 420px)); } }
 @media (max-width: 700px) { body:has(.fb-card) .guide-dock { display: none; } }
+
+/* toasts: top-centre, just under the header, 3 s, and they never take a click (they used to cover the Next question button) */
+body .toasts, body:has(.fb-card) .toasts { top: 76px; bottom: auto; left: 50%; right: auto; transform: translateX(-50%); width: max-content; max-width: min(30rem, calc(100vw - 32px)); justify-items: center; pointer-events: none; }
+body .toast { pointer-events: none; max-width: min(30rem, calc(100vw - 32px)); }
+@media (min-width: 64rem) { body .toasts, body:has(.fb-card) .toasts { left: calc(50% + var(--rail-w, 232px) / 2); top: 76px; bottom: auto; right: auto; justify-items: center; } }
+@media (max-width: 700px) { body:has(.toasts .toast) .guide-dock { bottom: 76px; } }
+
+/* the headphones note at the top of the Study room */
+.headphone-tip { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--sage); font-size: 14px; }
+.headphone-tip[hidden] { display: none; }
+.headphone-tip button { flex: none; }

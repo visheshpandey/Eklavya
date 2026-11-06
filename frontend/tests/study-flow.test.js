@@ -318,15 +318,16 @@ test('if even the notes cannot answer, the bubble still says something instead o
   assert.match(texts().at(-1), /could not get my answer out/);
 });
 
-test('a spoken "option B" that gets no grade is graded by text mode, not sent to the notes as a question', async () => {
-  const { clock, session, ask, state, calls } = setup();
+test('a spoken "option B" that gets no grade is NOT graded by the page: the student is asked to tap, and it is not sent to the notes as a question', async () => {
+  const { clock, session, ask, state, calls, texts } = setup();
   await session.start('test', 5); session.handleEvent({ type: 'session', id: 'x' });
   ask(1);
   session.handleEvent({ type: 'transcript', role: 'user', text: 'option B', final: true });
   clock.tick(20001); await flush();
-  assert.deepEqual(calls.ask, []);
-  assert.deepEqual(calls.submit, [[11, 'B']]);
-  assert.equal(state().session.live.text, true);
+  assert.deepEqual(calls.ask, []);                                           // not sent to the notes as a question
+  assert.deepEqual(calls.submit, []);                                        // and not graded: a spoken letter may be the tutor's own voice
+  assert.equal(state().session.live.text, false);
+  assert.ok(texts().some((x) => /tap one of the options/.test(x)));
 });
 
 test('in text mode typed text works: a letter answers the open question, a sentence asks the notes', async () => {
@@ -382,4 +383,31 @@ test('leaving text mode through the orb starts a free voice call again', async (
   assert.equal(voice.started.length, 1);
   assert.equal(voice.started[0].mode, 'free');
   assert.equal(state().session.live.text, false);
+});
+
+
+test('a "D" heard while the tutor is speaking does not appear in the chat, grade anything or move the test', async () => {
+  const { session, voice, state, texts, ask, calls } = setup();
+  await session.start('test', 5); session.handleEvent({ type: 'session', id: 'x' });
+  ask(1);
+  voice.status = 'speaking';                                                  // the tutor is reading the options out
+  session.handleEvent({ type: 'transcript', role: 'user', text: 'D', final: true });
+  session.handleEvent({ type: 'transcript', role: 'user', text: 'A, B, C or D', final: true });
+  assert.ok(!texts().includes('D') && !texts().includes('A, B, C or D'));    // nothing the student did not say is shown as theirs
+  assert.equal(state().session.result, null);                                // not graded
+  assert.equal(state().session.question.number, 1);                          // still on Question 1
+  assert.deepEqual(calls.submit, []);
+  assert.deepEqual(voice.sent, []);
+  assert.equal(voice.nexts, 0);
+});
+
+test('a spoken letter that nobody answers is never graded by the page: only a tap grades', async () => {
+  const { clock, session, voice, state, ask, calls } = setup();
+  await session.start('test', 5); session.handleEvent({ type: 'session', id: 'x' });
+  ask(1);
+  session.handleEvent({ type: 'transcript', role: 'user', text: 'option B please', final: true });   // said aloud, with the tutor quiet
+  clock.tick(60000); await flush();
+  assert.deepEqual(calls.submit, []);                                         // it was not graded behind the student's back
+  assert.equal(state().session.live.text, false);
+  assert.equal(voice.stopped, 0);
 });

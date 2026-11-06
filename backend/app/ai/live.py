@@ -25,11 +25,12 @@ from google.genai import types
 from app import db
 from app.ai import prompts
 from app.ai.tools import ToolContext, ask_quiz_question, dispatch, tools_for
-from app.domain import language_check
+from app.domain import echo, language_check
 from app.domain.scoring import VIVA_QUESTIONS
 from app.config import settings
 
 log = logging.getLogger(__name__)
+TYPED_ANSWER_SECONDS = 15   # how long after a tap or typed message a letter answer may be graded
 
 INPUT_AUDIO_MIME = "audio/pcm;rate=16000"   # browser -> Gemini
 PHOTO_TYPES = ("image/jpeg", "image/png", "image/webp")
@@ -299,6 +300,24 @@ class LiveTutorSession:
         self.ended_by_student = False
         self.nudge = False        # the tutor's last turn slipped on language or address: it is reminded after that turn
         self.resumed = False
+        self.tutor_audio_until = 0.0   # monotonic time when the speech sent so far will have finished playing
+        self.last_tutor_text = ""      # what the tutor last said, to recognise it coming back through the speakers
+        self.user_turn_echo = False    # part of the student's current turn was judged to be echo
+
+    # ---- the tutor's own voice coming back through the speakers
+    def _test_open(self) -> bool:
+        return self.ctx.focus_topic_id is not None and self.ctx.current_question_id is not None
+
+    def _since_tutor(self) -> float:
+        """Seconds since the tutor's speech finished playing; negative while it is still speaking."""
+        return time.monotonic() - self.tutor_audio_until
+
+    def _mic_gated(self) -> bool:
+        """During a test the microphone is not listened to while the tutor speaks and for a moment after (no headphones means it hears itself)."""
+        return self._test_open() and self._since_tutor() < echo.TAIL_SECONDS
+
+    def _heard_is_echo(self, text: str) -> bool:
+        return echo.is_echo(text, seconds_since_tutor=self._since_tutor(), test_open=self._test_open(), last_tutor_text=self.last_tutor_text)
 
     # ---- browser-facing helpers
     async def emit(self, event: dict):
@@ -319,7 +338,7 @@ class LiveTutorSession:
             log.debug("Client gone while sending audio")
             self.closed = True
 
-    async def _final(self, role: str):
+    async def _final(self, role: str, typed: bool = False):
         buf = self.user_buf if role == "user" else self.tutor_buf
         text = TRANSCRIPT_MARKERS.sub("", buf).strip()
         if role == "tutor" and text and (slips := language_check.violations(text, self.language)):
@@ -327,8 +346,13 @@ class LiveTutorSession:
             self.nudge = True
         if role == "user":
             self.user_buf = ""
+            if text and not typed and (self.user_turn_echo or self._heard_is_echo(text)):
+                text = ""   # the tutor's own voice (or one word right after it): not the student, so not shown, saved or counted
+            self.user_turn_echo = False
         else:
             self.tutor_buf = ""
+            if text:
+                self.last_tutor_text = text
         if text:
             await asyncio.to_thread(db.execute, "INSERT INTO transcripts (session_id, role, text) VALUES (?, ?, ?)",
                                     (self.session_id, role, text))
@@ -344,6 +368,9 @@ class LiveTutorSession:
         buf = self.user_buf if role == "user" else self.tutor_buf
         text = TRANSCRIPT_MARKERS.sub("", buf)
         text = re.sub(r"<[^>]*$", "", text)     # an unfinished "<no sp..." at the end waits for the next chunk
+        if role == "user" and text.strip() and self._heard_is_echo(text):
+            self.user_turn_echo = True
+            return
         if text.strip():
             await self.emit({"type": "transcript", "role": role, "text": text.strip(), "final": False, "replace": True})
             self.shown[role] = True
@@ -353,6 +380,7 @@ class LiveTutorSession:
         sc = getattr(msg, "server_content", None)
         if sc is not None:
             if getattr(sc, "interrupted", False):
+                self.tutor_audio_until = time.monotonic()   # its speech was cut off: nothing more will play
                 await self._final("tutor")
                 await self.emit({"type": "interrupted"})
             it = getattr(sc, "input_transcription", None)
@@ -369,6 +397,7 @@ class LiveTutorSession:
                 inline = getattr(part, "inline_data", None)
                 if inline is not None and getattr(inline, "data", None):
                     await self._final("user")
+                    self.tutor_audio_until = max(self.tutor_audio_until, time.monotonic()) + echo.audio_seconds(len(inline.data))
                     await self._send_audio(inline.data)
             if getattr(sc, "turn_complete", False):
                 await self._final("user")
@@ -403,6 +432,8 @@ class LiveTutorSession:
             if m["type"] == "websocket.disconnect":
                 return
             if m.get("bytes"):
+                if self._mic_gated():
+                    continue   # the tutor is speaking in a test: what the microphone hears is its own voice, so Gemini is not given it
                 await session.send_realtime_input(audio=types.Blob(data=m["bytes"], mime_type=INPUT_AUDIO_MIME))
             elif m.get("text"):
                 try:
@@ -418,9 +449,10 @@ class LiveTutorSession:
                     await session.send_realtime_input(audio_stream_end=True)
                 elif kind == "user_text" and str(data.get("text", "")).strip():
                     text = str(data["text"]).strip()
+                    self.ctx.typed_answer_until = time.monotonic() + TYPED_ANSWER_SECONDS   # typed or tapped by the student: a letter may be graded now
                     await self._final("tutor")       # close Eklavya's open bubble first, so the typed turn lands after it
                     self.user_buf = text
-                    await self._final("user")
+                    await self._final("user", typed=True)   # typed or tapped: never mistaken for an echo
                     await session.send_realtime_input(text=text)
                 elif kind == "photo":
                     await self._send_photo(session, data)

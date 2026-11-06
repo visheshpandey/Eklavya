@@ -14,6 +14,7 @@ import { createReplyWatchdog } from '../lib/reply-watchdog.js';
 import { createAutoAdvance } from '../lib/auto-advance.js';
 import { cancel as defaultCancel, schedule as defaultSchedule } from '../lib/timers.js';
 import { createTextSession, letterFrom } from './text-session.js';
+import { ignoreSpokenLine } from '../lib/echo-guard.js';
 
 /** Server events carry `type`; state keeps only the payload. */
 const stripType = ({ type: _type, ...rest }) => rest;
@@ -37,10 +38,11 @@ const TEXT_MODE_NOTICE = {
  * @param {{ask: Function, quizGenerate: Function, quizSubmit: Function}} [deps.backend] the ordinary endpoints; without it there is no text-mode fallback
  */
 export function createSessionController({ store, notes, notifier, getLanguage, getTutor = () => 'mentor', userId, onProgress = () => {}, preparePhoto,
-  backend = null, schedule = defaultSchedule, cancel = defaultCancel, connectMs = 10000, answerMs = 12000, advanceMs = 3000 }) {
+  backend = null, schedule = defaultSchedule, cancel = defaultCancel, now = () => Date.now(), connectMs = 10000, answerMs = 12000, advanceMs = 3000 }) {
   let voice = null;   // set by attach(); the VoiceClient needs this controller's handlers, so it is created after
   let celebrationId = 0;
   let lastStart = null;     // what to start again after a drop: {mode, topicId, debate}
+  let tutorSpokeAt = -Infinity;   // when the tutor's audio last ended: speech heard right after it is probably its own voice
   let unconfirmed = null;   // the last answer sent that nothing has answered yet: sent again after a reconnect if it is still awaited
   let queued = null;        // an answer typed or tapped while the call was down: sent as soon as it is back
   let switching = false;    // the call is being swapped for text mode: its ending is not the end of the session
@@ -94,9 +96,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
     if (!backend || textMode() || !active()) return;
     const { mode, question } = store.getState().session;
     if (FOCUSED.has(mode) && awaitingAnswer() && question) {
-      const letter = letterFrom(said) ?? /\b(?:option|answer)\s+([A-D])\b/i.exec(said)?.[1]?.toUpperCase();
-      if (letter) { await fallbackToText('stalled', { thenAnswer: letter }); return; }
-      say('I did not catch that. Please tap one of the options.');
+      say('Please tap one of the options, or say the full answer.');   // a spoken letter is never graded in a test: it may be the tutor's own voice
       return;
     }
     try { say((await backend.ask(said, getLanguage())).answer); }
@@ -120,6 +120,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
   }
 
   function handleStatus(status) {
+    if (status !== VOICE_STATUS.SPEAKING && voice?.status === VOICE_STATUS.SPEAKING) tutorSpokeAt = now();
     if (switching && status === VOICE_STATUS.IDLE) return;   // swapping the call for text mode: the session goes on
     store.dispatch(actions.voiceStatusChanged(status));
   }
@@ -127,6 +128,12 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
   function handleEvent(event) {
     switch (event.type) {
       case EVENT.TRANSCRIPT:
+        if (event.role === 'user' && !textMode()) {   // heard (not typed) while the tutor speaks: its own voice through the speakers, not the student
+          const { session } = store.getState();
+          const lastTutor = [...session.messages].reverse().find((m) => m.role === 'tutor')?.text ?? '';
+          if (ignoreSpokenLine({ testOpen: FOCUSED.has(session.mode) && Boolean(session.question), speaking: voice?.status === VOICE_STATUS.SPEAKING,
+            msSinceSpeech: now() - tutorSpokeAt, text: event.text, lastTutorText: lastTutor })) break;
+        }
         store.dispatch(actions.transcriptReceived({ role: event.role === 'user' ? 'user' : 'tutor', text: event.text, final: Boolean(event.final), replace: Boolean(event.replace) }));
         if (!textMode()) {
           if (event.role === 'user') { if (event.final && event.text) watchdog.userSpoke(event.text); }

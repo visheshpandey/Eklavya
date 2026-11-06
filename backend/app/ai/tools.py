@@ -6,6 +6,8 @@ logs to agent_logs, and pushes a UI event through ctx.emit so the frontend can r
 """
 import asyncio
 import logging
+import os
+import time
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from typing import Awaitable, Callable, Optional
@@ -15,7 +17,7 @@ from google.genai import types
 from app import db
 from app.agents import evaluation, quiz, study_mission
 from app.agents.logger import log_agent
-from app.domain import retrieval, board as boards, scoring
+from app.domain import echo, retrieval, board as boards, scoring
 from app.domain.mastery import update_mastery
 from app.services import search
 
@@ -168,6 +170,7 @@ class ToolContext:
     debate_id: Optional[int] = None
     debate_rounds: list = field(default_factory=list)  # debate: one argument_score dict per student argument
     current_question: Optional[dict] = None      # quiz: the question on screen {question, options, number}, kept so a reconnect can repeat it
+    typed_answer_until: float = 0.0              # monotonic time until which a tapped or typed letter may be graded (spoken letters are never accepted in a test)
 
     def name_of(self, topic_id: Optional[int]) -> str:
         """A topic's name from the list loaded when the call started: no database round trip on the event loop."""
@@ -258,6 +261,12 @@ async def ask_quiz_question(ctx: ToolContext, topic: str = None, **_):
 async def grade_answer(ctx: ToolContext, student_answer: str = "", confidence=None, **_):
     if not ctx.current_question_id:
         return {"error": "No quiz question is active. Call ask_quiz_question first."}
+    if ctx.focus_topic_id is not None and echo.is_letter_answer(student_answer) and os.environ.get("LETTER_GUARD", "").lower() != "off":
+        # in a test a bare letter counts only if the student tapped or typed it: heard aloud it is probably the tutor's own voice from the speakers
+        if time.monotonic() > ctx.typed_answer_until:
+            return {"unclear": True, "message": "A single spoken letter is not accepted in a test, because it may be an echo of your own voice. "
+                                                "Ask the student to tap an option, type the letter, or say the full answer in words. Do not grade anything yet."}
+        ctx.typed_answer_until = 0.0   # a tapped or typed letter is used once
     conf = None if confidence is None else _num(confidence)
     question_id = ctx.current_question_id
     earlier = next((r for r in ctx.results if r["question_id"] == question_id), None)   # a follow-up answer to the same question

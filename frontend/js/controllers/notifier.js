@@ -11,7 +11,7 @@ export function describeError(err) {
  * @param {ReturnType<typeof import('../state/store.js').createStore>} store
  * @param {{ttlMs?: number, schedule?: (fn: () => void, ms: number) => unknown}} [options] injectable for tests
  */
-export function createNotifier(store, { ttlMs = 6000, schedule = setTimeout } = {}) {
+export function createNotifier(store, { ttlMs = 3000, schedule = setTimeout } = {}) {
   let nextId = 0;
 
   function toast(kind, text) {

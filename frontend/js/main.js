@@ -76,6 +76,7 @@ import { mountGroups } from './components/groups-view.js';
 import { mountDemoCircle } from './components/demo-circle.js';
 import { mountWelcome } from './components/welcome.js';
 import { mountGuide } from './components/guide.js';
+import { mountHeadphoneTip } from './components/headphone-tip.js';
 import { testFinished, tutorReplied } from './lib/guide-events.js';
 import { createInstaller } from './lib/install.js';
 import { createTour } from './components/tour.js';
@@ -110,6 +111,8 @@ const notifier = createNotifier(store);
 const home = createHomeController({ store, backend, notifier, userId: USER_ID, onMastery: () => notes?.refresh() });   // a rating changes mastery: reload it everywhere
 
 let session;   // the notes controller needs to end a session; the session controller needs the notes controller
+const headphoneTip = mountHeadphoneTip({ root: byId('headphoneTip') });
+store.select(selectView, (view) => { if (view === VIEWS.STUDY) headphoneTip.show(); });
 const guideMark = (id) => document.dispatchEvent(new CustomEvent('eklavya:guide', { detail: id }));
 const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(answers) });
 document.addEventListener('eklavya:mastery', () => feedback.count());   // a flashcard rating
