@@ -80,7 +80,7 @@ export function mountGuide({ root, actions, storage = globalThis.localStorage, s
 
   function pill(count) {
     return el('button', { class: 'guide-pill', type: 'button', 'aria-expanded': 'false', 'aria-label': `Open the guided demo, ${count} of ${GUIDE_STEPS.length} done`,
-      onclick: () => { if (state.min) { state.min = false; save(); } else peek = true; draw(); } },
+      onclick: () => { state.min = false; peek = true; save(); draw(); } },   // one tap opens the card, wherever the pill is (also where it is squeezed)
     el('span', { class: 'mono', text: 'Guided demo' }), el('b', { text: `${count}/${GUIDE_STEPS.length}` }));
   }
 
