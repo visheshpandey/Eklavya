@@ -34,7 +34,7 @@ export function mountQuizCard({ store, root, onAnswer, onNext = null, hold = cre
       result.misconceptions_resolved ? el('p', { class: 'resolved', text: 'Misconception resolved' }) : null,
       // the test moves on by itself after a few seconds; this is the same step, now
       onNext && shown.question?.total && shown.question.number < shown.question.total
-        ? el('button', { class: 'btn btn-primary btn-sm next-q', type: 'button', onclick: onNext }, 'Next question →') : null);
+        ? el('button', { class: 'btn btn-primary btn-sm next-q', type: 'button', onclick: () => { hold.release(); onNext(); } }, 'Next question →') : null);
   }
 
   /** The state of one option once the question has been graded: the right one, and the wrong one that was chosen. */

@@ -39,6 +39,16 @@ test('feedback hold: with nothing on screen the next question appears at once', 
   assert.equal(shown, 1);
 });
 
+test('feedback hold: pressing "Next question" releases the hold, so the next question shows the instant it arrives', () => {
+  const c = clock();
+  const hold = createFeedbackHold({ ...c });
+  hold.resultShown();                             // a result is on screen
+  hold.release();                                 // the student pressed Next: it has been read
+  let shown = 0;
+  hold.swap(() => { shown++; });                  // the server's next question arrives a moment later
+  assert.equal(shown, 1);                         // no 2.5 s wait
+});
+
 test('feedback hold: a result stays at least 2.5 s, and the swap waits for the tutor to start speaking', () => {
   const c = clock();
   const hold = createFeedbackHold({ ...c });

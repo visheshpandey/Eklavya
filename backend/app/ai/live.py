@@ -96,7 +96,8 @@ def session_plan(mode: str, topic_name: str, total: int = 3) -> str:
                 'otherwise call ask_quiz_question yourself.\n'
                 '4. When a tool result says test_complete, give a short warm spoken summary of how they did, then call get_mission '
                 'and tell them what to do next.\n'
-                'Do not skip steps and do not start the test before teaching.')
+                'Do not skip steps on your own. But if the student asks to be tested at any point ("ab mera test lo", "test me", "quiz me"), '
+                'stop teaching at once, say one short line, and start the test (step 3) right away.')
     if mode == "test":
         return (f'# This session\'s plan: TEST. Topic: "{topic_name}"\n'
                 f'The student chose to be tested on "{topic_name}" by voice ({total} questions). Do not teach first.\n'
