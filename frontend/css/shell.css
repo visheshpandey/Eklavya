@@ -967,3 +967,7 @@ body:not(.ready) #panel-today > :not(#welcome) { visibility: hidden; }
 @media (max-width: 700px) { body:has(.toasts .toast) .guide-dock { bottom: 150px; } }
 /* nothing of the guide over a running call or the "How you sound" panel */
 body:has(#app[data-live="on"]) .guide-dock { display: none; }
+
+/* the feedback card sits bottom-left too: while it is up, toasts start to its right; on a phone the pill steps aside for it */
+@media (min-width: 64rem) { body:has(.fb-card) .toasts { left: calc(20px + min(360px, 100vw - 32px) + var(--s-4)); } .toast { max-width: min(30rem, calc(100vw - var(--rail-w) - 420px)); } }
+@media (max-width: 700px) { body:has(.fb-card) .guide-dock { display: none; } }
