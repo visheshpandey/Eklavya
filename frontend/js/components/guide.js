@@ -73,7 +73,7 @@ export function mountGuide({ root, actions, storage = globalThis.localStorage, s
     clearTimeout(goodbye);
     goodbye = setTimer(() => {
       if (!state.open) return;
-      if (root.offsetParent === null && tries < 30) { sayGoodbye(tries + 1); return; }   // hidden for now: wait until it is on screen
+      if (root.getClientRects().length === 0 && tries < 30) { sayGoodbye(tries + 1); return; }   // hidden for now: wait until it is on screen
       finish();
     }, tries === 0 ? DONE_MESSAGE_MS : 2000);
   }
