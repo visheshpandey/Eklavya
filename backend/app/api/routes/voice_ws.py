@@ -10,10 +10,14 @@ mode=debate  the student debates the tutor about the chosen topic; side=for|agai
              style=tough|friendly sets how hard the tutor pushes
 tutor=mentor|senior   the tutor's personality and voice (calm mentor, friendly senior)
 (default)    open conversation across all of the student's notes
+standby=1    pre-connect: the socket opens at once and answers {"type": "standby"}, then waits (up to 10 minutes) for
+             {"type": "start", lang, mode, topic_id, side, motion, style, tutor, resume}; those values replace the ones in the URL.
+             The page opens it when the Study room opens, so the connection is ready when the student picks a mode. No microphone,
+             no Gemini session and no voice minutes are used until "start" arrives.
 """
 import asyncio
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app import auth, db
 from app.agents import quiz
@@ -22,16 +26,52 @@ from app.services import voice_limit
 
 router = APIRouter()
 MAX_MOTION_CHARS = 200
+STANDBY_SECONDS = 600
+
+
+async def _wait_for_start(ws: WebSocket):
+    """The `start` message of a standby socket (pings from the page are ignored), or None if the page left or never started."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + STANDBY_SECONDS
+    while True:
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            return None
+        try:
+            message = await asyncio.wait_for(ws.receive_json(), remaining)
+        except (WebSocketDisconnect, asyncio.TimeoutError, RuntimeError, ValueError):
+            return None
+        if isinstance(message, dict) and message.get("type") == "start":
+            return message
 
 
 @router.websocket("/ws/voice")
 async def voice(ws: WebSocket, user_id: int = auth.CurrentUser, lang: str = "hinglish", mode: str = "free", topic_id: int = None,
-                side: str = "for", motion: str = "", style: str = "tough", tutor: str = "mentor", resume: str = ""):
+                side: str = "for", motion: str = "", style: str = "tough", tutor: str = "mentor", resume: str = "", standby: int = 0):
     await ws.accept()
     if await asyncio.to_thread(voice_limit.reached, user_id):
         await ws.send_json({"type": "error", "code": "daily_limit", "retryable": False, "message": live.ERROR_MESSAGES["daily_limit"]})
         await ws.close()
         return
+    if standby:   # pre-connected: ready now, and the real settings arrive with "start"
+        await ws.send_json({"type": "standby"})
+        start = await _wait_for_start(ws)
+        if start is None:
+            try:
+                await ws.close()
+            except Exception:  # noqa: BLE001 - already closed by the page
+                pass
+            return
+        lang, mode, tutor, resume = str(start.get("lang", lang)), str(start.get("mode", mode)), str(start.get("tutor", tutor)), str(start.get("resume", "") or "")
+        side, motion, style = str(start.get("side", side)), str(start.get("motion", motion) or ""), str(start.get("style", style))
+        try:
+            topic_id = int(start["topic_id"]) if start.get("topic_id") else None
+        except (TypeError, ValueError):
+            topic_id = None
+        if await asyncio.to_thread(voice_limit.reached, user_id):   # the minutes may have run out while it waited
+            await ws.send_json({"type": "error", "code": "daily_limit", "retryable": False, "message": live.ERROR_MESSAGES["daily_limit"]})
+            await ws.close()
+            return
     topics = await asyncio.to_thread(      # the event loop also answers every voice socket's pings: never wait on the database here
         db.query, "SELECT t.id, t.topic_name, t.document_id FROM topics t JOIN documents d ON d.id = t.document_id "
         "WHERE d.user_id = ? ORDER BY d.id DESC, t.id", (user_id,))

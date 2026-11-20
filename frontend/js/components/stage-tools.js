@@ -26,7 +26,8 @@ export function mountStageTools({ store, root, captionRoot, onToggleCaptions, on
     const on = selectCaptions(state);
     const last = [...selectMessages(state)].reverse().find((m) => m.role === 'tutor');
     captionRoot.hidden = !on || !last;
-    if (!captionRoot.hidden) captionRoot.textContent = last.text;
+    const target = captionRoot.querySelector('.caption-text') ?? captionRoot;
+    if (!captionRoot.hidden) target.textContent = last.text;
   }
 
   store.select(selectCaptions, () => { drawButtons(); drawCaption(); });

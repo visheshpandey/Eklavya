@@ -15,7 +15,11 @@ function write(key, value) {
 export const getToken = () => read(TOKEN_KEY);
 /** A guest's private id on the server (one per browser). It is not a login: isSignedIn stays false. */
 export const getGuestToken = () => read(GUEST_TOKEN_KEY);
-export const saveGuestToken = (token) => write(GUEST_TOKEN_KEY, token);
+export const saveGuestToken = (token) => { write(GUEST_TOKEN_KEY, token); if (token) resetGuide(); };   // a new private demo session: nothing ticked from an older one
+
+/** The guided-demo checklist belongs to one demo session: a new session (a new guest, a sign-in, a sign-out) starts it clean. */
+export const GUIDE_KEY = 'eklavya.guide';
+export function resetGuide() { write(GUIDE_KEY, null); }
 /** What identifies this browser to the server: the login, else the private guest. */
 export const authToken = () => getToken() ?? getGuestToken();
 
@@ -31,12 +35,14 @@ export function saveLogin({ token, user }) {
 }
 
 export function chooseGuest() {
+  resetGuide();
   write(TOKEN_KEY, null);
   write(USER_KEY, null);
   write(GUEST_KEY, '1');
 }
 
 export function signOut() {
+  resetGuide();
   write(TOKEN_KEY, null);
   write(USER_KEY, null);
   write(GUEST_KEY, null);

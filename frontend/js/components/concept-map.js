@@ -10,6 +10,7 @@ import { t } from '../lib/strings.js';
 import { selectConceptMap, selectLanguage } from '../state/selectors.js';
 import { sparkline } from '../lib/sparkline.js';
 import { masteryHistory } from '../lib/mastery-history.js';
+import { ellipseLayout, mapCanvas, placeLabels, wrapFull } from '../lib/map-layout.js';
 
 const statusOf = (node) => (node.started === false ? { key: 'new', label: 'Not started' } : masteryStatus(node.mastery));
 
@@ -71,12 +72,18 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
 
     const nodes = map.nodes;
     if (!nodes.some((n) => n.id === selected)) selected = null;
-    const geo = mapGeometry(nodes.length);
-    const at = new Map(ringLayout(nodes.length, geo.size, geo.ringRadius).map((p, i) => [nodes[i].id, p]));
+    // the picture is as wide as its card (1 unit = 1 pixel, so the names stay 13px); names are horizontal, on at most 2 lines, never cut
+    const lines = nodes.map((n) => wrapFull(n.topic, 2, 14));
+    const longest = Math.max(...lines.flat().map((l) => l.length), 10);
+    const canvas = mapCanvas(nodes.length, (root.clientWidth || 900) - 28, longest);
+    const geo = { size: canvas.W, height: canvas.H, nodeRadius: canvas.nodeRadius };
+    const points = ellipseLayout(nodes.length, canvas);
+    const at = new Map(points.map((p, i) => [nodes[i].id, p]));
+    const placed = placeLabels(points, lines, { W: canvas.W, H: canvas.H, nodeRadius: canvas.nodeRadius });
     const maxWeight = Math.max(1, ...map.links.map((l) => l.weight));
     const names = new Map(nodes.map((n) => [n.id, n.topic]));
     const neighbours = (id) => map.links.filter((l) => l.source === id || l.target === id).map((l) => (l.source === id ? l.target : l.source));
-    const svg = svgEl('svg', { viewBox: `0 0 ${geo.size} ${geo.size}`, class: 'map-svg' });
+    const svg = svgEl('svg', { viewBox: `0 0 ${geo.size} ${geo.height}`, class: 'map-svg' });
     const tip = el('div', { class: 'map-tip', role: 'status', hidden: '' });
     const frame = el('div', { class: 'map-frame' }, svg, tip);
     const detail = el('div', { class: 'card detail', id: 'mapDetail' });
@@ -99,7 +106,7 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
     const showTip = (node, p) => {
       tip.textContent = node.started === false ? `${node.topic}, not started` : `${node.topic}, ${Math.round(node.mastery)}%`;
       tip.style.left = `${(p.x / geo.size) * 100}%`;
-      tip.style.top = `${((p.y - geo.nodeRadius) / geo.size) * 100}%`;
+      tip.style.top = `${((p.y - geo.nodeRadius) / geo.height) * 100}%`;
       tip.hidden = false;
     };
     const hideTip = () => { tip.hidden = true; };
@@ -132,25 +139,10 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
       const p = at.get(node.id);
       const percent = Math.round(node.mastery);
       const status = statusOf(node);
-      const pctSize = geo.nodeRadius >= 16 ? 12 : geo.nodeRadius >= 13 ? 10 : 9;
-      let label = null;
-      if (geo.labelled) {
-        const distance = geo.nodeRadius + 7;
-        const lx = p.x + Math.cos(p.angle) * distance;
-        const ly = p.y + Math.sin(p.angle) * distance;
-        const text = shorten(node.topic, geo.labelChars);
-        if (geo.radial) {   // along the spoke, turned over on the left half so it never reads upside down
-          const degrees = (p.angle * 180) / Math.PI;
-          const left = Math.cos(p.angle) < 0;
-          label = svgEl('text', { x: lx, y: ly, class: 'map-label map-label-radial', 'text-anchor': left ? 'end' : 'start',
-            'dominant-baseline': 'middle', transform: `rotate(${left ? degrees + 180 : degrees} ${lx} ${ly})` }, text);
-        } else {
-          const outward = Math.cos(p.angle) >= 0 ? 'start' : 'end';
-          const lines = wrapLabel(node.topic, geo.labelChars, 2);   // a long name goes on two lines instead of being cut
-          label = svgEl('text', { x: lx, y: ly + 4 - (lines.length - 1) * 6, class: 'map-label', 'text-anchor': Math.abs(Math.cos(p.angle)) < 0.2 ? 'middle' : outward },
-            lines.map((line, i) => svgEl('tspan', { x: lx, dy: i ? '1.15em' : '0' }, line)));
-        }
-      }
+      const pctSize = 13;
+      const spot = placed[nodes.indexOf(node)];
+      const label = svgEl('text', { x: spot.x, y: spot.y, class: 'map-label', 'text-anchor': spot.anchor, 'dominant-baseline': 'central' },
+        spot.lines.map((line, k) => svgEl('tspan', { x: spot.x, y: spot.y - ((spot.lines.length - 1) * 16) / 2 + k * 16 }, line)));
       const group = svgEl('g', { class: 'map-node', role: 'button', tabindex: '0', 'aria-pressed': String(node.id === selected), 'aria-label': node.started === false ? `${node.topic}, not started` : `${node.topic}, ${percent}%, ${status.label}` },
         svgEl('circle', { cx: p.x, cy: p.y, r: geo.nodeRadius, class: `map-dot st-${status.key === 'strong' ? 'strong' : status.key === 'grow' ? 'grow' : status.key === 'new' ? 'new' : 'low'}` }),
         svgEl('text', { x: p.x, y: p.y, 'text-anchor': 'middle', 'dominant-baseline': 'central', class: 'map-pct', style: `font-size:${pctSize}px` }, node.started === false ? '·' : String(percent)),
@@ -171,7 +163,7 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
       el('div', { class: 'maplegend' }, el('span', {}, el('i', { class: 'st-strong' }), 'Strong · 80%+'), el('span', {}, el('i', { class: 'st-grow' }), 'Growing · 60–79%'),
         el('span', {}, el('i', { class: 'st-low' }), 'Revisit · below 60%'), el('span', {}, el('i', { class: 'st-new' }), 'Not started')),
       detail,
-      el('ul', { class: 'map-list' }, nodes.map((n) => {
+      el('ul', { class: 'map-list visually-hidden' }, nodes.map((n) => {
         const linked = neighbourNames(n.id);
         return el('li', {},
           el('button', { class: 'link-btn', type: 'button', onclick: () => select(n.id) }, `${n.topic} · ${n.started === false ? 'not started' : `${Math.round(n.mastery)}%`}`), sparkline(masteryHistory.values(n.id)),
@@ -183,6 +175,15 @@ export function mountConceptMap({ store, root, onStudy, onAsk, onTest = null, on
     requestAnimationFrame(() => frame.classList.add('drawn'));   // the links draw themselves in
   }
 
+  if (typeof ResizeObserver === 'function') {   // the picture is as wide as its card: draw again when the card changes width
+    let lastWidth = 0, pending = null;
+    new ResizeObserver(() => {
+      const width = Math.round(root.clientWidth);
+      if (!width || Math.abs(width - lastWidth) < 24) return;
+      lastWidth = width;
+      clearTimeout(pending); pending = setTimeout(draw, 120);
+    }).observe(root);
+  }
   document.addEventListener('eklavya:mastery-history', draw);   // the sparklines arrive after the map
   store.select(selectConceptMap, draw);
   store.select(selectLanguage, draw);

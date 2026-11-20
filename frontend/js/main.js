@@ -77,6 +77,9 @@ import { mountDemoCircle } from './components/demo-circle.js';
 import { mountWelcome } from './components/welcome.js';
 import { mountGuide } from './components/guide.js';
 import { mountHeadphoneTip } from './components/headphone-tip.js';
+import { mountWakeToast } from './components/wake-toast.js';
+import { mountVoiceNote } from './components/voice-note.js';
+import { warmup } from './lib/warmup.js';
 import { testFinished, tutorReplied } from './lib/guide-events.js';
 import { createInstaller } from './lib/install.js';
 import { createTour } from './components/tour.js';
@@ -111,7 +114,9 @@ const notifier = createNotifier(store);
 const home = createHomeController({ store, backend, notifier, userId: USER_ID, onMastery: () => notes?.refresh() });   // a rating changes mastery: reload it everywhere
 
 let session;   // the notes controller needs to end a session; the session controller needs the notes controller
+mountWakeToast({ root: byId('wakeToast'), warmup });
 const headphoneTip = mountHeadphoneTip({ root: byId('headphoneTip') });
+const voiceNote = mountVoiceNote({ root: byId('voiceNote'), isReady: () => Boolean(voiceClient?.standbyReady), isBusy: () => selectSessionActive(store.getState()), onText: () => session.useText() });
 store.select(selectView, (view) => { if (view === VIEWS.STUDY) headphoneTip.show(); });
 const guideMark = (id) => document.dispatchEvent(new CustomEvent('eklavya:guide', { detail: id }));
 const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(answers) });
@@ -324,8 +329,12 @@ voiceClient = new VoiceClient({
   onLevel: (level, bands) => { globalThis.eklavyaLevel = level; orb.setLevel(level); mentor.setLevel(level, bands); },   // one voice level moves the orb and the mentor
   onAudio: (chunk) => mentor.feedAudio(chunk),
   onInterrupt: () => mentor.interrupt(),
+  onStandby: (ready) => { if (ready) voiceNote.ready(); },
 });
 session.attach(voiceClient);
+// the Study room opened: connect the voice in the background (no microphone yet) so it is ready when a mode is picked
+store.select(selectView, (view) => { if (view === VIEWS.STUDY && !selectSessionActive(store.getState())) { session.preconnect(); voiceNote.show(); } else voiceNote.leave(); });
+store.select(selectSessionActive, (active) => { if (active) voiceNote.leave(); });
 // leaving the Study room ends the call: the Live socket closes and the microphone is released
 store.select(selectView, (view) => { if (endsOnLeave(view, selectSessionActive(store.getState()))) session.stop(); });
 mountStageTools({
@@ -343,13 +352,13 @@ mountQuizCard({ store, root: byId('quizcard'), onAnswer: session.answer, onNext:
 mountSummaryCard({ store, root: byId('summary') });
 mountStudyFocus({ store, panel: byId('panel-study'), reduceMotion });   // a compact mentor card while a question or board is up, and whatever appears is scrolled into view
 mountMissionCard({ store, root: byId('studyMission'), select: selectSessionMission, heading: 'Your next mission' });
-mountChat({ store, root: byId('chat') });
+mountChat({ store, root: byId('chat'), onRetry: () => session.retryReply() });
 mountTextInput({ store, form: byId('textform'), input: byId('textin'), button: byId('textsend'), onSend: session.sendText });
 mountEmotionCard({ store, root: byId('emotion') });
 
 // --- progress
 mountStatTiles({ store, root: byId('statTiles') });
-mountMissionCard({ store, root: byId('mission') });
+mountMissionCard({ store, root: byId('mission'), showWeakest: true });
 mountMasteryChart({ store, root: byId('chart') });
 mountMasteryRows({ store, root: byId('masteryRows') });
 mountMasteryRing({ store, root: byId('masteryRing') });

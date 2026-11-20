@@ -15,6 +15,9 @@ import { createAutoAdvance } from '../lib/auto-advance.js';
 import { cancel as defaultCancel, schedule as defaultSchedule } from '../lib/timers.js';
 import { createTextSession, letterFrom } from './text-session.js';
 import { ignoreSpokenLine } from '../lib/echo-guard.js';
+import { masteryChange, toastText } from '../lib/mastery-change.js';
+import { stripForeignScripts } from '../lib/script-filter.js';
+import { feedbackLimitMs, feedbackMs } from '../lib/feedback-timing.js';
 
 /** Server events carry `type`; state keeps only the payload. */
 const stripType = ({ type: _type, ...rest }) => rest;
@@ -24,6 +27,8 @@ const TEXT_MODE_NOTICE = {
   slow: 'Voice is slow right now, switching to text mode.',
   stalled: 'Voice is not answering, switching to text mode.',
   mic: 'The microphone is not available, so we will carry on in text.',
+  chosen: 'Text mode: type or tap your answers. Voice is off for this session.',
+  failed: 'Voice could not connect, so we will carry on in text.',
 };
 
 /**
@@ -47,12 +52,14 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
   let queued = null;        // an answer typed or tapped while the call was down: sent as soon as it is back
   let switching = false;    // the call is being swapped for text mode: its ending is not the end of the session
   let connectTimer = null;
+  let preferText = false;   // the student chose "Continue with text" while the voice was still connecting
   let answerTimer = null;
   let progress = { asked: [], results: [] };   // what this call has already asked and graded, handed to text mode if it has to take over
   const language = () => store.getState().ui.language;
   const errorText = (code) => { const text = t(`err.${code}`, language()); return text.startsWith('err.') ? t('err.generic', language()) : text; };
   const textMode = () => store.getState().session.live.text;
-  const say = (text) => store.dispatch(actions.transcriptReceived({ role: 'tutor', text, final: true }));
+  const say = (text, { retry = false } = {}) => store.dispatch(actions.transcriptReceived({ role: 'tutor', text: stripForeignScripts(text), final: true, whole: true, retry }));
+  let lastAsked = '';   // what the student last said or typed, for the Retry button
 
   /** Is the tutor waiting for an answer right now: an open quiz question, a viva question, or a debate in progress? */
   function awaitingAnswer() {
@@ -99,8 +106,9 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
       say('Please tap one of the options, or say the full answer.');   // a spoken letter is never graded in a test: it may be the tutor's own voice
       return;
     }
+    lastAsked = said;
     try { say((await backend.ask(said, getLanguage())).answer); }
-    catch { say('I could not get my answer out just now. Please ask again in a moment.'); }
+    catch { say('I could not get an answer from your notes just now.', { retry: true }); }   // no notes answer either: a Retry button, not a silence
   }
 
   /** Swap the call for text mode and carry on from where it was. Returns false if there is no text mode to go to. */
@@ -134,7 +142,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
           if (ignoreSpokenLine({ testOpen: FOCUSED.has(session.mode) && Boolean(session.question), speaking: voice?.status === VOICE_STATUS.SPEAKING,
             msSinceSpeech: now() - tutorSpokeAt, text: event.text, lastTutorText: lastTutor })) break;
         }
-        store.dispatch(actions.transcriptReceived({ role: event.role === 'user' ? 'user' : 'tutor', text: event.text, final: Boolean(event.final), replace: Boolean(event.replace) }));
+        store.dispatch(actions.transcriptReceived({ role: event.role === 'user' ? 'user' : 'tutor', text: event.role === 'user' ? event.text : stripForeignScripts(event.text), final: Boolean(event.final), replace: Boolean(event.replace), whole: Boolean(event.whole) }));
         if (!textMode()) {
           if (event.role === 'user') { if (event.final && event.text) watchdog.userSpoke(event.text); }
           else if (event.text) watchdog.replied();
@@ -163,13 +171,15 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
         unconfirmed = null;
         cancel(answerTimer); answerTimer = null;
         watchdog.replied();
-        if (!event.retry) progress.results.push({ question_id: event.question_id, is_correct: event.is_correct, before: event.before, after: event.after,
+        const change = masteryChange(event.before, event.after);   // worked out once: the toast, the card and the summary all read it
+        event = { ...event, ...change };
+        if (!event.retry) progress.results.push({ question_id: event.question_id, is_correct: event.is_correct, before: change.before, after: change.after,
           misconception: event.misconception?.text ?? null, resolved: event.misconceptions_resolved ? 1 : 0 });
         store.dispatch(actions.answerGraded(event));
-        notifier.toast(event.is_correct ? 'ok' : 'bad', `${event.topic}: ${event.before}% → ${event.after}%`);
-        if (event.is_correct && event.after > event.before) celebrate(event.topic, event.after - event.before);
+        notifier.toast(event.is_correct ? 'ok' : 'bad', toastText(event.topic, change));
+        if (event.is_correct && change.delta > 0) celebrate(event.topic, change.delta);
         const { session } = store.getState();
-        if (!textMode() && FOCUSED.has(session.mode) && session.question?.total) advancer.arm();   // the next question comes by itself, or after 3 s we ask for it
+        if (!textMode() && FOCUSED.has(session.mode) && session.question?.total) advancer.arm(feedbackMs(event.is_correct), feedbackLimitMs(event.is_correct));   // the next question comes by itself, or after 3 s we ask for it
         notes.refresh();
         onProgress();
         break;
@@ -198,7 +208,7 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
         store.dispatch(actions.missionReceived(event));
         notes.refresh();
         break;
-      case EVENT.TURN_COMPLETE: watchdog.turnComplete(); notes.refresh(); break;
+      case EVENT.TURN_COMPLETE: watchdog.turnComplete(); store.dispatch(actions.turnEnded()); notes.refresh(); break;
       case EVENT.ERROR:   // the server sends a code; the words come from here, in the student's language, never from the provider
         clearTimers();
         voice.stop();
@@ -225,10 +235,12 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
     lastStart = { mode, topicId, debate };
     unconfirmed = queued = null;
     progress = { asked: [], results: [] };
+    if (preferText && typed && await fallbackToText('chosen')) return;   // text only, on request: the voice is not started
     try {
       await voice.start({ userId, lang: getLanguage(), mode, topicId, side: debate.side, motion: debate.motion, style: debate.style, tutor: getTutor() });
     } catch (err) {
       if (err?.code === 'mic' && await fallbackToText('mic')) return;   // no microphone (or not allowed): the test still works by typing
+      if (await fallbackToText('failed')) return;                        // the voice would not connect: the room still works, in text, with one line saying why
       notifier.error(err);
       return;
     }
@@ -259,6 +271,13 @@ export function createSessionController({ store, notes, notifier, getLanguage, g
 
   const controller = {
     attach(client) { voice = client; },
+    /** The Retry button on a failed reply: ask the same thing again. */
+    retryReply() { if (lastAsked) { if (textMode() && typed) typed.chat(lastAsked); else controller.sendText(lastAsked); } },
+    /** The Study room opened: connect the voice in the background (no microphone yet), so it is ready when a mode is picked. */
+    preconnect() { preferText = false; if (!active()) voice?.prewarm?.({ lang: getLanguage() }); },
+    /** "Continue with text": the next session runs without the voice. */
+    useText() { preferText = true; },
+    voiceReady: () => Boolean(voice?.standbyReady),
     handleEvent,
     handleStatus,
     start,

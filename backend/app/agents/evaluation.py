@@ -96,7 +96,7 @@ def grade(user_id: int, question_id: int, student_answer: str, confidence: float
 
     topic = db.one("SELECT topic_name FROM topics WHERE id = ?", (topic_id,))["topic_name"]
     if is_correct:
-        action = "Review next question" + (f"; resolved {resolved} misconception(s)" if resolved else "")
+        action = "Review next question" + (f"; resolved {resolved} misconception{'' if resolved == 1 else 's'}" if resolved else "")
         log_agent(user_id, "evaluation", f"Correct on {topic} (confidence {confidence:.2f})",
                   f"Mastery {before} -> {after}", action, confidence)
     else:

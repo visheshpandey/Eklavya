@@ -21,7 +21,11 @@ export function mountStudyFocus({ store, panel, reduceMotion = false }) {
     // after the card has drawn itself (it may hold the last result for a moment before swapping in the next question)
     setTimeout(() => {
       const target = panel.querySelector(selector) ?? panel.querySelector('#quizcard');
-      if (target && !target.hidden) target.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+      if (!target || target.hidden) return;
+      const behavior = reduceMotion ? 'auto' : 'smooth';
+      // the summary sits first in the column: go to the top of the page, where it starts (and where later cards growing below it cannot push it away)
+      if (selector === '#summary') window.scrollTo({ top: 0, behavior });
+      else target.scrollIntoView({ behavior, block: 'nearest' });
     }, 60);
   }
 

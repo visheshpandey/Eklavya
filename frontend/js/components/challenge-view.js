@@ -1,5 +1,6 @@
 // Challenge a friend: pick a topic to get a code, or enter a friend's code and answer the same 5 questions.
 // One try each. The standings show once you have played.
+import { youName } from '../lib/weakest.js';
 import { el, render } from '../lib/dom.js';
 
 export function mountChallenge({ root, api, signedIn, topics, onSignIn, notify, onPlayed = () => {} }) {
@@ -75,7 +76,7 @@ export function mountChallenge({ root, api, signedIn, topics, onSignIn, notify, 
         el('button', { class: 'btn btn-quiet btn-sm', type: 'button', onclick: async () => {
           try { await navigator.clipboard.writeText(page.code); notify('Code copied.'); } catch { notify(`The code is ${page.code}`); } } }, 'Copy')),
       page.played ? el('ol', { class: 'leaderboard' }, page.standings.map((r) => el('li', { class: r.you ? 'is-you' : '' },
-        el('span', { class: 'lb-rank', text: String(r.rank) }), el('span', { class: 'lb-name', text: r.you ? `${r.name} (you)` : r.name }),
+        el('span', { class: 'lb-rank', text: String(r.rank) }), el('span', { class: 'lb-name', text: r.you ? youName(r.name) : r.name }),
         el('span', { class: 'hint', text: `${r.seconds}s` }), el('strong', { text: `${r.correct}/${r.total}` }))))
         : el('div', {}, el('p', { text: 'Play your own challenge to see how friends do.' }),
           el('button', { class: 'btn btn-primary', type: 'button', onclick: () => run(() => show(page.code)) }, 'Play it now')),

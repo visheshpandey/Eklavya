@@ -10,9 +10,10 @@ export function isWorking({ active, question, boards = [], summary, viva, debate
 /** Which element to bring into view for what just changed (the most specific first), or null. */
 export function focusTargetFor(prev, next) {
   const changed = (key) => next[key] && next[key] !== prev[key];
-  if (changed('summary')) return '#summary';
+  if (next.summary) return changed('summary') ? '#summary' : null;   // the summary is up: it stays in view, nothing else pulls the page away from it
+
   if (changed('result')) return '#quizcard .result';
-  if (changed('question')) return '#quizcard';
+  if (changed('question') && !prev.question) return '#quizcard';   // only the FIRST question scrolls into view: the next ones appear in place, so the page never jumps
   if (next.boardIndex >= 0 && next.boardIndex !== prev.boardIndex) return '#board';   // index 0 is the first board, so this is not a truthiness check
   if (changed('viva')) return '#viva';
   if (changed('verdict') || changed('debateScore')) return '#debateScore';

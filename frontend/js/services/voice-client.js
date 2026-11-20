@@ -49,12 +49,14 @@ export class VoiceClient {
    * @param {{onEvent: (event: object) => void, onStatus: (status: string) => void, onLevel?: (level: number) => void}} handlers
    *   onLevel gets the loudness (0-1) of whoever is talking, about 60 times a second, for the orb animation.
    */
-  constructor({ onEvent, onStatus, onLevel = () => {}, onAudio = () => {}, onInterrupt = () => {} }) {
+  constructor({ onEvent, onStatus, onLevel = () => {}, onAudio = () => {}, onInterrupt = () => {}, onStandby = () => {} }) {
     this.onEvent = onEvent;
     this.onStatus = onStatus;
     this.onLevel = onLevel;
     this.onAudio = onAudio;           // each chunk of Eklavya's voice (PCM16 mono 24 kHz), for an avatar that speaks it
     this.onInterrupt = onInterrupt;   // the student barged in
+    this.onStandby = onStandby;       // the pre-connected socket became ready (true) or was lost (false)
+    this.standby = null;              // {ws, ready, timer}: a socket opened ahead of time (see prewarm)
     this.muted = false;
     this.status = VOICE_STATUS.IDLE;
     this.ws = null;
@@ -67,6 +69,44 @@ export class VoiceClient {
     if (status === this.status) return;
     this.status = status;
     this.onStatus(status);
+  }
+
+  /**
+   * Pre-connect: open a standby socket now (the Study room just opened) so the connection is ready when the student picks a mode.
+   * No microphone and no Gemini session are started until start() is called, and no voice minutes are used meanwhile.
+   */
+  prewarm({ lang = 'hinglish' } = {}) {
+    const token = authToken();
+    if (this.ws || this.standby || this.standbyUnsupported || !token || typeof WebSocket !== 'function') return;   // no identity yet: it would be the shared demo's, so no pre-connect
+    let ws;
+    try { ws = new WebSocket(`${WS_BASE}/ws/voice?${token ? `token=${encodeURIComponent(token)}&` : ''}lang=${encodeURIComponent(lang)}&standby=1`); } catch { return; }
+    const standby = { ws, ready: false, timer: null };
+    this.standby = standby;
+    ws.onmessage = (message) => {
+      if (this.standby !== standby || typeof message.data !== 'string') return;
+      let event; try { event = JSON.parse(message.data); } catch { return; }
+      if (event.type === 'standby') { standby.ready = true; this.onStandby(true); return; }
+      // anything else first means an older server that does not know pre-connect and has started a real session: end it, and never pre-connect again
+      this.standbyUnsupported = true;
+      quiet(() => ws.send(JSON.stringify({ type: 'end' })));
+      this.dropStandby();
+    };
+    const lost = () => { clearInterval(standby.timer); if (this.standby === standby) { this.standby = null; this.onStandby(false); } };
+    ws.onclose = lost;
+    ws.onerror = lost;
+    standby.timer = setInterval(() => { if (ws.readyState === WebSocket.OPEN) quiet(() => ws.send(JSON.stringify({ type: 'ping' }))); }, 25000);   // proxies close idle sockets
+  }
+
+  /** Is a pre-connected socket open and ready? */
+  get standbyReady() { return Boolean(this.standby?.ready && this.standby.ws.readyState === WebSocket.OPEN); }
+
+  /** Close the standby socket (the page is leaving the Study room, or it is not usable). */
+  dropStandby() {
+    const standby = this.standby;
+    if (!standby) return;
+    this.standby = null;
+    clearInterval(standby.timer);
+    quiet(() => standby.ws.close());
   }
 
   /**
@@ -119,7 +159,17 @@ export class VoiceClient {
       extra += `&side=${side === 'against' ? 'against' : 'for'}&motion=${encodeURIComponent(motion)}&style=${style === 'friendly' ? 'friendly' : 'tough'}`;
     }
     const token = authToken();   // the server reads who you are from the token
-    ws = new WebSocket(`${WS_BASE}/ws/voice?${token ? `token=${encodeURIComponent(token)}&` : ''}lang=${encodeURIComponent(lang)}&tutor=${tutor === 'senior' ? 'senior' : 'mentor'}${extra}${resumeId ? `&resume=${encodeURIComponent(resumeId)}` : ''}`);
+    const pre = this.standbyReady ? this.standby : null;   // already connected: only the settings are sent, so there is nothing to wait for
+    if (pre) {
+      this.standby = null;
+      clearInterval(pre.timer);
+      ws = pre.ws;
+      ws.onclose = ws.onerror = null;
+      ws.send(JSON.stringify({ type: 'start', lang, mode, topic_id: topicId, side: side ?? 'for', motion, style, tutor: tutor === 'senior' ? 'senior' : 'mentor', resume: resumeId ?? '' }));
+    } else {
+      this.dropStandby();
+      ws = new WebSocket(`${WS_BASE}/ws/voice?${token ? `token=${encodeURIComponent(token)}&` : ''}lang=${encodeURIComponent(lang)}&tutor=${tutor === 'senior' ? 'senior' : 'mentor'}${extra}${resumeId ? `&resume=${encodeURIComponent(resumeId)}` : ''}`);
+    }
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
     ws.onmessage = (message) => { if (this.ws === ws) this._onMessage(message); };
@@ -132,6 +182,7 @@ export class VoiceClient {
 
     try {
       await new Promise((resolve, reject) => {
+        if (ws.readyState === WebSocket.OPEN) { resolve(); return; }
         ws.addEventListener('open', resolve, { once: true });
         ws.addEventListener('error', () => reject(new Error('Voice connection failed. Is the backend running?')), { once: true });
       });

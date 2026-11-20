@@ -1,6 +1,7 @@
 // Text mode: the same lesson and test, by typing and tapping, using the ordinary (non-Live) endpoints. It takes over when the voice would not
 // connect, stalled, or has no microphone, so a student (or a judge with no mic) can always finish a test: Q1, Q2, Q3, then the summary.
 // It speaks the live server's own event language through `emit`, so the question card, the stepper, the summary and the toasts work unchanged.
+import { feedbackLimitMs, feedbackMs } from '../lib/feedback-timing.js';
 import { createAutoAdvance } from '../lib/auto-advance.js';
 import { cancel as defaultCancel, schedule as defaultSchedule } from '../lib/timers.js';
 
@@ -44,7 +45,7 @@ export function createTextSession({ store, backend, emit, notifier, getLanguage,
   let finished = false;
   const advance = createAutoAdvance({ advance: () => next(), delayMs, schedule, cancel });
 
-  const say = (text) => emit({ type: 'transcript', role: 'tutor', text, final: true });
+  const say = (text) => emit({ type: 'transcript', role: 'tutor', text, final: true, whole: true });
   const youSaid = (text) => emit({ type: 'transcript', role: 'user', text, final: true });
   const current = () => store.getState().session;
   const waitingForAnswer = () => { const s = current(); return Boolean(s.question && s.result?.question_id !== s.question.question_id); };
@@ -104,7 +105,7 @@ export function createTextSession({ store, backend, emit, notifier, getLanguage,
       notifier.error(err);
       return;
     } finally { busy = false; }
-    if (results.length >= total) finish(); else advance.arm();
+    if (results.length >= total) finish(); else advance.arm(feedbackMs(results.at(-1).is_correct), feedbackLimitMs(results.at(-1).is_correct));
   }
 
   return {

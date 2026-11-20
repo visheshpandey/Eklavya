@@ -33,11 +33,11 @@ function fakeClock() {
 const flush = async () => { for (let i = 0; i < 12; i++) await new Promise((resolve) => setImmediate(resolve)); };
 
 // ---------- the small pure pieces
-test('reply watchdog: fires 20 s after the student finishes if nothing at all came back', () => {
+test('reply watchdog: fires 15 s after the student finishes if nothing at all came back', () => {
   const clock = fakeClock(), fired = [];
   const dog = createReplyWatchdog({ ...clock, onTimeout: (said) => fired.push(said) });
   dog.userSpoke('what is recall');
-  clock.tick(19999); assert.deepEqual(fired, []);
+  clock.tick(14999); assert.deepEqual(fired, []);
   clock.tick(2); assert.deepEqual(fired, ['what is recall']);
   clock.tick(60000); assert.equal(fired.length, 1);                         // once
 });
@@ -149,12 +149,22 @@ test('no microphone: the test still works, by typing and tapping, with no error 
   assert.ok(state().toasts.some((x) => /microphone is not available/.test(x.text)));
 });
 
-test('another start-up failure (backend down) is still the red banner, not text mode', async () => {
+test('a voice that cannot connect leaves the room working in text mode, with one line saying why', async () => {
   const { session, voice, state } = setup();
   voice.failWith = new Error('Voice connection failed. Is the backend running?');
   await session.start('test', 5);
-  assert.equal(state().banner, 'Voice connection failed. Is the backend running?');
-  assert.equal(state().session.live.text, false);
+  assert.equal(state().session.live.text, true);                                  // the test carries on by typing and tapping
+  assert.ok(state().toasts.some((t) => /Voice could not connect/.test(t.text)));  // and says so in one line
+  assert.equal(state().banner, null);                                             // not a red error
+});
+
+test('"Continue with text" starts the next session without the voice', async () => {
+  const { session, voice, state } = setup();
+  session.useText();
+  await session.start('test', 5);
+  assert.equal(voice.started.length, 0);                                          // the microphone and the call were never started
+  assert.equal(state().session.live.text, true);
+  assert.ok(state().toasts.some((t) => /Voice is off for this session/.test(t.text)));
 });
 
 test('without a backend there is no text mode: the old behaviour stays', async () => {
@@ -276,7 +286,7 @@ test('the reply bubble is filled from the notes when Eklavya\'s words never arri
   const { clock, session, voice, state, texts, calls } = setup();
   await session.start('free'); session.handleEvent({ type: 'session', id: 'x' });
   session.handleEvent({ type: 'transcript', role: 'user', text: 'mujhe precision samjhao', final: true });
-  clock.tick(19999); await flush(); assert.deepEqual(calls.ask, []);
+  clock.tick(14999); await flush(); assert.deepEqual(calls.ask, []);
   clock.tick(2); await flush();
   assert.deepEqual(calls.ask, ['mujhe precision samjhao']);
   assert.equal(state().session.messages.at(-1).role, 'tutor');
@@ -315,7 +325,7 @@ test('if even the notes cannot answer, the bubble still says something instead o
   await session.start('free'); session.handleEvent({ type: 'session', id: 'x' });
   session.handleEvent({ type: 'transcript', role: 'user', text: 'hello there', final: true });
   clock.tick(20001); await flush();
-  assert.match(texts().at(-1), /could not get my answer out/);
+  assert.match(texts().at(-1), /could not get an answer from your notes/);
 });
 
 test('a spoken "option B" that gets no grade is NOT graded by the page: the student is asked to tap, and it is not sent to the notes as a question', async () => {
@@ -410,4 +420,38 @@ test('a spoken letter that nobody answers is never graded by the page: only a ta
   assert.deepEqual(calls.submit, []);                                         // it was not graded behind the student's back
   assert.equal(state().session.live.text, false);
   assert.equal(voice.stopped, 0);
+});
+
+import { cardText, changeText, masteryChange, toastText } from '../js/lib/mastery-change.js';
+
+test('one mastery number per answer: the toast, the card and the stored result agree (Q1 right +9.3, Q2 wrong -5)', async () => {
+  const { session, state, ask } = setup();
+  await session.start('test', 5); session.handleEvent({ type: 'session', id: 'x' });
+  const answer = (n, before, after, correct) => {
+    ask(n);
+    session.handleEvent({ type: 'mastery', topic: 'Precision', before, after, is_correct: correct, misconception: null, chosen: 'A', correct_answer: 'A', question_id: 10 + n, retry: false });
+    const result = state().session.result;
+    const toast = state().toasts.at(-1).text;
+    return { result, toast, card: cardText('Precision', result) };
+  };
+  const q1 = answer(1, 38, 47.3, true);
+  assert.deepEqual([q1.result.before, q1.result.after, q1.result.delta], [38, 47.3, 9.3]);          // stored once
+  assert.equal(q1.toast, 'Precision: 38% → 47.3%');
+  assert.equal(q1.card, 'Precision mastery 38% → 47.3% (+9.3)');
+  assert.equal(q1.result.before + q1.result.delta, q1.result.after);                               // the card's after is before + delta
+  assert.ok(q1.card.includes(q1.toast.split(': ')[1]));                                            // the toast's "38% → 47.3%" is inside the card line
+  const q2 = answer(2, 47.3, 42.3, false);
+  assert.deepEqual([q2.result.before, q2.result.after, q2.result.delta], [47.3, 42.3, -5]);
+  assert.equal(q2.toast, 'Precision: 47.3% → 42.3%');
+  assert.equal(q2.card, 'Precision mastery 47.3% → 42.3% (-5)');
+  assert.ok(q2.card.includes(q2.toast.split(': ')[1]));
+});
+
+test('the change is rounded once: before + delta equals after as displayed, even for awkward numbers', () => {
+  for (const [b, a] of [[38, 47.34], [38.04, 43.449], [12.25, 12.349], [99.95, 100], [0.04, 0.06]]) {
+    const c = masteryChange(b, a);
+    assert.equal(Math.round((c.before + c.delta) * 10) / 10, c.after);
+    assert.equal(changeText(c), `${c.before}% → ${c.after}% (${c.delta > 0 ? '+' : ''}${c.delta})`);
+    assert.equal(toastText('T', c), `T: ${c.before}% → ${c.after}%`);
+  }
 });

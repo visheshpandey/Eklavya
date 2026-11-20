@@ -55,10 +55,15 @@ def _exam_plan_today(user: dict, topics, day):
     return [{**item, "reason": "From your exam plan."} for item in items]
 
 
+def _days(n) -> str:
+    """"1 day", "3 days": the noun agrees with the number."""
+    return f"{n} day" if n == 1 else f"{n} days"
+
+
 def _default_plan(due, new, mission, topics):
     plan = [{"kind": "revise", "topic_id": t["topic_id"], "topic": t["topic_name"], "minutes": REVISE_MINUTES,
              "reason": f"Last practised {t['last_practised'].isoformat()}; at {round(t['mastery'])}% it comes back "
-                       f"every {interval_days(t['mastery'])} day(s)."} for t in due[:MAX_DUE_IN_PLAN]]
+                       f"every {_days(interval_days(t['mastery']))}."} for t in due[:MAX_DUE_IN_PLAN]]
     planned = {item["topic_id"] for item in plan}
     by_id = {t["topic_id"]: t for t in topics}
     if mission and mission["topic_id"] in by_id and mission["topic_id"] not in planned:

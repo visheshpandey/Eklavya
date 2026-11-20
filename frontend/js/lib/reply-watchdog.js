@@ -4,7 +4,7 @@
 // logic with injectable timers, so it can be tested without waiting.
 import { cancel as defaultCancel, schedule as defaultSchedule } from './timers.js';
 
-export function createReplyWatchdog({ onTimeout, silentMs = 20000, afterTurnMs = 8000, schedule = defaultSchedule, cancel = defaultCancel }) {
+export function createReplyWatchdog({ onTimeout, silentMs = 15000, afterTurnMs = 8000, schedule = defaultSchedule, cancel = defaultCancel }) {
   let waiting = false;
   let said = '';
   let timer = null;

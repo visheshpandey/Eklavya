@@ -27,7 +27,7 @@ function setup({ backendOverrides = {} } = {}) {
   const voice = { status: 'idle', started: [], stopped: 0, sent: [], failWith: null,
     async start(opts) { if (this.failWith) throw this.failWith; this.started.push(opts); this.status = 'listening'; },
     stop() { this.stopped++; this.status = 'idle'; },
-    sendText(t) { this.sent.push(t); } };
+    sendText(t) { this.sent.push(t); }, nextQuestion() { return true; } };
   const session = createSessionController({ store, notes, notifier, userId: 1, getLanguage: () => 'hinglish' });
   session.attach(voice);
   return { store, notifier, notes, session, voice, calls, timers, fakeBackend, endedCount: () => sessionEnded };
@@ -225,7 +225,7 @@ test('api client: validation errors expose the offending fields', async () => {
 
 test('api client: a network failure says the backend is unreachable', async () => {
   mockFetch(new TypeError('Failed to fetch'));
-  await assert.rejects(backend.dashboard(1), (err) => err.code === 'network' && /Cannot reach the backend/.test(err.message));
+  await assert.rejects(backend.dashboard(1), (err) => err.code === 'network' && /taking longer than usual/.test(err.message));
 });
 
 test('api client: a non-JSON reply is reported, not crashed on', async () => {

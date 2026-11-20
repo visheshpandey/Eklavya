@@ -11,6 +11,8 @@ export function createFeedbackHold({ holdMs = 2500, maxHoldMs = 6000, now = () =
   let pending = null;      // the swap waiting for its turn
   let spoke = false;       // the tutor has started speaking since the swap was requested
   let timers = [];
+  let curHoldMs = holdMs;  // this result's own minimum and maximum (a wrong answer is held longer)
+  let curMaxMs = maxHoldMs;
 
   const clearTimers = () => { timers.forEach(cancel); timers = []; };
 
@@ -26,12 +28,12 @@ export function createFeedbackHold({ holdMs = 2500, maxHoldMs = 6000, now = () =
 
   function ready() {
     const elapsed = now() - shownAt;
-    return elapsed >= maxHoldMs || (elapsed >= holdMs && spoke);
+    return elapsed >= curMaxMs || (elapsed >= curHoldMs && spoke);
   }
 
   return {
     /** A result just appeared on screen: start the clock. */
-    resultShown() { shownAt = now(); },
+    resultShown({ holdMs: own, maxHoldMs: ownMax } = {}) { shownAt = now(); curHoldMs = own ?? holdMs; curMaxMs = ownMax ?? Math.max(maxHoldMs, curHoldMs + 3000); curMaxMs = Math.max(curMaxMs, curHoldMs); },
 
     /** Show something else (the next question). Runs `apply` now if nothing is held, otherwise when it is time. */
     swap(apply) {
@@ -40,8 +42,8 @@ export function createFeedbackHold({ holdMs = 2500, maxHoldMs = 6000, now = () =
       spoke = false;
       clearTimers();
       const elapsed = now() - shownAt;
-      timers.push(schedule(() => { if (pending && ready()) flush(); }, Math.max(0, holdMs - elapsed)));
-      timers.push(schedule(flush, Math.max(0, maxHoldMs - elapsed)));
+      timers.push(schedule(() => { if (pending && ready()) flush(); }, Math.max(0, curHoldMs - elapsed)));
+      timers.push(schedule(flush, Math.max(0, curMaxMs - elapsed)));
     },
 
     /** The tutor started speaking (a transcript or audio arrived): the next question is being read out. */

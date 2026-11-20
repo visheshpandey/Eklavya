@@ -7,17 +7,18 @@ export function createAutoAdvance({ advance, canAdvance = () => true, delayMs = 
   now = () => Date.now(), schedule = defaultSchedule, cancel = defaultCancel }) {
   let timer = null;
   let startedAt = 0;
+  let limitMs = maxMs;
 
   const clear = () => { if (timer != null) { cancel(timer); timer = null; } };
   function check() {
     timer = null;
-    if (now() - startedAt >= maxMs || canAdvance()) { advance(); return; }
+    if (now() - startedAt >= limitMs || canAdvance()) { advance(); return; }
     timer = schedule(check, retryMs);   // Eklavya is still speaking: look again shortly
   }
 
   return {
     /** A result is on screen: the clock starts. */
-    arm() { clear(); startedAt = now(); timer = schedule(check, delayMs); },
+    arm(ownDelayMs = delayMs, ownLimitMs = null) { clear(); startedAt = now(); limitMs = ownLimitMs ?? (ownDelayMs === delayMs ? maxMs : ownDelayMs + 3000); timer = schedule(check, ownDelayMs); },
     /** The next question came by itself, or the session ended: nothing to do. */
     disarm() { clear(); },
     get armed() { return timer != null; },

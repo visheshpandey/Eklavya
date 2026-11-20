@@ -89,7 +89,7 @@ function showBoard(state, board) {
 }
 
 /** Live transcript: chunks (final=false) grow the open bubble; the final text replaces it. */
-function receiveTranscript(state, { role, text, final, image, replace, local }) {
+function receiveTranscript(state, { role, text, final, image, replace, local, whole, retry }) {
   // a new bubble from one speaker ends the other speaker's open bubble, so later chunks of that speaker start a new
   // one below instead of growing the old one above (the order of the conversation is the order things happened)
   const other = role === 'user' ? 'tutor' : 'user';
@@ -101,16 +101,28 @@ function receiveTranscript(state, { role, text, final, image, replace, local }) 
   const messages = role === 'tutor' && !local && text && !image ? state.session.messages.filter((m) => !m.local) : state.session.messages;
   if (local) return withSession(state, { messages: [...closeOther(messages), { role, text, final: true, local: true }] });
   if (image) return withSession(state, { messages: [...closeOther(messages), { role, text, final: true, image }] });   // a shared photo
-  const open = lastOpenIndex(messages, role);
+  let open = lastOpenIndex(messages, role);
+  // one tutor turn is ONE bubble: if the server closed the bubble early (an interruption, a pause around a tool call) and Eklavya carries on
+  // before the turn is complete and before the student has said anything, the words join that bubble instead of starting a fragment of 1-3 words
+  const last = messages.at(-1);
+  const rejoin = open < 0 && role === 'tutor' && !whole && text && last?.role === 'tutor' && !last.done && !last.local && !last.image;
+  if (rejoin) open = messages.length - 1;
   if (final && !text) {   // a turn that turned out empty (e.g. only "<no speech>"): remove the bubble it started
     return open < 0 ? state : withSession(state, { messages: messages.filter((_, i) => i !== open) });
   }
   if (!text) return state;
   let next;
   if (open >= 0) {
-    next = messages.map((m, i) => (i !== open ? m : { ...m, text: final || replace ? text : m.text + text, final: Boolean(final) }));
+    next = messages.map((m, i) => {
+      if (i !== open) return m;
+      const base = rejoin ? `${m.text.trim()} ` : (m.base ?? '');   // what the earlier pieces of this turn said; a replace or a final carries only the new piece
+      const grown = { ...m, text: final || replace ? base + text : m.text + text, final: Boolean(final) };
+      if (base) grown.base = base;
+      if (rejoin) delete grown.cut;
+      return grown;
+    });
   } else {
-    next = [...closeOther(messages), { role, text, final: Boolean(final) }];
+    next = [...closeOther(messages), { role, text, final: Boolean(final), ...(whole ? { done: true } : {}), ...(retry ? { retry: true } : {}) }];
   }
   return withSession(state, { messages: next });
 }
@@ -161,6 +173,10 @@ export function reducer(state, action) {
       return withSession(state, { lost: null });
     case A.TRANSCRIPT_RECEIVED:
       return receiveTranscript(state, payload);
+    case A.TURN_ENDED: {
+      const i = state.session.messages.findLastIndex((m) => m.role === 'tutor' && !m.done);
+      return i < 0 || i !== state.session.messages.length - 1 ? state : withSession(state, { messages: state.session.messages.map((m, k) => (k === i ? { ...m, final: true, done: true } : m)) });
+    }
     case A.TURN_INTERRUPTED: {
       const open = lastOpenIndex(state.session.messages, 'tutor');
       if (open < 0) return state;

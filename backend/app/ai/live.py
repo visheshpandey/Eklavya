@@ -341,6 +341,8 @@ class LiveTutorSession:
     async def _final(self, role: str, typed: bool = False):
         buf = self.user_buf if role == "user" else self.tutor_buf
         text = TRANSCRIPT_MARKERS.sub("", buf).strip()
+        if role == "tutor" and text:
+            text = language_check.strip_markup(language_check.strip_foreign_scripts(text)).strip()   # a Bengali or Tamil word, or tool-call markup, never reaches the chat (it may still have been spoken)
         if role == "tutor" and text and (slips := language_check.violations(text, self.language)):
             log.warning("The tutor slipped in %s: %s", self.language, "; ".join(slips))
             self.nudge = True
@@ -368,6 +370,8 @@ class LiveTutorSession:
         buf = self.user_buf if role == "user" else self.tutor_buf
         text = TRANSCRIPT_MARKERS.sub("", buf)
         text = re.sub(r"<[^>]*$", "", text)     # an unfinished "<no sp..." at the end waits for the next chunk
+        if role == "tutor":
+            text = language_check.strip_markup(language_check.strip_foreign_scripts(text))
         if role == "user" and text.strip() and self._heard_is_echo(text):
             self.user_turn_echo = True
             return

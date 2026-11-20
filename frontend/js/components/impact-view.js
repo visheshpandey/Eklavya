@@ -10,7 +10,7 @@ export function diagram() {
   const box = (x, y, w, label, sub, fill) => svg('g', {},
     svg('rect', { x, y, width: w, height: 54, rx: 10, fill, stroke: 'var(--line)' }),
     svg('text', { x: x + w / 2, y: y + 24, 'text-anchor': 'middle', 'font-size': 14, fill: 'var(--ink)', style: 'font-family:var(--font-serif)' }, label),
-    svg('text', { x: x + w / 2, y: y + 42, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--ink-3)', style: 'font-family:var(--font-mono)' }, sub));
+    svg('text', { x: x + w / 2, y: y + 42, 'text-anchor': 'middle', 'font-size': 13, fill: 'var(--ink-3)', style: 'font-family:var(--font-mono)' }, sub));
   const arrow = (x1, y1, x2, y2) => svg('path', { d: `M${x1} ${y1}L${x2} ${y2}`, stroke: 'var(--ink-3)', 'stroke-width': 1.4, fill: 'none', 'marker-end': 'url(#arr)' });
   return svg('svg', { viewBox: '0 0 640 230', class: 'arch', role: 'img', 'aria-label': 'Architecture: the browser talks to a FastAPI server, which uses Gemini, a search over the notes and a mastery engine, and stores everything in Postgres.' },
     svg('defs', {}, svg('marker', { id: 'arr', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, svg('path', { d: 'M0 0L10 5L0 10z', fill: 'var(--ink-3)' }))),

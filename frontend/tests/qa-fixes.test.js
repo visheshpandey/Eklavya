@@ -210,3 +210,119 @@ test('the concept map keeps names for up to 30 topics, on a bigger ring with sma
     assert.ok(gap > 2 * g.nodeRadius, `${n} topics: circles overlap`);
   }
 });
+
+import { feedbackMs, WRONG_MS, RIGHT_MS } from '../js/lib/feedback-timing.js';
+import { createAutoAdvance } from '../js/lib/auto-advance.js';
+import { focusTargetFor } from '../js/lib/study-focus.js';
+
+test('a wrong answer stays on screen 5 s, a right one 1.5 s', () => {
+  assert.equal(feedbackMs(false), 5000); assert.equal(WRONG_MS, 5000);
+  assert.equal(feedbackMs(true), 1500); assert.equal(RIGHT_MS, 1500);
+  const c = clock();
+  const hold = createFeedbackHold({ ...c });
+  hold.resultShown({ holdMs: feedbackMs(false) });
+  let shown = 0;
+  hold.swap(() => { shown++; });                 // the next question is already there
+  hold.tutorSpoke();
+  c.advance(4900); assert.equal(shown, 0);       // the red card is still up
+  c.advance(200); assert.equal(shown, 1);        // gone after 5 s
+  const right = createFeedbackHold({ ...c });
+  right.resultShown({ holdMs: feedbackMs(true) });
+  right.swap(() => { shown++; }); right.tutorSpoke();
+  c.advance(1600); assert.equal(shown, 2);       // a right answer: 1.5 s
+});
+
+test('the auto-advance takes its delay from the answer: 5 s wrong, 1.5 s right, and never over the tutor talking for long', () => {
+  const log = [], timers = [];
+  let t0 = 0, quiet = true;
+  const adv = createAutoAdvance({ advance: () => log.push(t0), canAdvance: () => quiet, now: () => t0,
+    schedule: (fn, ms) => { timers.push({ fn, at: t0 + ms }); return timers.length; }, cancel: () => {} });
+  adv.arm(5000);
+  assert.equal(timers.at(-1).at, 5000);
+  adv.arm(1500);
+  assert.equal(timers.at(-1).at, 1500);
+});
+
+test('only the first question scrolls into view; Q2 and Q3 appear in place', () => {
+  const none = { question: null, result: null, summary: null, boardIndex: -1, viva: null, verdict: null, debateScore: null };
+  assert.equal(focusTargetFor(none, { ...none, question: { id: 1 } }), '#quizcard');
+  assert.equal(focusTargetFor({ ...none, question: { id: 1 } }, { ...none, question: { id: 2 } }), null);
+});
+
+test('once the summary is up nothing else scrolls the page away from it', () => {
+  const none = { question: null, result: null, summary: null, boardIndex: -1, viva: null, verdict: null, debateScore: null };
+  const s = { total: 3 };
+  assert.equal(focusTargetFor({ ...none, summary: s }, { ...none, summary: s, result: { question_id: 3 } }), null);
+  assert.equal(focusTargetFor({ ...none, summary: s }, { ...none, summary: s, boardIndex: 0 }), null);
+});
+
+import { feedbackLimitMs } from '../js/lib/feedback-timing.js';
+
+test('a right answer moves on at 1.5 s even while Eklavya talks; a wrong one still holds 5 s (and waits a little for Eklavya)', () => {
+  const c = clock();
+  const hold = createFeedbackHold({ ...c });
+  hold.resultShown({ holdMs: feedbackMs(true), maxHoldMs: feedbackLimitMs(true) });
+  let shown = 0;
+  hold.swap(() => { shown++; });                 // no tutorSpoke: Eklavya is still on the praise
+  c.advance(1600); assert.equal(shown, 1);
+  const log = [], timers = [];
+  let t0 = 0;
+  const adv = createAutoAdvance({ advance: () => log.push('advance'), canAdvance: () => false, now: () => t0,
+    schedule: (fn, ms) => { timers.push({ fn, at: t0 + ms }); return timers.length; }, cancel: () => {} });
+  adv.arm(feedbackMs(true), feedbackLimitMs(true));
+  t0 = 1500; timers.at(-1).fn();                 // the tutor is still speaking, but the 1.5 s limit has passed
+  assert.deepEqual(log, ['advance']);
+  assert.equal(feedbackLimitMs(false), 8000);
+});
+
+import { lowestMastery, weakestLine, youName } from '../js/lib/weakest.js';
+
+test('"Weakest topic" is computed from the table: the lowest started topic, never a topic that has not started', () => {
+  const rows = [{ topic_name: 'Paging', mastery_score: 62, started: true }, { topic_name: 'Recall', mastery_score: 31.04, started: true },
+    { topic_name: 'Untouched', mastery_score: 5, started: false }, { topic_name: 'Precision', mastery_score: 47.3, started: true }];
+  assert.equal(lowestMastery(rows).topic_name, 'Recall');
+  assert.equal(weakestLine(rows), 'Weakest topic: Recall (31%)');
+  assert.equal(weakestLine(rows.map((r) => (r.topic_name === 'Recall' ? { ...r, mastery_score: 80 } : r))), 'Weakest topic: Precision (47.3%)');   // follows the data
+  assert.equal(weakestLine([{ topic_name: 'X', mastery_score: 1, started: false }]), '');
+  assert.equal(weakestLine([]), '');
+});
+
+test('the student\'s own row says "You", not "You (you)"', () => {
+  assert.equal(youName('You'), 'You');
+  assert.equal(youName('Janhavi'), 'Janhavi (you)');
+});
+
+import { separationVector, wrapTitle } from '../js/lib/graph-labels.js';
+
+test('two spheres closer than the minimum are pushed apart; ones that are far enough are left alone', () => {
+  const a = { x: 0, y: 0, z: 0 }, b = { x: 10, y: 0, z: 0 };
+  const push = separationVector(a, b, 30);
+  assert.ok(push.x < 0 && push.y === 0);                 // a moves away from b
+  assert.equal(Math.round(Math.hypot(a.x + push.x - (b.x - push.x), 0, 0)), 30);   // both moving half: exactly the minimum apart
+  assert.deepEqual(separationVector(a, { x: 50, y: 0, z: 0 }, 30), { x: 0, y: 0, z: 0 });
+  assert.ok(separationVector(a, { ...a }, 30).x > 0);    // on top of each other: nudged sideways, not stuck
+});
+
+test('a long subject title wraps onto two balanced lines instead of running across the map', () => {
+  assert.equal(wrapTitle('DBMS'), 'DBMS');
+  assert.equal(wrapTitle('MACHINE LEARNING NOTES'), 'MACHINE\nLEARNING NOTES');
+  assert.equal(wrapTitle('Operating Systems Lecture Notes Part Two').split('\n').length, 2);
+});
+
+import { SLOW_TEXT, TYPING_MAX_MS, createTypingTimer } from '../js/lib/typing-timeout.js';
+
+test('the typing dots give way after 15 s with no reply, and start fresh for the next wait', () => {
+  const tasks = []; let slow = 0;
+  const timer = createTypingTimer({ onSlow: () => { slow++; }, schedule: (fn, ms) => { tasks.push({ fn, ms }); return tasks.length; }, cancel: (id) => { tasks[id - 1].fn = () => {}; } });
+  assert.equal(TYPING_MAX_MS, 15000);
+  timer.start(); timer.start();                          // called on every redraw: one timer
+  assert.equal(tasks.length, 1); assert.equal(tasks[0].ms, 15000);
+  tasks[0].fn();                                         // 15 s with no reply
+  assert.equal(slow, 1); assert.equal(timer.slow, true);
+  assert.match(SLOW_TEXT, /taking a while.*Answering from your notes instead/);
+  timer.start(); assert.equal(tasks.length, 1);          // already slow: no second timer
+  timer.stop();                                          // a reply came
+  assert.equal(timer.slow, false);
+  timer.start(); assert.equal(tasks.length, 2);          // the next wait counts again
+  timer.stop(); tasks[1].fn(); assert.equal(slow, 1);    // a reply before 15 s: never slow
+});

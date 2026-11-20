@@ -3,6 +3,7 @@
 // buttons here, so a first-time student is never shown the same choice twice.
 import { el, render as replaceContent } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
+import { round1 } from '../lib/format.js';
 import { selectDashboard, selectLanguage, selectSelectedTopicId, selectTopicDetail } from '../state/selectors.js';
 
 export function mountStudyHeader({ store, root, onBrowse }) {
@@ -20,7 +21,7 @@ export function mountStudyHeader({ store, root, onBrowse }) {
     if (!topic) { replaceContent(root, el('p', { class: 'empty', text: 'Opening the topic...' })); return; }
 
     const row = dashboard?.mastery.find((m) => m.topic_id === topic.topic_id);
-    const mastery = Math.round(row ? row.mastery_score : topic.mastery);
+    const mastery = round1(row ? row.mastery_score : topic.mastery);   // one decimal, like the card and the toast
     const questionText = topic.question_count
       ? `${topic.question_count} practice questions ready`
       : 'Test questions are written from your notes when the test starts';

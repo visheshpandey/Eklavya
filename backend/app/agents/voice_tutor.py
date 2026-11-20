@@ -16,8 +16,8 @@ from app.services.search import search
 
 LANG_RULES = {
     "english": "Reply in simple English.",
-    "hindi": "Reply in simple Hindi (Devanagari), keeping technical terms in English.",
-    "hinglish": "Reply in clear Hinglish: Hindi words written in Roman letters (never Devanagari) mixed with English terms.",
+    "hindi": "Reply in simple Hindi (Devanagari only, never Bengali, Tamil, Urdu or any other script), keeping technical terms in English.",
+    "hinglish": "Reply in clear Hinglish: Hindi words written in Roman letters (never Devanagari) mixed with English terms. Write Hinglish using ONLY the Roman (English) alphabet: never Bengali, Tamil, Urdu or any other script.",
 }
 SYSTEM = ("You are Eklavya, a warm, respectful study mentor. Answer from the notes provided (unless told the notes only list the topic). "
           "Keep it short (3-5 sentences) with one simple example. Address the student as aap (or you), gender-neutral, and "

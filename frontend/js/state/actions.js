@@ -16,6 +16,7 @@ export const ActionType = Object.freeze({
   SESSION_RESUMED: 'session/resumed',
   TRANSCRIPT_RECEIVED: 'session/transcript',
   TURN_INTERRUPTED: 'session/interrupted',
+  TURN_ENDED: 'session/turn-ended',
   EMOTION_REPORTED: 'session/emotion',
   PHASE_CHANGED: 'session/phase',
   QUESTION_ASKED: 'session/question',
@@ -60,6 +61,7 @@ export const actions = {
   textModeStarted: make(ActionType.TEXT_MODE_STARTED),         // the voice would not connect: the session carries on by typing
   transcriptReceived: make(ActionType.TRANSCRIPT_RECEIVED),    // {role, text, final, replace?, local?}
   turnInterrupted: make(ActionType.TURN_INTERRUPTED),
+  turnEnded: make(ActionType.TURN_ENDED),                      // the server says Eklavya's turn is complete: the next words start a new bubble
   emotionReported: make(ActionType.EMOTION_REPORTED),          // server `emotion` event
   phaseChanged: make(ActionType.PHASE_CHANGED),                // server `phase` event
   questionAsked: make(ActionType.QUESTION_ASKED),              // server `quiz_question` event

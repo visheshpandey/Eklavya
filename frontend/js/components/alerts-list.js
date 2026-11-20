@@ -1,4 +1,5 @@
 // Patterns to clear up: each open misconception with its level (HIGH / MED / LOW), or a note that there are none / they were resolved.
+import { plural } from '../lib/format.js';
 import { el, render as replaceContent } from '../lib/dom.js';
 import { selectDashboard } from '../state/selectors.js';
 
@@ -15,7 +16,7 @@ export function mountAlertsList({ store, root }) {
           el('div', {}, el('b', { text: a.message }), el('small', { text: `${a.topic} · ${a.severity} confidence` })));
       })
       : [el('li', { class: 'empty', text: dashboard.misconceptions_resolved
-        ? `${dashboard.misconceptions_resolved} misconception(s) resolved. Nice work.`
+        ? `${plural(dashboard.misconceptions_resolved, 'misconception')} resolved. Nice work.`
         : 'No misconceptions detected yet.' })]));
   });
 }

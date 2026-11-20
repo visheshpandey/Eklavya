@@ -1,7 +1,8 @@
 """Study Mission agent: rank weak topics, produce one short timed mission and say why.
 
-Ranking: unresolved misconception severity first, then lowest mastery. Gemini writes the
-mission; a Gemini failure raises (no canned mission).
+Ranking: the topic with the LOWEST mastery among the topics the student has started, worked out from the same numbers the Progress table
+shows (faded mastery, started topics only); an open misconception's severity only breaks a tie. Gemini writes the mission; a Gemini
+failure raises (no canned mission).
 """
 from app import db
 from app.agents.logger import log_agent
@@ -20,7 +21,7 @@ def _priority(mastery: float, severity: str = None) -> str:
 
 def _pick_target(user_id: int):
     rows = db.query(
-        "SELECT m.topic_id, m.mastery_score, t.topic_name, t.document_id FROM learner_mastery m "
+        "SELECT m.topic_id, m.mastery_score, m.last_updated, t.topic_name, t.document_id FROM learner_mastery m "
         "JOIN topics t ON t.id = m.topic_id WHERE m.user_id = ?", (user_id,))
     if not rows:
         return None
@@ -28,11 +29,18 @@ def _pick_target(user_id: int):
     for r in db.query("SELECT * FROM misconceptions WHERE user_id = ? AND resolved = 0 ORDER BY id DESC", (user_id,)):
         open_mis.setdefault(r["topic_id"], r)  # latest unresolved per topic
 
+    from app.services import mastery_log          # imported here: the dashboard imports this module
+    from app.services.progress_data import local_today
+
+    shown = mastery_log.faded_rows(user_id, rows, local_today())       # what the Progress table shows
+    started = [r for r in shown if r["started"]]
+    pool = started or shown                                            # nothing started yet: every topic is equal, the first is taken
+
     def key(r):
         sev = SEVERITY_RANK.get((open_mis.get(r["topic_id"]) or {}).get("severity"), 0)
-        return (-sev, r["mastery_score"])
+        return (round(r["mastery_score"], 1), -sev)
 
-    target = sorted(rows, key=key)[0]
+    target = sorted(pool, key=key)[0]
     return target, open_mis.get(target["topic_id"])
 
 

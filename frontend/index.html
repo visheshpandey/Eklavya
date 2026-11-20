@@ -182,6 +182,7 @@
           <!-- STUDY ROOM -->
           <section id="panel-study" class="panel" role="tabpanel" aria-labelledby="tab-study">
             <div id="headphoneTip" class="headphone-tip" role="note" hidden></div>
+            <div id="voiceNote" class="headphone-tip voice-note" role="status" hidden></div>
             <div id="studyIntro">
               <div class="studyhead">
                 <div>
@@ -213,7 +214,9 @@
             <div class="study-grid">
               <div class="study-main">
                 <div class="stage">
-                  <div id="mentorFrame" class="mentor-frame" data-mode="static"><div id="avatar" class="avatar-slot mf-static"></div><p id="caption" class="caption" aria-hidden="true" hidden></p></div>
+                  <div id="mentorFrame" class="mentor-frame" data-mode="static"><div id="avatar" class="avatar-slot mf-static"></div></div>
+                  <!-- captions: a bar BELOW the face (never over it), the latest three lines of what Eklavya says -->
+                  <p id="caption" class="caption" aria-hidden="true" hidden><span class="caption-clip"><span class="caption-text"></span></span></p>
                   <!-- the call bar: the microphone beside the status, like the controls under a video call -->
                   <div class="call-bar">
                     <button id="orb" class="orb" type="button" data-state="idle" aria-label="Start a voice conversation"></button>
@@ -361,6 +364,7 @@
   <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/three-addons/"}}</script>
   <script src="config.js"></script>
+  <div id="wakeToast" class="wake-toast" role="status" aria-live="polite" hidden></div>
   <script>fetch(window.APP_CONFIG.apiBase + "/api/health", { cache: "no-store" }).catch(function () {});   /* wake the server the instant the page opens */</script>
   <script type="module" src="js/main.js"></script>
   <div id="guide" class="guide-dock" hidden></div>

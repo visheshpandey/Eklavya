@@ -3,38 +3,33 @@
 // question has arrived (see lib/feedback-hold.js).
 import { el, render as replaceContent } from '../lib/dom.js';
 import { icon } from '../lib/icons.js';
-import { round1, signed } from '../lib/format.js';
+import { changeParts, masteryChange } from '../lib/mastery-change.js';
 import { createFeedbackHold } from '../lib/feedback-hold.js';
-import { countUp, percentText } from '../lib/count-up.js';
+import { feedbackLimitMs, feedbackMs } from '../lib/feedback-timing.js';
+import { createAnswerGuard } from '../lib/answer-guard.js';
 import { selectMessages, selectQuestion, selectResult } from '../state/selectors.js';
 
-export function mountQuizCard({ store, root, onAnswer, onNext = null, hold = createFeedbackHold() }) {
+export function mountQuizCard({ store, root, onAnswer, onNext = null, hold = createFeedbackHold(), guard = createAnswerGuard() }) {
   let shown = { question: null, result: null };   // what the card displays right now
   let picked = null;                              // the option the student tapped (replaced by the graded choice)
   let lastTutorText = null;
-  let stopCount = () => {};
-  const counted = new WeakSet();   // results whose mastery number has already counted up: a redraw shows the final value, it does not restart
+  let armedFor;                                   // the question the answer guard was last armed for
 
   function resultBlock(result) {
-    const delta = round1(result.after - result.before);
-    stopCount();
-    // the mastery number counts from the old value to the new one, so the change is seen to happen
-    const number = el('b', { class: 'mastery-num', text: percentText(counted.has(result) ? result.after : result.before) });
-    if (!counted.has(result)) {
-      counted.add(result);
-      stopCount = countUp({ from: result.before, to: result.after, onUpdate: (value) => { number.textContent = percentText(value); },
-        reduce: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false });
-    }
+    // the change was worked out once, when the answer was graded (lib/mastery-change.js); the card only shows it, and always the final number
+    const change = result.delta !== undefined ? result : masteryChange(result.before, result.after);
+    const parts = changeParts(change);
     return el('div', { class: `result ${result.is_correct ? 'ok' : 'bad'}`, role: 'status' },
+      el('div', { class: 'hold-line', style: `--hold-ms: ${feedbackMs(result.is_correct)}ms`, 'aria-hidden': 'true' }),
       el('div', { class: 'result-main' },
         el('div', { class: 'result-title' }, icon(result.is_correct ? 'check-circle' : 'warning', { size: 30 }), result.is_correct ? 'Correct' : 'Not quite'),
-        el('p', { class: 'result-mastery' }, `${result.topic} mastery `, el('span', { class: 'was', text: percentText(result.before) }), ' → ', number,
-          el('span', { class: `delta ${delta >= 0 ? 'up' : 'down'}`, text: ` (${signed(delta)})` }))),
+        el('p', { class: 'result-mastery' }, `${result.topic} mastery `, el('span', { class: 'was', text: parts.was }), ' → ', el('b', { class: 'mastery-num', text: parts.now }),
+          el('span', { class: `delta ${change.delta >= 0 ? 'up' : 'down'}`, text: ` (${parts.delta})` }))),
       result.misconception ? el('p', { text: `Misconception: ${result.misconception.text}` }) : null,
       result.misconceptions_resolved ? el('p', { class: 'resolved', text: 'Misconception resolved' }) : null,
       // the test moves on by itself after a few seconds; this is the same step, now
       onNext && shown.question?.total && shown.question.number < shown.question.total
-        ? el('button', { class: 'btn btn-primary btn-sm next-q', type: 'button', onclick: () => { hold.release(); onNext(); } }, 'Next question →') : null);
+        ? el('button', { class: 'btn btn-primary btn-sm next-q', type: 'button', onclick: (event) => { event.preventDefault(); event.stopPropagation(); if (event.currentTarget.disabled) return; event.currentTarget.disabled = true; hold.release(); onNext(); } }, 'Continue') : null);
   }
 
   /** The state of one option once the question has been graded: the right one, and the wrong one that was chosen. */
@@ -49,6 +44,7 @@ export function mountQuizCard({ store, root, onAnswer, onNext = null, hold = cre
     const { question, result } = shown;
     root.hidden = !question;
     if (!question) { replaceContent(root); return; }
+    if (question !== armedFor) { armedFor = question; guard.arm(question); }   // a new question: ignore clicks for a moment (the page scrolls to the first one only: see study-focus)
     replaceContent(root,
       el('div', { class: 'quiz-head' },
         el('h3', { class: 'quiz-count', text: question.number ? `Question ${question.number} of ${question.total}` : 'Quiz question' }),
@@ -56,9 +52,13 @@ export function mountQuizCard({ store, root, onAnswer, onNext = null, hold = cre
       el('p', { class: 'q-text', text: question.question }),
       el('div', { class: 'opts', role: 'group', 'aria-label': 'Answer options' }, (question.options ?? []).map((option) => {
         const letter = option.trim().charAt(0);
+        const forQuestion = question;   // the question this button belongs to
         return el('button', {
           class: `opt${optionState(letter, result)}`, type: 'button', disabled: Boolean(result),
-          onclick: () => { picked = letter; onAnswer(letter); draw(); },
+          onclick: (event) => {
+            if (!guard.allows(forQuestion) || shown.question !== forQuestion) { event.preventDefault(); return; }   // too soon after the question appeared, or a stale button
+            picked = letter; onAnswer(letter); draw();
+          },
         }, option);
       })),
       el('p', { class: 'hint', text: 'Say your answer out loud, or choose an option.' }),
@@ -77,7 +77,7 @@ export function mountQuizCard({ store, root, onAnswer, onNext = null, hold = cre
     if (!shown.question || !result) return;
     if (result && result.question_id != null && shown.question.question_id !== result.question_id) return;   // belongs to a newer question: shown after the swap
     shown = { ...shown, result };
-    if (result) { picked = result.chosen ?? picked; hold.resultShown(); }
+    if (result) { picked = result.chosen ?? picked; hold.resultShown({ holdMs: feedbackMs(result.is_correct), maxHoldMs: feedbackLimitMs(result.is_correct) }); }
     draw();
   });
 

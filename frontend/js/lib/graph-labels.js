@@ -54,3 +54,32 @@ export function visibleLabelIds(items, forced = []) {
   }
   return shown;
 }
+
+/**
+ * How far node `a` must move away from node `b` so their spheres keep `minDist` between centres (pure; {x:0,y:0,z:0} when already apart).
+ * Used as a collision force so two topics never sit on top of each other.
+ */
+export function separationVector(a, b, minDist) {
+  const dx = a.x - b.x, dy = a.y - b.y, dz = a.z - b.z;
+  const d = Math.hypot(dx, dy, dz);
+  if (d >= minDist) return { x: 0, y: 0, z: 0 };
+  if (d === 0) return { x: minDist / 2, y: 0, z: 0 };   // exactly on top: nudge sideways
+  const push = (minDist - d) / d / 2;
+  return { x: dx * push, y: dy * push, z: dz * push };
+}
+
+/** A subject title split onto at most two lines at a space near the middle ("MACHINE LEARNING NOTES" -> "MACHINE LEARNING
+NOTES"). */
+export function wrapTitle(name, maxChars = 14) {
+  const text = String(name).trim();
+  if (text.length <= maxChars) return text;
+  const words = text.split(/\s+/);
+  if (words.length < 2) return text.length > maxChars * 1.6 ? `${text.slice(0, Math.round(maxChars * 1.6) - 1)}…` : text;
+  let best = 1, bestGap = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const gap = Math.abs(words.slice(0, i).join(' ').length - words.slice(i).join(' ').length);
+    if (gap < bestGap) { bestGap = gap; best = i; }
+  }
+  return `${words.slice(0, best).join(' ')}
+${words.slice(best).join(' ')}`;
+}

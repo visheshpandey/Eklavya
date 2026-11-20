@@ -5,7 +5,7 @@
 // show it on hover or tap, and a subject's title is placed above its highest sphere so it never covers a dot. The whole graph turns slowly until the student takes hold.
 import { PALETTE, reducedMotion } from './env.js';
 import { THREE } from './scene-kit.js';
-import { permanentLabelIds, subjectLabelSpot, visibleLabelIds } from '../lib/graph-labels.js';
+import { permanentLabelIds, separationVector, subjectLabelSpot, visibleLabelIds, wrapTitle } from '../lib/graph-labels.js';
 
 export const colorFor = (mastery, started = true) => (!started ? '#b9b2a0' : mastery < 60 ? PALETTE.terracotta : mastery < 80 ? PALETTE.gold : PALETTE.greenSoft);
 export const radiusFor = (notes = 1) => 6 + ((Math.min(Math.max(notes, 1), 12) - 1) / 11) * 8;   // 6 to 14 by how many notes a topic is built from
@@ -17,7 +17,7 @@ export function subjectAnchors(subjects, radius = 70) {
   return new Map(names.map((name, i) => {
     const angle = (i / Math.max(1, names.length)) * Math.PI * 2;
     // mostly across the screen (wider than tall), with only a little depth, so the clusters fill the box instead of lining up behind each other
-    return [name, { x: names.length === 1 ? 0 : Math.cos(angle) * radius * 1.5, y: names.length === 1 ? 0 : Math.sin(angle) * radius * 0.55, z: ((i % 3) - 1) * 18 }];
+    return [name, { x: names.length === 1 ? 0 : Math.cos(angle) * radius * 1.5, y: names.length === 1 ? 0 : Math.sin(angle) * radius * 0.55, z: ((i % 3) - 1) * 6 }];
   }));
 }
 
@@ -60,7 +60,7 @@ export async function createGraph(host, initialMap, { onPick }) {
   controls.addEventListener('end', () => { clearTimeout(resume); if (!calm) resume = setTimeout(() => { controls.autoRotate = true; }, 5000); });
 
   host.__graph = graph;   // for tests and the console
-  const fit = (ms = 400) => { graph.zoomToFit(ms, 60); host.dataset.fits = String(Number(host.dataset.fits ?? 0) + 1); };
+  const fit = (ms = 400) => { graph.zoomToFit(ms, 28); host.dataset.fits = String(Number(host.dataset.fits ?? 0) + 1); };
   let refit = null;
   const size = () => { if (host.clientWidth && host.clientHeight) { graph.width(host.clientWidth).height(host.clientHeight); clearTimeout(refit); refit = setTimeout(() => fit(300), 250); } };   // a new size: fit the whole map again
   const resizer = new ResizeObserver(size);
@@ -76,7 +76,13 @@ export async function createGraph(host, initialMap, { onPick }) {
       const spot = Number.isFinite(n.x) ? graph.graph2ScreenCoords(n.x, n.y, n.z) : null;
       return spot ? [{ id: n.id, x: spot.x, y: spot.y - 16, w: String(labelFor(n)).length * 8.5, h: 22 }] : [];
     });
-    const allowed = boxes.length === candidates.length ? visibleLabelIds(boxes, forced) : null;
+    // the subject titles are placed first and always show; a topic name that would land on one is left out
+    const titleBoxes = [...subjectSprites].flatMap(([name, sprite]) => {
+      const spot = graph.graph2ScreenCoords(sprite.position.x, sprite.position.y, sprite.position.z);
+      const lines = String(sprite.text).split(/\r?\n/);
+      return spot && Number.isFinite(spot.x) ? [{ id: `subject:${name}`, x: spot.x, y: spot.y, w: Math.max(...lines.map((l) => l.length)) * 11, h: lines.length * 17 }] : [];
+    });
+    const allowed = boxes.length === candidates.length ? visibleLabelIds([...titleBoxes, ...boxes], [...titleBoxes.map((b) => b.id), ...forced]) : null;
     for (const n of nodes) if (n.__label) n.__label.visible = (n === hovered || n.id === selectedId) || (permanent.has(n.id) && (!allowed || allowed.has(n.id)));
   };   // the biggest spheres, the hovered and the selected topic carry a name
   graph.onNodeHover((node) => {
@@ -101,6 +107,24 @@ export async function createGraph(host, initialMap, { onPick }) {
     return force;
   })();
   graph.d3Force('cluster', clusterForce);
+  // spheres keep their distance (their own radius plus a gap), so no two topics sit on top of each other
+  const collideForce = (() => {
+    let list = [];
+    const force = (alpha) => {
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          const a = list[i], b = list[j];
+          const move = separationVector(a, b, radiusFor(a.notes) + radiusFor(b.notes) + 16);
+          const k = 0.6 + alpha;
+          a.vx += move.x * k; a.vy += move.y * k; a.vz += move.z * k;
+          b.vx -= move.x * k; b.vy -= move.y * k; b.vz -= move.z * k;
+        }
+      }
+    };
+    force.initialize = (nodes) => { list = nodes; };
+    return force;
+  })();
+  graph.d3Force('collide', collideForce);
 
   let frame = 0, alive = true, ticks = 0;
   const pulse = (time) => {   // weak topics (started, under 60) breathe
@@ -113,13 +137,13 @@ export async function createGraph(host, initialMap, { onPick }) {
 
   const toData = (map) => {
     const nodes = (map?.nodes ?? []).map((n) => ({ id: n.id, name: n.topic, mastery: n.mastery, started: n.started !== false, notes: n.notes ?? 1, subject: n.subject ?? 'Notes' }));
-    anchors = subjectAnchors(nodes.map((n) => n.subject), 62);
+    anchors = subjectAnchors(nodes.map((n) => n.subject), 96);
     permanent = new Set(permanentLabelIds(nodes));
     for (const old of subjectLabels) { graph.scene().remove(old); old.material.map?.dispose(); old.material.dispose(); }
     subjectSprites = new Map();
     subjectLabels = [...anchors].map(([name, p]) => {
-      const sprite = new SpriteText(name.toUpperCase(), 11, '#5f564a');   // large: the subjects are what the eye should find first
-      sprite.fontFace = 'DM Mono, monospace'; sprite.fontWeight = '600'; sprite.material.depthWrite = false; sprite.material.depthTest = false; sprite.renderOrder = 5; sprite.material.opacity = 0.9;
+      const sprite = new SpriteText(wrapTitle(name.toUpperCase()), 8, '#3f4a44');   // two lines at most, on a light plate: the subjects are what the eye should find first
+      sprite.fontFace = 'DM Mono, monospace'; sprite.fontWeight = '600'; sprite.backgroundColor = 'rgba(250,248,242,0.92)'; sprite.padding = 2.4; sprite.borderRadius = 3; sprite.material.depthWrite = false; sprite.material.depthTest = false; sprite.renderOrder = 5; sprite.material.opacity = 1;
       sprite.position.set(p.x, p.y + 40, p.z);
       graph.scene().add(sprite);
       subjectSprites.set(name, sprite);

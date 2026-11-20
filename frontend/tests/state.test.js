@@ -14,8 +14,30 @@ test('transcript chunks grow one open bubble and the final text replaces it', ()
   assert.deepEqual(s.session.messages, [{ role: 'tutor', text: 'Hello there', final: false }]);
   s = reducer(s, transcript('tutor', 'Hello there!', true));
   assert.deepEqual(s.session.messages, [{ role: 'tutor', text: 'Hello there!', final: true }]);
-  s = reducer(s, transcript('tutor', 'Next'));                       // a finished bubble is never reopened
+  s = reducer(s, actions.turnEnded());                               // the turn is complete...
+  s = reducer(s, transcript('tutor', 'Next'));                       // ...so the next words are a new bubble
   assert.equal(s.session.messages.length, 2);
+});
+
+test('one tutor turn is one bubble: words after an early close join it, and a replace keeps the earlier pieces', () => {
+  let s = run(transcript('tutor', 'C. TP divided by T', true), actions.turnInterrupted());          // the server closed it early
+  s = reducer(s, actions.transcriptReceived({ role: 'tutor', text: 'P plus TN,', final: false, replace: true }));
+  assert.deepEqual(s.session.messages.map((m) => m.text), ['C. TP divided by T P plus TN,']);   // one bubble, not a 3-word fragment
+  s = reducer(s, actions.transcriptReceived({ role: 'tutor', text: 'P plus TN, or D.', final: true }));
+  assert.deepEqual(s.session.messages.map((m) => m.text), ['C. TP divided by T P plus TN, or D.']);
+  s = reducer(s, actions.turnEnded());
+  s = reducer(s, transcript('tutor', 'Your turn.'));
+  assert.equal(s.session.messages.length, 2);                                                   // after the turn is complete: a new bubble
+});
+
+test('the student speaking ends the tutor turn: the next tutor words are a new bubble', () => {
+  const s = run(transcript('tutor', 'Which one?', true), actions.transcriptReceived({ role: 'user', text: 'B', final: true }), transcript('tutor', 'Right.'));
+  assert.deepEqual(s.session.messages.map((m) => m.role), ['tutor', 'user', 'tutor']);
+});
+
+test('a text-mode line is a whole turn of its own: two lines are two bubbles', () => {
+  const whole = (text) => actions.transcriptReceived({ role: 'tutor', text, final: true, whole: true });
+  assert.equal(run(whole('Correct.'), whole('Question 2.')).session.messages.length, 2);
 });
 
 test('bubbles are in the order things happened: a new speaker closes the other speaker open bubble', () => {
@@ -143,4 +165,14 @@ test('a listener that throws does not stop the other listeners', () => {
     console.error = original;
   }
   assert.deepEqual(seen, ['still delivered']);
+});
+
+import { isRepeat } from '../js/lib/chat-repeat.js';
+
+test('the same long tutor line twice in a row (even after an answer) is shown once; short or different lines stay', () => {
+  const q = 'Which formula gives precision? A, TP over TP plus TN. B, TP over TP plus FP.';
+  const msgs = [{ role: 'tutor', text: q }, { role: 'user', text: 'A' }, { role: 'tutor', text: q }, { role: 'tutor', text: 'Correct.' }, { role: 'tutor', text: 'Correct.' }];
+  assert.deepEqual(msgs.map((_, i) => isRepeat(msgs, i)), [false, false, true, false, false]);
+  assert.equal(isRepeat([{ role: 'tutor', text: q }, { role: 'tutor', text: 'Which formula gives precision? A, TP over' }], 1), true);   // still streaming the same words
+  assert.equal(isRepeat([{ role: 'tutor', text: q }, { role: 'tutor', text: 'Now a different question about recall, which asks for something else.' }], 1), false);
 });

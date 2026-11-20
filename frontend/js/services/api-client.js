@@ -1,7 +1,7 @@
 // HTTP access to the backend. Gemini is called by the backend only; the browser never sees a key.
 import { API_BASE } from '../lib/config.js';
-import { authToken, getGuestToken, getToken, needsLogin, saveGuestToken, signOut } from '../lib/session.js';
-import { ready as serverReady } from '../lib/warmup.js';
+import { authToken, getGuestToken, getToken, saveGuestToken, signOut } from '../lib/session.js';
+import { MESSAGES, warmup } from '../lib/warmup.js';
 
 /** Any failed request. `code` is the backend's machine code ("not_found", "llm_unavailable", ...) or "network". */
 export class ApiError extends Error {
@@ -20,16 +20,35 @@ function timezone() {
 }
 
 let guestRequest = null;
-/** A guest gets a private id once, before their first call. If that fails the app still opens, on the shared demo. */
+let guestRetryMs = 1500;
+/** (for tests) how long to wait between the 3 tries of creating a guest */
+export const setGuestRetryMs = (ms) => { guestRetryMs = ms; };
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * Every browser that is not signed in gets its own private guest before its FIRST call (the login screen's calls too), so nothing it asks
+ * or changes is ever the shared demo account's. Asked up to 3 times; if that fails, calls are refused with the calm "server is taking
+ * longer" message instead of being sent without an identity (which the server would answer as the shared demo account).
+ */
 function ensureGuest() {
-  if (getToken() || getGuestToken() || needsLogin()) return null;
-  guestRequest ??= fetch(`${API_BASE}/api/guest`, { method: 'POST' }).then((res) => (res.ok ? res.json() : null)).then((data) => { if (data?.token) saveGuestToken(data.token); }).catch(() => {});
+  if (getToken() || getGuestToken()) return null;
+  guestRequest ??= (async () => {
+    for (let attempt = 0; attempt < 3 && !getGuestToken(); attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/api/guest`, { method: 'POST' });
+        const data = res.ok ? await res.json() : null;
+        if (data?.token) saveGuestToken(data.token);
+      } catch { /* try again */ }
+      if (!getGuestToken() && attempt < 2) await sleep(guestRetryMs);
+    }
+  })().finally(() => { guestRequest = null; });   // a failure is asked again by the next call
   return guestRequest;
 }
+const inBrowser = () => typeof window !== 'undefined' && typeof document !== 'undefined';
 
 async function request(path, { method = 'GET', json, form } = {}) {
-  await serverReady;   // a sleeping server is woken first, so nothing fails while it starts
+  await warmup.settled();   // a sleeping server is woken first (at most about a minute), so nothing fails with a raw error while it starts
   await ensureGuest();
+  if (inBrowser() && !authToken()) throw new ApiError(MESSAGES.slow, { code: 'network' });   // never send a call with no identity: it would be the shared demo's
   const options = { method, headers: {} };
   const token = authToken();
   if (token) options.headers.authorization = `Bearer ${token}`;
@@ -41,7 +60,7 @@ async function request(path, { method = 'GET', json, form } = {}) {
   try {
     response = await fetch(API_BASE + path, options);
   } catch {
-    throw new ApiError(`Cannot reach the backend at ${API_BASE}. Is it running?`, { code: 'network' });
+    throw new ApiError(MESSAGES.slow, { code: 'network' });   // the server is not answering: the same calm message as the banner, never a raw error
   }
 
   let data = null;
@@ -53,7 +72,7 @@ async function request(path, { method = 'GET', json, form } = {}) {
     globalThis.location?.reload();
   }
   if (!response.ok) {
-    throw new ApiError(data?.error || `Request failed (${response.status})`,
+    throw new ApiError(data?.error || ([502, 503, 504].includes(response.status) ? MESSAGES.slow : `Request failed (${response.status})`),
       { status: response.status, code: data?.code || 'http_error', fields: data?.fields ?? null });
   }
   if (data === null) throw new ApiError('The server sent an unreadable response.', { status: response.status, code: 'bad_response' });
