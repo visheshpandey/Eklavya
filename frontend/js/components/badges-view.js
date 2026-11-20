@@ -18,6 +18,5 @@ export function mountBadges({ root, onLoad, getLanguage = () => 'english' }) {
         el('strong', { text: language === 'hindi' ? t(`badge.${b.id}`, language) : b.title }),
         el('span', { class: 'hint', text: b.earned ? t('badges.earned', language) : language === 'hindi' ? t('badges.progress', language, { progress: b.progress, goal: b.goal }) : badgeProgressText(b) })))));
   }
-  refresh();
-  return { refresh };
+  return { refresh };   // loaded when Progress opens (lib/screen-loads.js), not at page load
 }

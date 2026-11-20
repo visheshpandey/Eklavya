@@ -97,6 +97,5 @@ export function mountChallenge({ root, api, signedIn, topics, onSignIn, notify, 
       ...(playing ? playNode() : page ? resultNode() : [el('p', { class: 'hint', text: 'Five questions on one topic. Send the code, and the best score wins.' }), ...startForms()]));
   }
 
-  load();
-  return { refresh: load };
+  return { refresh: load };   // loaded when Study groups opens (lib/screen-loads.js)
 }

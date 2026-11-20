@@ -108,6 +108,5 @@ export function mountDemoCircle({ store, root, api, onSignIn, onNotes }) {
   document.addEventListener('eklavya:mastery-history', draw);
   store.select(selectDashboard, draw);
   store.select(selectToday, draw);
-  load();
-  return { refresh: load };
+  return { refresh: load };   // loaded when Study groups opens (lib/screen-loads.js)
 }

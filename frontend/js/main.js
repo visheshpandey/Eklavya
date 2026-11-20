@@ -87,6 +87,7 @@ import { TOUR_STEPS, demoLoadedMessage, markTourSeen, pickDemoTopic, shouldAutoT
 import { mountImpact } from './components/impact-view.js';
 import { mountFeedbackCard } from './components/feedback-card.js';
 import { sessionIsOver } from './lib/feedback-gate.js';
+import { loadsFor } from './lib/screen-loads.js';
 import { mountBehindScenes } from './components/behind-scenes.js';
 import { isLite, setLite } from './motion/env.js';
 import { mountAvatar } from './components/avatar.js';
@@ -474,7 +475,7 @@ const documentsOf = () => {
 const openSignIn = () => authDialog.open();
 const guestCircleRoot = document.createElement('div');
 guestCircleRoot.className = 'guest-circle';
-mountDemoCircle({ store, root: guestCircleRoot, api: backend, onSignIn: openSignIn, onNotes: () => showView(VIEWS.LIBRARY) });
+const demoCircle = mountDemoCircle({ store, root: guestCircleRoot, api: backend, onSignIn: openSignIn, onNotes: () => showView(VIEWS.LIBRARY) });
 const groupsView = mountGroups({
   root: byId('groupsRoot'), api: backend, signedIn: () => signedIn, onSignIn: openSignIn, myDocuments: documentsOf, guestRoot: guestCircleRoot,
   onNotesAdded: () => notes.refresh(), notify: notifier.success,
@@ -486,11 +487,9 @@ const challengeView = mountChallenge({
 });
 
 // each tab loads fresh data when it is opened
-store.select(selectView, (view) => {
-  if (view === VIEWS.ASK) ask.refresh();
-  else if (view === VIEWS.GROUPS) { groupsView.refresh(); challengeView.refresh(); }
-  else if (view === VIEWS.PROGRESS) { badges.refresh(); mockExam.refresh(); }
-});
+const screenLoaders = { ask: () => ask.refresh(), groups: () => groupsView.refresh(), challenges: () => challengeView.refresh(),
+  demoCircle: () => demoCircle.refresh(), badges: () => badges.refresh(), mockExams: () => mockExam.refresh() };
+store.select(selectView, (view) => loadsFor(view).forEach((name) => screenLoaders[name]()));   // only what the open screen needs
 
 // installable app: cache the page shell for offline start (only where service workers are allowed)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
@@ -589,7 +588,7 @@ byId('helpAbout').addEventListener('click', () => {
   aboutDialog.showModal();
 });
 byId('aboutClose').addEventListener('click', () => aboutDialog.close());
-mountImpact({ root: byId('impactBody'), loadSummary: () => backend.feedbackSummary() });
+mountImpact({ root: byId('impactBody'), loadSummary: () => backend.feedbackSummary(), fold: byId('impact') });
 if (firstVisit()) byId('impact').open = true;   // a first look sees the explanation, not a closed fold
 // the tour offers itself once, after the login choice and with nothing else open; the guided demo only docks after the demo is loaded
 if (shouldAutoTour({ seen: tourSeen(), needsLogin: needsLogin(), arrivedByLink, onboardingPending: signedIn && !onboardingDone(), reduceMotion })) {

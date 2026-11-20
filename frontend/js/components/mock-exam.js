@@ -125,6 +125,5 @@ export function mountMockExam({ dialog, block, onStart, onSubmit, onHistory, onD
   dialog.addEventListener('cancel', (event) => { if (stage === 'exam' || stage === 'busy') event.preventDefault(); });   // Escape must not throw the paper away
   dialog.addEventListener('close', stopTimer);
   drawBlock();
-  refresh();
-  return { open, refresh };
+  return { open, refresh };   // the history loads when Progress opens (lib/screen-loads.js), not at page load
 }

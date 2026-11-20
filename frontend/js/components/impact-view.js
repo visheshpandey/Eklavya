@@ -22,7 +22,8 @@ export function diagram() {
     arrow(140, 115, 198, 115), arrow(330, 105, 398, 40), arrow(330, 115, 398, 115), arrow(330, 125, 398, 195));
 }
 
-export function mountImpact({ root, loadSummary = null }) {
+/** `fold`: the <details> holding it; the students' summary is then fetched only when it is first opened, not at page load. */
+export function mountImpact({ root, loadSummary = null, fold = null }) {
   function draw() {
     render(root,
       el('div', { class: 'impact-grid' },
@@ -63,6 +64,7 @@ export function mountImpact({ root, loadSummary = null }) {
     } catch { /* the line simply stays out */ }
   }
   draw();
-  proof();
+  if (!fold || fold.open) proof();
+  else fold.addEventListener('toggle', function first() { if (!fold.open) return; fold.removeEventListener('toggle', first); proof(); });
   return { redraw: () => { draw(); proof(); } };
 }

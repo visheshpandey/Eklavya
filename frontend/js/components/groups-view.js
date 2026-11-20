@@ -103,6 +103,5 @@ export function mountGroups({ root, api, signedIn, onSignIn, myDocuments, onNote
       entryForms());
   }
 
-  load();
-  return { refresh: load };
+  return { refresh: load };   // loaded when Study groups opens (lib/screen-loads.js)
 }
