@@ -184,6 +184,9 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .cbot small { color: var(--ink-3); font-size: 13px; }
 .err { color: var(--accent-text); font-size: 13px; min-height: 18px; margin-top: 6px; }
 .answer { margin-top: 12px; padding: 18px; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); animation: rise .35s ease; display: grid; gap: 4px; }
+#answer .answer { scroll-margin-top: calc(var(--topbar, 64px) + 16px); }
+#answer .answer:focus { outline: none; }
+#answer .answer:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 2px; }
 .ahead { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
 .strength { font: 500 13px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 3px; background: var(--sage); color: var(--ok-text); }
 .strength.partial { background: var(--clay-pale); color: var(--accent-text); }

@@ -10,6 +10,7 @@ import { plural, shortDate } from '../lib/format.js';
 import { icon } from '../lib/icons.js';
 import { createDictation } from '../lib/dictation.js';
 import { isGeneral, matchLabel } from '../lib/match-label.js';
+import { reveal } from '../lib/reveal.js';
 
 const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
 
@@ -57,7 +58,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
     if (item.pending) return el('div', { class: 'answer' }, el('p', { class: 'mono', text: item.question }), el('p', { class: 'ask-wait', role: 'status', text: 'Looking in your notes…' }));
     if (item.error) return el('div', { class: 'answer' }, el('p', { class: 'mono', text: item.question }), el('p', { class: 'auth-error', role: 'alert', text: item.error }));
     const { text: word, tone, tip } = matchLabel(item.match);
-    return el('div', { class: 'answer' },
+    return el('div', { class: 'answer', role: 'article', 'aria-label': `Answer to: ${item.question}` },
       el('div', { class: 'ahead' }, el('span', { class: `strength${tone}`, text: word, title: tip, tabindex: '0' }),
         el('span', { class: 'mono', text: `Searched ${item.searched ?? 0} passage${item.searched === 1 ? '' : 's'} in ${item.ms ?? 0} ms` })),
       el('p', { class: 'mono', text: item.question }),
@@ -118,7 +119,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
     busy = false;
     drawChat();
     loadList();
-    chatRoot.querySelector('#ask-input')?.focus();
+    reveal(chatRoot.querySelector('#answer .answer'));   // the newest answer, newest first: scrolled to and focused, so it never lands unseen below the fold
   }
 
   function fill(text) {
