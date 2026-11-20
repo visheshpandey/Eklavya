@@ -23,12 +23,19 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
 
   const choices = () => pickChoices(selectDashboard(store.getState())?.mastery, selectSelectedTopicId(store.getState()), MAX_TOPICS);
 
+  // The ring turns every frame, so layout() only writes: the radius comes from a ResizeObserver (reading clientWidth here forced a reflow
+  // each frame), and focus/aria/pointer settings are touched only when a topic actually moves between the front and the back.
+  let radius = orbitRadius(600);
+  new ResizeObserver(() => { radius = orbitRadius(orbit.clientWidth || 600); }).observe(orbit);
+  let onScreen = true;
+  new IntersectionObserver((entries) => { onScreen = entries.at(-1).isIntersecting; if (onScreen) start(); }).observe(orbit);
   function layout() {
-    const radius = orbitRadius(orbit.clientWidth || 600);
     orbitPositions(nodes.length, angle).forEach((p) => {
       const node = nodes[p.index];
       node.style.transform = `rotateY(${p.degrees.toFixed(2)}deg) translateZ(${radius.toFixed(0)}px)`;
-      node.style.opacity = String(p.opacity);
+      node.style.opacity = p.opacity.toFixed(3);
+      if (node._back === p.back) return;
+      node._back = p.back;
       node.style.pointerEvents = p.back ? 'none' : '';
       node.tabIndex = p.back ? -1 : 0;
       if (p.back) node.setAttribute('aria-hidden', 'true'); else node.removeAttribute('aria-hidden');
@@ -42,7 +49,7 @@ export function mountStudyLaunch({ store, orbit, ring, modes, startTalk, studyFo
     else if (target !== null && !drag) angle = reduceMotion ? target : easeAngle(angle, target, dt);   // the picked topic turns to the front and stays there
     else if (!paused && !drag && !reduceMotion) angle -= dt * 0.012;
     layout();
-    frame = requestAnimationFrame(tick);
+    frame = onScreen ? requestAnimationFrame(tick) : null;   // scrolled away: rest until it is seen again
   }
   const start = () => { if (!frame && nodes.length) { last = 0; frame = requestAnimationFrame(tick); } };
   const stop = () => { if (frame) { cancelAnimationFrame(frame); frame = null; } };

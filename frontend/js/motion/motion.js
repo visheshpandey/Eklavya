@@ -1,4 +1,4 @@
-// The global motion layer: smooth scroll (Lenis), scroll reveals, number count-ups, bars filling, the tab change, hover lift and tilt, the
+// The global motion layer: scroll reveals, number count-ups, bars filling, the tab change, hover lift and tilt, the
 // streak flame, the route checkmark and the confetti. All 2D motion is GSAP + ScrollTrigger. Everything here only decorates what the
 // components already drew: it watches the page for new elements instead of changing how they are made.
 import { selectToday, selectView } from '../state/selectors.js';
@@ -20,17 +20,14 @@ const visible = (node) => node.isConnected && node.offsetParent !== null && !(bo
 const keyOf = (node, tag) => `${tag}|${node.className}|${(node.textContent || '').trim().slice(0, 40)}|${[...node.parentElement.children].indexOf(node)}`;
 
 export async function initMotion({ store }) {
-  await Promise.all([loadScript('vendor/gsap.min.js'), loadScript('vendor/MotionPathPlugin.min.js'), loadScript('vendor/lenis.min.js'), loadScript('vendor/lottie_light.min.js'), loadScript('vendor/confetti.browser.js')]);
+  await Promise.all([loadScript('vendor/gsap.min.js'), loadScript('vendor/MotionPathPlugin.min.js'), loadScript('vendor/lottie_light.min.js'), loadScript('vendor/confetti.browser.js')]);
   await loadScript('vendor/ScrollTrigger.min.js');
-  const { gsap, ScrollTrigger, Lenis, lottie, confetti } = globalThis;
+  const { gsap, ScrollTrigger, lottie, confetti } = globalThis;
   gsap.registerPlugin(ScrollTrigger, globalThis.MotionPathPlugin);
   document.documentElement.dataset.motion = 'on';
 
-  // ---- smooth scroll, driven by GSAP's own clock so ScrollTrigger and Lenis never disagree
-  const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1, prevent: (node) => Boolean(node.closest?.('dialog, [role="dialog"], textarea, select, .chat, .call, .topmenu, .menu')) });
-  lenis.on('scroll', ScrollTrigger.update);
-  gsap.ticker.add((time) => lenis.raf(time * 1000));
-  gsap.ticker.lagSmoothing(0);
+  // Native scrolling: a smooth-scroll library made the wheel trail behind the hand, which reads as lag. GSAP keeps its default lag
+  // smoothing, so a slow frame never makes every animation jump ahead at once.
 
   // ---- reveals: fade + a 16px rise, 0.06s apart, as each thing scrolls into view
   function reveal(root = document) {
@@ -328,7 +325,7 @@ export async function initMotion({ store }) {
     if (first) { first = false; return; }
     const panel = document.getElementById(`panel-${view}`);
     if (panel) gsap.fromTo(panel, { autoAlpha: 0, x: 12 }, { autoAlpha: 1, x: 0, duration: 0.32, ease: 'power2.out', clearProps: 'transform,opacity,visibility' });
-    lenis.scrollTo(0, { immediate: true });
+    window.scrollTo(0, 0);
     requestAnimationFrame(() => { pass(main); ScrollTrigger.refresh(); });
   });
 
@@ -336,7 +333,12 @@ export async function initMotion({ store }) {
   if (finePointer()) {
     let current = null;
     const rest = (node) => gsap.to(node, { rotationX: 0, rotationY: 0, y: 0, duration: 0.5, ease: 'power3.out', overwrite: 'auto' });
+    let pending = null;   // at most one tilt update per frame, however fast the mouse reports
     document.addEventListener('pointermove', (event) => {
+      if (!pending) requestAnimationFrame(() => { const latest = pending; pending = null; tilt(latest); });
+      pending = event;
+    }, { passive: true });
+    const tilt = (event) => {
       const node = event.target.closest?.(TILT);
       const next = node && !node.closest(NO_TILT) && !node.querySelector(NO_TILT) ? node : null;
       if (current && current !== next) rest(current);
@@ -345,7 +347,7 @@ export async function initMotion({ store }) {
       const box = next.getBoundingClientRect();
       const x = (event.clientX - box.left) / box.width - 0.5, y = (event.clientY - box.top) / box.height - 0.5;
       gsap.to(next, { rotationX: -y * 12, rotationY: x * 12, y: -4, transformPerspective: 900, duration: 0.35, ease: 'power2.out', overwrite: 'auto' });
-    }, { passive: true });
+    };
     document.addEventListener('pointerleave', () => { if (current) { rest(current); current = null; } });
   }
 
@@ -398,15 +400,24 @@ export async function initMotion({ store }) {
   // ---- the study room's waveform: bars that move on their own, and swell with the live voice level during a session
   const waveBars = [...document.querySelectorAll('.wave i')];
   if (waveBars.length) {
-    gsap.set(waveBars, { transformOrigin: '50% 50%' });
-    document.documentElement.classList.add('wave-gsap');
+    // At rest the CSS animation moves the bars on the compositor (no JavaScript). Only during a live session, and only while the bars are
+    // on screen, does this loop take over to follow the voice level; it never reads layout, so it cannot force a reflow each frame.
     const phases = waveBars.map((_, i) => ({ speed: 1.3 + (i % 4) * 0.35, phase: i * 0.9 }));
-    let level = 0;
+    const app = document.getElementById('app');
+    let level = 0, onScreen = false, driving = false;
+    new IntersectionObserver((entries) => { onScreen = entries.at(-1).isIntersecting; }).observe(waveBars[0].parentElement);
+    const drive = (on) => {
+      if (on === driving) return;
+      driving = on;
+      document.documentElement.classList.toggle('wave-gsap', on);
+      if (!on) { level = 0; for (const bar of waveBars) bar.style.transform = ''; }
+    };
     gsap.ticker.add((time) => {
-      if (waveBars[0].offsetParent === null) return;
-      const live = document.getElementById('app')?.hasAttribute('data-live');
-      level += (((live ? globalThis.eklavyaLevel : 0) ?? 0) - level) * 0.2;
-      waveBars.forEach((bar, i) => { const wobble = 0.55 + 0.35 * Math.sin(time * phases[i].speed + phases[i].phase); gsap.set(bar, { scaleY: wobble * (live ? 0.7 + level * 2.2 : 1) }); });
+      drive(onScreen && !document.hidden && Boolean(app?.hasAttribute('data-live')));
+      if (!driving) return;
+      level += ((globalThis.eklavyaLevel ?? 0) - level) * 0.2;
+      const swell = 0.7 + level * 2.2;
+      waveBars.forEach((bar, i) => { bar.style.transform = `scaleY(${((0.55 + 0.35 * Math.sin(time * phases[i].speed + phases[i].phase)) * swell).toFixed(3)})`; });
     });
   }
 
@@ -430,6 +441,7 @@ export async function initMotion({ store }) {
   flame.className = 'flame'; flame.setAttribute('aria-hidden', 'true');
   document.querySelector('.streakcard')?.append(flame);
   const flameAnimation = lottie.loadAnimation({ container: flame, renderer: 'svg', loop: true, autoplay: true, animationData: FLAME });
+  flameAnimation.setSubframe(false);   // the flame's own frame rate, not one redraw per screen frame
   const seenKey = 'eklavya.streak.seen';
   const readSeen = () => { try { return localStorage.getItem(seenKey); } catch { return null; } };
   store.select(selectToday, (today) => {

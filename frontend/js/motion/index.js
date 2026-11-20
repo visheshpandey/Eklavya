@@ -8,22 +8,25 @@ export function startMotion(deps) {
 }
 
 /**
- * The 3D book on Today. Built when the desk comes into view, freed when it leaves (another tab, scrolled away for good), rebuilt when it
+ * The 3D book on Today. Built when the desk comes into view, paused when it leaves and freed after a minute away, rebuilt when it
  * returns. Without WebGL, or with "reduce motion", the drawn CSS book stays as it is. Returns { update(info), dispose() }.
  */
 export function mountHeroScene(desk, info) {
   if (reducedMotion() || !hasWebGL()) return { update() {}, dispose() {} };
-  let latest = info, scene = null, building = false, visible = false;
+  let latest = info, scene = null, building = false, visible = false, freeLater = null;
+  document.addEventListener('eklavya:lite', () => { if (scene) { scene.dispose(); scene = null; } });
   const stop = whenVisible(desk, (now) => {
     visible = now;
-    if (now && !scene && !building) {
+    clearTimeout(freeLater);
+    if (now && scene) scene.sleep?.(false);
+    if (now && !scene && !building && !isLite()) {
       building = true;
       afterLoad(3500).then(() => loadScript('vendor/gsap.min.js')).catch(() => {})
         .then(() => import('./hero-book.js'))
         .then((module) => module.createHeroBook(desk, latest, { gsap: globalThis.gsap }))
-        .then((created) => { building = false; if (visible) scene = created; else created.dispose(); })
+        .then((created) => { building = false; if (visible) { scene = created; guardOnce(); } else created.dispose(); })
         .catch((error) => { building = false; console.warn('3D hero not started', error); });
-    } else if (!now && scene) { scene.dispose(); scene = null; }
+    } else if (!now && scene) { scene.sleep?.(true); freeLater = setTimeout(() => { if (!visible && scene) { scene.dispose(); scene = null; } }, KEEP_MS); }
   }, '0px');
   return {
     update(next) { latest = { ...latest, ...next }; scene?.update(latest); },
@@ -31,17 +34,32 @@ export function mountHeroScene(desk, info) {
   };
 }
 
+// A scene that leaves the screen is paused at once but freed only after a minute away: switching tabs and coming back must not pay the
+// whole build (shader compile, textures) again, which is what made every return to Today or Progress stall.
+const KEEP_MS = 60000;
+
+// The first time any 3D scene is running, check (once per visit) that this machine keeps up; if not, every scene is freed and the drawn
+// versions stay. Waits a moment so the scene's own start-up does not count against it.
+let guarded = false;
+function guardOnce() {
+  if (guarded) return;
+  guarded = true;
+  setTimeout(() => guardPerformance(40), 2500);
+}
+
 /** Builds `create(host)` (a promise of { dispose, ... }) while `host` is on screen and frees it when it is not; `apply(scene)` replays the latest settings. */
 function whileVisible(host, create, apply, { onFail = null, wait = 3500 } = {}) {
-  let scene = null, building = false, visible = false;
+  let scene = null, building = false, visible = false, freeLater = null;
   document.addEventListener('eklavya:lite', () => { if (scene) { scene.dispose(); scene = null; } });   // too slow here: the drawn version stays
   whenVisible(host, (now) => {
     visible = now;
-    if (now && !scene && !building) {
+    clearTimeout(freeLater);
+    if (now && scene) scene.sleep?.(false);
+    if (now && !scene && !building && !isLite()) {
       building = true;
-      afterLoad(wait).then(() => (visible ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); } else created.dispose(); })
+      afterLoad(wait).then(() => (visible && !isLite() ? create(host) : null)).then((created) => (created ?? Promise.reject(new Error('left before it started')))).then((created) => { building = false; if (visible) { scene = created; apply(scene); guardOnce(); } else created.dispose(); })
         .catch((error) => { building = false; if (visible) { console.error('3D scene not started', error); onFail?.(error); } });
-    } else if (!now && scene) { scene.dispose(); scene = null; }
+    } else if (!now && scene) { scene.sleep?.(true); freeLater = setTimeout(() => { if (!visible && scene) { scene.dispose(); scene = null; } }, KEEP_MS); }
   }, '0px');
   return () => scene;
 }

@@ -306,7 +306,7 @@ cd eklavya\frontend && npm test
 Everything here only decorates what the components draw; each piece is skipped for `prefers-reduced-motion` or without WebGL, and the
 drawn (CSS/SVG) version underneath stays as the fallback.
 
-- `vendor/`: pinned builds, loaded without a bundler. gsap 3.12.5 + ScrollTrigger, lenis 1.1.18, lottie-web 5.12.2 (light), canvas-confetti 1.9.3,
+- `vendor/`: pinned builds, loaded without a bundler. gsap 3.12.5 + ScrollTrigger, lottie-web 5.12.2 (light), canvas-confetti 1.9.3,
   three 0.179.1 (ES modules through the import map in `index.html`; `three/addons/` holds GLTFLoader), and `force-graph.js` (3d-force-graph 1.73.4 +
   three-spritetext, bundled with esbuild, `three` kept external).
 - `motion/index.js`: `startMotion`, `mountHeroScene`, `mountMentor`, `mountOrb`, `mountGraph`, `mountOnScreen`. 3D scenes are built when their host is on

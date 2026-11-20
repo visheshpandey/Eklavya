@@ -39,7 +39,7 @@ export async function createGraph(host, initialMap, { onPick }) {
       const group = new THREE.Group();
       const color = colorFor(node.mastery, node.started);
       const radius = radiusFor(node.notes);
-      group.add(new THREE.Mesh(new THREE.SphereGeometry(radius, 28, 20),
+      group.add(new THREE.Mesh(new THREE.SphereGeometry(radius, 20, 14),
         new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.18, roughness: 0.55, metalness: 0.05 })));
       const text = new SpriteText(labelFor(node), 6, PALETTE.ink);   // about 6 world units tall: readable at the fitted zoom
       text.fontFace = 'DM Sans, sans-serif'; text.fontWeight = '600'; text.backgroundColor = 'rgba(250,248,242,0.96)'; text.padding = 2.4; text.borderRadius = 3;
@@ -48,7 +48,8 @@ export async function createGraph(host, initialMap, { onPick }) {
       node.__label = text;
       return group;
     });
-  graph.renderer().setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
+  graph.renderer().setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 1.5));
+  graph.renderer().debug.checkShaderErrors = false;
   graph.scene().add(new THREE.HemisphereLight(0xfffaf0, 0x29483e, 0.9));
   graph.camera().fov = 48; graph.camera().updateProjectionMatrix();
 
@@ -145,6 +146,7 @@ export async function createGraph(host, initialMap, { onPick }) {
 
   return {
     update(map) { framed = false; graph.graphData(toData(map)); },
+    sleep(on) { if (on) graph.pauseAnimation(); else if (!document.hidden) graph.resumeAnimation(); },   // off screen but kept: no drawing, nothing to rebuild
     focus(id) { selectedId = id; showLabels(); fly(graph.graphData().nodes.find((n) => n.id === id)); },
     dispose() {
       alive = false; cancelAnimationFrame(frame); clearTimeout(resume);

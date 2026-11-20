@@ -8,11 +8,16 @@ import { whenVisible } from './env.js';
 export { THREE };
 
 export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target = [0, 0.15, 0.1], shadows = true, floor = true, onDemand = false } = {}) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
+  // Pixel ratio at most 1.5: on a 2x/3x screen that is 45-75% fewer pixels to shade and still looks sharp at this size. The default GPU
+  // preference: asking for 'high-performance' wakes the discrete GPU on dual-GPU laptops, which stalls the page while it switches.
+  const ratio = Math.min(globalThis.devicePixelRatio || 1, 1.5);
+  const renderer = new THREE.WebGLRenderer({ antialias: ratio < 1.5, alpha: true, powerPreference: 'default' });
+  renderer.setPixelRatio(ratio);
+  renderer.debug.checkShaderErrors = false;   // the check reads every shader's log, which forces a blocking compile and defeats compileAsync
   renderer.setClearColor(0x000000, 0);
   renderer.shadowMap.enabled = shadows;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;   // PCF with a radius is just as soft here and much cheaper per pixel
+  renderer.shadowMap.autoUpdate = false;   // shadows are redrawn every other frame (below): half the shadow work, the slow drift hides it
   const canvas = renderer.domElement;
   canvas.className = 'scene-canvas';
   canvas.setAttribute('aria-hidden', 'true');
@@ -43,7 +48,7 @@ export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target =
   }
 
   const ticks = new Set();
-  let last = 0, elapsed = 0;   // our own clock (THREE.Clock is deprecated)
+  let last = 0, elapsed = 0, drawn = 0;   // our own clock (THREE.Clock is deprecated)
   let running = false;
   let onScreen = false;
   const size = () => {
@@ -64,6 +69,8 @@ export function createStage(host, { fov = 28, position = [0, 4.0, 3.6], target =
     const time = elapsed;
     for (const tick of ticks) tick.run?.(delta, time);
     camera.lookAt(lookAt);
+    drawn += 1;
+    if (shadows) renderer.shadowMap.needsUpdate = drawn <= 2 || drawn % 2 === 0;
     renderer.render(scene, camera);
   };
   const sync = () => {
