@@ -1,4 +1,5 @@
 // The label on an Ask answer: how well the student's notes cover the question. Pure, so the wording can be tested.
+import { t } from './strings.js';
 // "strong" is green and says plainly where the answer comes from; "partial" and "none" are amber and carry a tooltip that says what they mean.
 const LABELS = {
   strong: { text: 'From your notes', tone: '', tip: 'The passages below cover your question, so this answer comes from your own notes.' },
@@ -10,4 +11,12 @@ const LABELS = {
 /** True when the answer is general knowledge: it must show no passage or citation. */
 export const isGeneral = (item) => Boolean(item?.general) || item?.match === 'general';
 
-export const matchLabel = (match) => LABELS[match] ?? LABELS.partial;
+const HINDI_KEYS = { strong: 'ask.strong', partial: 'ask.partial', none: 'ask.none', general: 'ask.general' };
+
+/** The label for `match`; in Hindi the words are translated (the tooltip too for a general answer). */
+export function matchLabel(match, language = 'english') {
+  const label = LABELS[match] ?? LABELS.partial;
+  if (language !== 'hindi') return label;
+  const key = HINDI_KEYS[match] ?? HINDI_KEYS.partial;
+  return { ...label, text: t(key, language), tip: match === 'general' ? t('ask.generalTip', language) : label.tip };
+}

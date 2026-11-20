@@ -195,7 +195,8 @@ const mockExam = mountMockExam({
   onStart: backend.startMockExam, onSubmit: backend.submitMockExam, onHistory: backend.mockExams,
   onDone: () => { notes.refresh(); home.refresh(); },   // the exam moved mastery
 });
-const badges = mountBadges({ root: byId('badges'), onLoad: backend.badges });
+const badges = mountBadges({ root: byId('badges'), onLoad: backend.badges, getLanguage: () => selectLanguage(store.getState()) });
+{ let first = true; store.select(selectLanguage, () => { if (first) { first = false; return; } badges.refresh(); }); }   // badge names follow the interface language (not on load: mountBadges already fetched)
 const topicsOf = () => selectDashboard(store.getState())?.mastery ?? [];
 const ask = mountAsk({
   chatRoot: byId('askChat'), listRoot: byId('doubts'), sourcesRoot: byId('srcList'), recentRoot: byId('recentDoubts'), recentWrap: byId('recentWrap'),
@@ -206,6 +207,7 @@ const ask = mountAsk({
   onListen: (text) => { if (sound.isSpeaking()) { sound.stopSpeaking(); return; } sound.speak(text, byId('lang').value === 'hindi' ? 'hi-IN' : 'en-IN', { force: true }); },
 });
 store.select(selectDashboard, () => ask.redrawSide());
+{ let first = true; store.select(selectLanguage, () => { if (first) { first = false; return; } ask.refresh(); }); }   // the Ask screen's words follow the interface language
 
 // --- today: the guided path on top, the older plan and exam planner below
 const reviewCards = () => showView(VIEWS.FLASHCARDS);

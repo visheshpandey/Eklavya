@@ -1,4 +1,5 @@
 // Today's route: three steps (recall, understand a concept, review cards), built from the real plan and remembered per day (pure).
+import { t } from './strings.js';
 
 export const ROUTE_KEYS = ['recall', 'concept', 'cards'];
 const STORE_KEY = 'eklavya.route';
@@ -10,27 +11,28 @@ const weakestOf = (mastery) => [...mastery].sort((a, b) => a.mastery_score - b.m
  * @returns {{key: string, title: string, sub: string, minutes: number, action: object|null}[]}
  *   action is {type:'session', mode, topicId} or {type:'cards'}, or null when there is nothing to do for that step.
  */
-export function buildRoute({ plan = [], due = [], mastery = [], cardsDue = 0 }) {
+export function buildRoute({ plan = [], due = [], mastery = [], cardsDue = 0, language = 'english' }) {
   const revise = plan.find((item) => item.kind === 'revise') ?? (due[0] ? { topic_id: due[0].topic_id, topic: due[0].topic, minutes: 5 } : null);
   const weakest = weakestOf(mastery);
   const learn = plan.find((item) => item.kind === 'learn' || item.kind === 'test')
     ?? (weakest ? { topic_id: weakest.topic_id, topic: weakest.topic_name, minutes: 12 } : null);
   return [
-    { key: 'recall', title: 'Quick recall', sub: revise ? revise.topic : 'Nothing is due for revision', minutes: revise?.minutes ?? 5,
+    { key: 'recall', title: t('route.recall', language), sub: revise ? revise.topic : t('route.nothingDue', language), topic: revise?.topic ?? null, minutes: revise?.minutes ?? 5,
       action: revise ? { type: 'session', mode: 'revise', topicId: revise.topic_id } : null },
-    { key: 'concept', title: 'Understand a concept', sub: learn ? `${learn.topic}, in a voice session` : 'Add notes to start', minutes: learn?.minutes ?? 12,
+    { key: 'concept', title: t('route.concept', language), sub: learn ? t('route.inVoice', language, { topic: learn.topic }) : t('route.addNotes', language), topic: learn?.topic ?? null,
+      minutes: learn?.minutes ?? 12,
       action: learn ? { type: 'session', mode: learn.kind === 'test' ? 'test' : 'learn', topicId: learn.topic_id } : null },
-    { key: 'cards', title: 'Review flashcards', sub: cardsDue ? `${cardsDue} card${cardsDue === 1 ? '' : 's'} due today` : 'No cards due',
+    { key: 'cards', title: t('route.cards', language), sub: cardsDue ? t('route.cardsDue', language, { n: cardsDue }) : t('route.noCards', language), topic: null,
       minutes: Math.min(10, Math.max(2, Math.ceil(cardsDue * 0.5))), action: { type: 'cards' } },   // about half a minute a card, never a long block
   ];
 }
 
 /** {done, percent, label, current}: how far along the three steps are; current is the first one still open. */
-export function routeProgress(done = {}) {
+export function routeProgress(done = {}, language = 'english') {
   const finished = ROUTE_KEYS.filter((key) => done[key]).length;
   return {
     done: finished, percent: Math.round((finished / ROUTE_KEYS.length) * 100),
-    label: finished === ROUTE_KEYS.length ? 'All 3 steps done. Nice work.' : `${finished} of 3 steps done`,
+    label: finished === ROUTE_KEYS.length ? t('route.allDone', language) : t('route.progress', language, { n: finished }),
     current: ROUTE_KEYS.find((key) => !done[key]) ?? null,
   };
 }

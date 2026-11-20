@@ -11,6 +11,7 @@ import { icon } from '../lib/icons.js';
 import { createDictation } from '../lib/dictation.js';
 import { isGeneral, matchLabel } from '../lib/match-label.js';
 import { reveal } from '../lib/reveal.js';
+import { t } from '../lib/strings.js';
 
 const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
 
@@ -54,13 +55,15 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
     return paragraph;
   }
 
+  const tr = (key, values) => t(key, getLanguage(), values);
+
   function answerCard(item) {
-    if (item.pending) return el('div', { class: 'answer' }, el('p', { class: 'mono', text: item.question }), el('p', { class: 'ask-wait', role: 'status', text: 'Looking in your notes…' }));
+    if (item.pending) return el('div', { class: 'answer' }, el('p', { class: 'mono', text: item.question }), el('p', { class: 'ask-wait', role: 'status', text: tr('ask.looking') }));
     if (item.error) return el('div', { class: 'answer' }, el('p', { class: 'mono', text: item.question }), el('p', { class: 'auth-error', role: 'alert', text: item.error }));
-    const { text: word, tone, tip } = matchLabel(item.match);
+    const { text: word, tone, tip } = matchLabel(item.match, getLanguage());
     return el('div', { class: 'answer', role: 'article', 'aria-label': `Answer to: ${item.question}` },
       el('div', { class: 'ahead' }, el('span', { class: `strength${tone}`, text: word, title: tip, tabindex: '0' }),
-        el('span', { class: 'mono', text: `Searched ${item.searched ?? 0} passage${item.searched === 1 ? '' : 's'} in ${item.ms ?? 0} ms` })),
+        el('span', { class: 'mono', text: tr('ask.searched', { n: item.searched ?? 0, ms: item.ms ?? 0 }) })),
       el('p', { class: 'mono', text: item.question }),
       el('div', { class: 'md' }, renderMarkdown(item.answer)),
       item.from_syllabus ? el('p', { class: 'hint ask-note', text: 'Your notes only list this topic, so this explanation is from general knowledge. The passage below is where your syllabus names it.' }) : null,
@@ -68,7 +71,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
       item.follow_up_question ? el('button', { class: 'chip-action', type: 'button', onclick: () => fill(item.follow_up_question) }, item.follow_up_question) : null,
       ...(isGeneral(item) ? [] : item.sources ?? []).map((source) => el('div', { class: 'passage' }, highlighted(bestSentences(source.text, item.terms, 3), item.terms),
         el('span', { class: 'mono', text: `${source.document} · ${source.heading || source.topic}` }))),
-      el('button', { class: 'linkbtn listen-btn', type: 'button', onclick: () => onListen(item.answer) }, icon('speaker-high', { size: 16 }), ' Listen'));
+      el('button', { class: 'linkbtn listen-btn', type: 'button', onclick: () => onListen(item.answer) }, icon('speaker-high', { size: 16 }), tr('ask.listen')));
   }
 
   function exampleChips() {
@@ -79,29 +82,29 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   }
 
   function drawChat() {
-    const input = el('textarea', { id: 'ask-input', placeholder: 'Ask something from your notes…', 'aria-label': 'Your question', maxlength: '2000', disabled: busy ? '' : null });
+    const input = el('textarea', { id: 'ask-input', placeholder: tr('ask.placeholder'), 'aria-label': tr('ask.label'), maxlength: '2000', disabled: busy ? '' : null });
     input.value = draft;
     input.addEventListener('input', () => { draft = input.value; if (error) { error = ''; chatRoot.querySelector('.err').textContent = ''; } });
     input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) form.requestSubmit(); });
     const form = el('form', { class: 'askbox', id: 'askForm' }, input,
-      el('div', { class: 'cbot' }, el('small', { text: 'Answers come from your notes first. Ctrl+Enter to send.' }),
+      el('div', { class: 'cbot' }, el('small', { text: tr('ask.hint') }),
         el('div', { class: 'cact' },
           dictation.available() ? el('button', { id: 'ask-mic', class: 'btn btn-secondary ask-mic', type: 'button', 'aria-pressed': String(listening),
             'aria-label': listening ? 'Stop listening' : 'Speak your question', disabled: busy ? '' : null,
             onclick: () => { if (dictation.listening()) dictation.stop(); else dictation.start(input.value); } }, icon('microphone', { size: 20 })) : null,
-          el('button', { class: 'btn btn-primary', type: 'submit', disabled: busy ? '' : null }, busy ? 'Asking…' : 'Ask ↗'))));
+          el('button', { class: 'btn btn-primary', type: 'submit', disabled: busy ? '' : null }, busy ? tr('ask.asking') : tr('ask.send')))));
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       dictation.stop();
       const question = input.value.trim();
-      if (!question) { error = 'Enter a question first.'; chatRoot.querySelector('.err').textContent = error; input.focus(); return; }
+      if (!question) { error = tr('ask.empty'); chatRoot.querySelector('.err').textContent = error; input.focus(); return; }
       if (busy) return;
       run(question);
     });
     render(chatRoot,
-      el('div', { class: 'askcard' }, el('span', { class: 'mono', text: 'English or Hinglish' }),
-        el('h2', {}, 'What are you trying', el('br'), 'to understand?'),
-        el('p', { text: 'Eklavya searches your notes and shows the exact passages it used.' }),
+      el('div', { class: 'askcard' }, el('span', { class: 'mono', text: tr('ask.lang') }),
+        el('h2', {}, tr('ask.heading1'), el('br'), tr('ask.heading2')),
+        el('p', { text: tr('ask.searches') }),
         el('div', { class: 'chips' }, exampleChips().map(([label, text]) => el('button', { type: 'button', onclick: () => { if (busy) return; fill(text); run(text); } }, label)))),   // a suggestion asks straight away; the answer can still be edited and asked again
       form,
       el('p', { class: 'err', role: 'alert', text: error }),

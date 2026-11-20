@@ -22,7 +22,7 @@
 </head>
 
 <body>
-  <a class="skip-link" href="#main">Skip to the study area</a>
+  <a class="skip-link" href="#main" data-i18n="pg.skip">Skip to the study area</a>
 
   <!-- opening animation: a book opens and lands on the Today desk (once per visit, skippable) -->
   <div class="intro" id="intro" hidden role="dialog" aria-label="Opening Eklavya">
@@ -30,14 +30,14 @@
     <div class="ifly" id="ifly">
       <div class="ibook" aria-hidden="true">
         <div class="iback"></div>
-        <div class="ipage ip3"><span class="mono">Chapter 01</span><strong>Your own pace.<br>Your own understanding.</strong><p>A study mentor grounded in your notes.</p></div>
+        <div class="ipage ip3"><span class="mono" data-i18n="pg.chapter">Chapter 01</span><strong>Your own pace.<br>Your own understanding.</strong><p data-i18n="pg.tagline">A study mentor grounded in your notes.</p></div>
         <div class="ipage ip2"></div>
         <div class="ipage ip1"></div>
-        <div class="icover"><div class="f"><span class="mark">e</span><b>eklavya</b><span class="mono">Study companion</span></div><div class="b"></div></div>
+        <div class="icover"><div class="f"><span class="mark">e</span><b>eklavya</b><span class="mono" data-i18n="pg.companion">Study companion</span></div><div class="b"></div></div>
       </div>
     </div>
-    <span class="mono cue">Opening your study space</span>
-    <button class="skip" id="skip" type="button">Skip intro</button>
+    <span class="mono cue" data-i18n="pg.opening">Opening your study space</span>
+    <button class="skip" id="skip" type="button" data-i18n="pg.skipIntro">Skip intro</button>
   </div>
 
   <div id="app" class="app" data-view="today" data-live="off">
@@ -77,7 +77,7 @@
         <header class="top">
           <span class="mono brand-top">Eklavya / <b id="crumb">Today</b></span>
           <div class="topacts">
-              <label class="visually-hidden" for="lang">Tutor language</label>
+              <label class="visually-hidden" for="lang" data-i18n="pg.tutorLang">Tutor language</label>
               <select id="lang" class="select">
                 <option value="hinglish" selected>Hinglish</option>
                 <option value="english">English</option>
@@ -85,21 +85,21 @@
               </select>
             <div id="topMenu" class="topmenu" role="group" aria-label="Settings">
               <button class="btn btn-secondary" id="soundBtn" type="button" aria-pressed="true"><span class="sound-label">Sound on</span></button>
-              <label class="menu-label" for="tutor">Tutor personality: calm mentor or friendly senior</label>
+              <label class="menu-label" for="tutor" data-i18n="pg.tutorPersona">Tutor personality: calm mentor or friendly senior</label>
               <select id="tutor" class="select">
-                <option value="mentor" selected title="Calm mentor">Mentor</option>
-                <option value="senior" title="Friendly senior">Senior</option>
+                <option value="mentor" selected title="Calm mentor" data-i18n="pg.mentor">Mentor</option>
+                <option value="senior" title="Friendly senior" data-i18n="pg.senior">Senior</option>
               </select>
-              <span class="menu-label">Display</span>
+              <span class="menu-label" data-i18n="pg.display">Display</span>
               <button id="btnTheme" class="icon-btn" type="button" aria-label="Theme: follow system"></button>
-              <span id="demoPill" class="demo-pill" hidden>Demo mode</span>
+              <span id="demoPill" class="demo-pill" hidden data-i18n="pg.demoMode">Demo mode</span>
               <hr class="menu-rule">
-              <button class="menu-item" type="button" id="helpInstall" hidden>Install Eklavya on this device</button>
-              <button class="menu-item" type="button" id="helpGuide">Start the guided demo</button>
-              <button class="menu-item" type="button" id="helpTour">Replay the tour</button>
-              <button class="menu-item" type="button" id="helpAbout">About / How it works</button>
+              <button class="menu-item" type="button" id="helpInstall" hidden data-i18n="pg.install">Install Eklavya on this device</button>
+              <button class="menu-item" type="button" id="helpGuide" data-i18n="pg.guide">Start the guided demo</button>
+              <button class="menu-item" type="button" id="helpTour" data-i18n="pg.tour">Replay the tour</button>
+              <button class="menu-item" type="button" id="helpAbout" data-i18n="pg.about">About / How it works</button>
               <button class="menu-item" type="button" id="helpLite">Lite mode</button>
-              <button class="menu-item" type="button" id="helpExit" hidden>Exit demo (sign in)</button>
+              <button class="menu-item" type="button" id="helpExit" hidden data-i18n="pg.exitDemo">Exit demo (sign in)</button>
             </div>
                         <button id="btnStreak" class="streak-chip" type="button" aria-expanded="false" aria-controls="streakSheet" aria-label="Learning streak: 0 days"><span data-icon="fire" data-size="18"></span><b id="streakChipN" class="tnum">0</b></button>
             <button id="btnMore" class="icon-btn" type="button" aria-expanded="false" aria-controls="topMenu" aria-label="Settings: sound, tutor, language, display"><span aria-hidden="true" style="font-size:22px;line-height:1">⋯</span></button>
@@ -114,7 +114,7 @@
         <main id="main" class="workspace" tabindex="-1">
 
           <div id="streakSheet" class="streak-sheet" role="dialog" aria-label="Learning streak" hidden>
-            <span class="mono">Learning streak</span>
+            <span class="mono" data-i18n="pg.streak">Learning streak</span>
             <strong class="tnum"><span id="streakSheetDays">0</span> <small id="streakSheetUnit">days</small></strong>
             <p id="streakSheetNote">Study today to start a streak.</p>
             <div class="week" id="streakSheetWeek" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -124,37 +124,37 @@
           <section id="panel-today" class="panel" role="tabpanel" aria-labelledby="tab-today">
             <div id="welcome" class="welcome-wrap" hidden></div>
             <aside id="whatIs" class="what-strip" aria-label="What is Eklavya?">
-              <span class="mono">What is Eklavya?</span>
+              <span class="mono" data-i18n="pg.what">What is Eklavya?</span>
               <ol>
-                <li><b>The problem</b><span>Students study from scattered PDFs and videos, mostly in English, with nobody to ask.</span></li>
-                <li><b>The fix</b><span>Eklavya teaches from your own notes or syllabus, out loud, in Hinglish.</span></li>
-                <li><b>The proof</b><span>Answers cite your notes · Talks in Hinglish · 370+ tests · Works on 2G</span></li>
+                <li><b data-i18n="pg.problem">The problem</b><span data-i18n="pg.problemText">Students study from scattered PDFs and videos, mostly in English, with nobody to ask.</span></li>
+                <li><b data-i18n="pg.fix">The fix</b><span data-i18n="pg.fixText">Eklavya teaches from your own notes or syllabus, out loud, in Hinglish.</span></li>
+                <li><b data-i18n="pg.proof">The proof</b><span data-i18n="pg.proofText">Answers cite your notes · Talks in Hinglish · 370+ tests · Works on 2G</span></li>
               </ol>
             </aside>
             <div id="todayHead"></div>
             <div id="todayHero"></div>
-            <div class="section"><div><span class="mono">Today's route</span><h2 class="section-title">One step at a time.</h2></div></div>
+            <div class="section"><div><span class="mono" data-i18n="pg.route">Today's route</span><h2 class="section-title" data-i18n="pg.oneStep">One step at a time.</h2></div></div>
             <div class="two">
               <section class="card" id="route" aria-label="Today's route"></section>
               <section class="card note-card">
-                <span class="mono">A note from Eklavya</span>
+                <span class="mono" data-i18n="pg.note">A note from Eklavya</span>
                 <p class="quote" id="quote">“You don't have to know it all. Just understand the next thing.”</p>
-                <button class="linkbtn" id="talkIt" type="button">Talk it through ↗</button>
+                <button class="linkbtn" id="talkIt" type="button" data-i18n="pg.talkThrough">Talk it through ↗</button>
               </section>
             </div>
-            <div class="section"><div><span class="mono">Your subjects</span><h2 class="section-title">Taking shape.</h2></div><button class="linkbtn" id="seeMap" type="button">See how they connect ↗</button></div>
+            <div class="section"><div><span class="mono" data-i18n="pg.subjects">Your subjects</span><h2 class="section-title" data-i18n="pg.shape">Taking shape.</h2></div><button class="linkbtn" id="seeMap" type="button" data-i18n="pg.connect">See how they connect ↗</button></div>
             <div class="subs" id="subjects"></div>
-            <details class="fold today-more"><summary><span class="mono">More for today</span><b>Your plan, revision and exam planner</b></summary>
+            <details class="fold today-more"><summary><span class="mono" data-i18n="pg.more">More for today</span><b data-i18n="pg.moreText">Your plan, revision and exam planner</b></summary>
               <div id="todayMore" class="today"></div>
               <section id="planner" class="block planner" aria-label="Exam planner"></section>
             </details>
-            <details class="fold" id="behindScenes"><summary title="Live log of what each AI agent saw, decided and did."><span class="mono">Behind the scenes</span><b>What the agents really did</b></summary><div id="behindBody"></div></details>
-            <details class="fold" id="impact"><summary><span class="mono">Why Eklavya</span><b>Built for how Indian students study</b></summary><div id="impactBody"></div></details>
+            <details class="fold" id="behindScenes"><summary title="Live log of what each AI agent saw, decided and did."><span class="mono" data-i18n="pg.behind">Behind the scenes</span><b data-i18n="pg.behindText">What the agents really did</b></summary><div id="behindBody"></div></details>
+            <details class="fold" id="impact"><summary><span class="mono" data-i18n="pg.why">Why Eklavya</span><b data-i18n="pg.whyText">Built for how Indian students study</b></summary><div id="impactBody"></div></details>
           </section>
 
           <!-- MY NOTES -->
           <section id="panel-library" class="panel" role="tabpanel" aria-labelledby="tab-library">
-            <div><p class="mono">Your knowledge, in one place</p><h1 class="page-title">Your library<em>.</em></h1>
+            <div><p class="mono" data-i18n="pg.knowledge">Your knowledge, in one place</p><h1 class="page-title"><span data-i18n="pg.libraryTitle">Your library</span><em data-i18n="punct.stop">.</em></h1>
               <p class="lead" data-i18n="notes.lead">Add a syllabus, PDFs, text files or a photo of a page. Eklavya finds every topic and teaches it.</p></div>
             <div class="drop" id="drop">
               <div><b data-i18n="notes.dropTitle">Drop your notes here</b><p data-i18n="notes.hint">PDF (even scanned), text, or a photo of a page. Up to 10 MB per file.</p></div>
@@ -186,26 +186,26 @@
             <div id="studyIntro">
               <div class="studyhead">
                 <div>
-                  <span class="mono">Your personal study session</span>
-                  <h2>A real conversation<br><em>with your notes.</em></h2>
-                  <p>Talk out loud or type. Every answer comes from the material in your library.</p>
-                  <button class="btn btn-primary" id="startTalk" type="button">Start a voice session ↗</button>
+                  <span class="mono" data-i18n="pg.session">Your personal study session</span>
+                  <h2>A real conversation<br><em data-i18n="pg.withNotes">with your notes.</em></h2>
+                  <p data-i18n="pg.sessionText">Talk out loud or type. Every answer comes from the material in your library.</p>
+                  <button class="btn btn-primary" id="startTalk" type="button" data-i18n="pg.startVoice">Start a voice session ↗</button>
                 </div>
                 <div class="wave" aria-hidden="true">
                   <i style="--bar:30px;--d:0"></i><i style="--bar:58px;--d:.3"></i><i style="--bar:86px;--d:.6"></i><i style="--bar:44px;--d:.9"></i><i style="--bar:96px;--d:.2"></i><i style="--bar:52px;--d:.5"></i><i style="--bar:72px;--d:.8"></i><i style="--bar:36px;--d:.1"></i>
                 </div>
               </div>
-              <div class="section"><div><span class="mono">Pick a topic</span><h2 class="section-title">Where to begin?</h2></div></div>
-              <div class="orbit" id="orbit" role="group" aria-label="Topics you can study. Drag or use the arrow keys to turn."><div class="ring" id="ring"></div><span class="mono orbit-hint" id="orbitHint">Drag to turn · Arrow keys work too</span></div>
-              <div class="section"><div><span class="mono">Choose a way in</span><h2 class="section-title">What would help now?</h2></div></div>
+              <div class="section"><div><span class="mono" data-i18n="pg.pickTopic">Pick a topic</span><h2 class="section-title" data-i18n="pg.begin">Where to begin?</h2></div></div>
+              <div class="orbit" id="orbit" role="group" aria-label="Topics you can study. Drag or use the arrow keys to turn."><div class="ring" id="ring"></div><span class="mono orbit-hint" id="orbitHint" data-i18n="pg.drag">Drag to turn · Arrow keys work too</span></div>
+              <div class="section"><div><span class="mono" data-i18n="pg.wayIn">Choose a way in</span><h2 class="section-title" data-i18n="pg.help">What would help now?</h2></div></div>
               <p class="studyfor mono" id="studyFor" role="status"></p>
               <div class="modes" id="modes">
-                <button class="mode feat" type="button" data-mode="learn"><span class="serif-sm">Learn</span><p>Build an idea from the ground up with an everyday example.</p><span class="mono">Teach · Practise · Recap →</span></button>
-                <button class="mode" type="button" data-mode="test"><span class="serif-sm">Test</span><p>Answer three questions by voice, graded against your notes.</p><span class="mono">Quick check →</span></button>
-                <button class="mode" type="button" data-mode="revise"><span class="serif-sm">Revise</span><p>A short recap board and two questions.</p><span class="mono">5 minutes →</span></button>
-                <button class="mode" type="button" data-mode="viva"><span class="serif-sm">Viva</span><p>Practise explaining an idea the way an examiner asks it.</p><span class="mono">Examiner style →</span></button>
-                <button class="mode" type="button" data-mode="debate"><span class="serif-sm">Debate</span><p>Take a side on a claim and back it with evidence.</p><span class="mono">Argue with evidence →</span></button>
-                <button class="mode" type="button" data-mode="free"><span class="serif-sm">Free talk</span><p>Follow your curiosity across every topic in the library.</p><span class="mono">No fixed agenda →</span></button>
+                <button class="mode feat" type="button" data-mode="learn"><span class="serif-sm" data-i18n="pg.learn">Learn</span><p data-i18n="pg.learnText">Build an idea from the ground up with an everyday example.</p><span class="mono" data-i18n="pg.learnTag">Teach · Practise · Recap →</span></button>
+                <button class="mode" type="button" data-mode="test"><span class="serif-sm" data-i18n="pg.test">Test</span><p data-i18n="pg.testText">Answer three questions by voice, graded against your notes.</p><span class="mono" data-i18n="pg.testTag">Quick check →</span></button>
+                <button class="mode" type="button" data-mode="revise"><span class="serif-sm" data-i18n="pg.revise">Revise</span><p data-i18n="pg.reviseText">A short recap board and two questions.</p><span class="mono" data-i18n="pg.reviseTag">5 minutes →</span></button>
+                <button class="mode" type="button" data-mode="viva"><span class="serif-sm" data-i18n="pg.viva">Viva</span><p data-i18n="pg.vivaText">Practise explaining an idea the way an examiner asks it.</p><span class="mono" data-i18n="pg.vivaTag">Examiner style →</span></button>
+                <button class="mode" type="button" data-mode="debate"><span class="serif-sm" data-i18n="pg.debate">Debate</span><p data-i18n="pg.debateText">Take a side on a claim and back it with evidence.</p><span class="mono" data-i18n="pg.debateTag">Argue with evidence →</span></button>
+                <button class="mode" type="button" data-mode="free"><span class="serif-sm" data-i18n="pg.free">Free talk</span><p data-i18n="pg.freeText">Follow your curiosity across every topic in the library.</p><span class="mono" data-i18n="pg.freeTag">No fixed agenda →</span></button>
               </div>
             </div>
 
@@ -224,7 +224,7 @@
                       <p id="status" class="stage-status">Tap to talk to Eklavya</p>
                       <p class="stage-hint" data-i18n="stage.hint">Headphones work best.</p>
                     </div>
-                    <div class="call-bar-tools"><div id="stageTools" class="stage-tools"></div><button id="btnCallScreen" class="btn btn-secondary btn-sm" type="button" hidden>Full screen call</button></div>
+                    <div class="call-bar-tools"><div id="stageTools" class="stage-tools"></div><button id="btnCallScreen" class="btn btn-secondary btn-sm" type="button" hidden data-i18n="pg.fullScreen">Full screen call</button></div>
                   </div>
                   <div class="stage-text">
                     <p id="debateTag" class="debate-tag" hidden></p>
@@ -246,10 +246,10 @@
                 <section class="convo" aria-labelledby="convo-title">
                   <header class="convo-head"><h3 id="convo-title" data-i18n="convo.title">Conversation</h3><span id="liveTag" class="live-tag" hidden><span class="live-dot" aria-hidden="true"></span>Live</span></header>
                   <div id="chat" class="chat" role="log" aria-live="off" aria-label="Conversation" tabindex="0">
-                    <p class="chat-empty">Try saying: “Mujhe precision aur recall simple example se samjhao”</p>
+                    <p class="chat-empty" data-i18n="pg.trySay">Try saying: “Mujhe precision aur recall simple example se samjhao”</p>
                   </div>
                   <form id="textform" class="composer" autocomplete="off">
-                    <label class="visually-hidden" for="textin">Message to Eklavya</label>
+                    <label class="visually-hidden" for="textin" data-i18n="pg.message">Message to Eklavya</label>
                     <input id="textin" class="field" type="text" placeholder="Or type a message to Eklavya" data-i18n-placeholder="composer.placeholder" disabled>
                     <button id="textsend" class="btn btn-primary" type="submit" disabled data-i18n="composer.send">Send</button>
                   </form>
@@ -261,18 +261,18 @@
 
           <!-- ASK -->
           <section id="panel-ask" class="panel" role="tabpanel" aria-labelledby="tab-ask">
-            <div><p class="mono">No guesswork. Just your material.</p><h1 class="page-title">Ask Eklavya<em>.</em></h1><p class="lead">Answers come from your notes first; quick general questions are answered too.</p></div>
+            <div><p class="mono" data-i18n="pg.noGuess">No guesswork. Just your material.</p><h1 class="page-title"><span data-i18n="pg.askTitle">Ask Eklavya</span><em data-i18n="punct.stop">.</em></h1><p class="lead" data-i18n="pg.askLead">Answers come from your notes first; quick general questions are answered too.</p></div>
             <div class="askgrid">
               <div style="min-width:0"><div id="askChat" class="ask"></div></div>
               <aside class="card" style="align-self:start">
-                <span class="mono">Your sources</span>
-                <h3 class="serif-sm" style="margin:6px 0 10px">What Eklavya can use</h3>
+                <span class="mono" data-i18n="pg.sources">Your sources</span>
+                <h3 class="serif-sm" style="margin:6px 0 10px" data-i18n="pg.canUse">What Eklavya can use</h3>
                 <div id="srcList"></div>
-                <div id="recentWrap" hidden><span class="mono" style="display:block;margin-top:16px">Recent doubts</span><div class="recent" id="recentDoubts"></div></div>
+                <div id="recentWrap" hidden><span class="mono" style="display:block;margin-top:16px" data-i18n="pg.recent">Recent doubts</span><div class="recent" id="recentDoubts"></div></div>
               </aside>
             </div>
             <section class="block" aria-labelledby="h-doubts">
-              <h3 id="h-doubts">Your doubts</h3>
+              <h3 id="h-doubts" data-i18n="pg.doubts">Your doubts</h3>
               <div id="doubts" class="doubts"></div>
             </section>
           </section>
@@ -280,30 +280,30 @@
           <!-- PROGRESS -->
           <section id="panel-progress" class="panel" role="tabpanel" aria-labelledby="tab-progress">
             <div class="panel-head">
-              <div><p class="mono">Progress you can explain</p><h1 class="page-title">The bigger picture<em>.</em></h1><p class="lead">What you understand, what needs work, and how it connects.</p></div>
+              <div><p class="mono" data-i18n="pg.progress">Progress you can explain</p><h1 class="page-title"><span data-i18n="pg.biggerTitle">The bigger picture</span><em data-i18n="punct.stop">.</em></h1><p class="lead" data-i18n="pg.progressText">What you understand, what needs work, and how it connects.</p></div>
               <div id="masteryRing" class="mring"></div>
               <button id="btnPack" class="btn btn-secondary" type="button"></button>
             </div>
             <div id="statTiles" class="stats"></div>
             <div id="mission" class="mission" hidden></div>
 
-            <div class="section"><div><span class="mono">Concept map</span><h2 class="section-title">How your ideas connect.</h2></div></div>
+            <div class="section"><div><span class="mono" data-i18n="pg.map">Concept map</span><h2 class="section-title" data-i18n="pg.mapText">How your ideas connect.</h2></div></div>
             <section class="block wide" aria-labelledby="h-map"><h3 id="h-map" class="visually-hidden" data-i18n="progress.map">How your topics connect</h3><div id="graph3d" class="graph3d" hidden></div><div id="conceptMap" class="concept-map"></div></section>
 
             <div class="two">
-              <section class="card"><span class="mono">Mastery by subject</span><div id="masteryRows"></div></section>
+              <section class="card"><span class="mono" data-i18n="pg.mastery">Mastery by subject</span><div id="masteryRows"></div></section>
               <section class="card"><span class="mono" id="h-mis" data-i18n="progress.mistakes">Misconceptions</span><ul id="alerts" class="list"></ul></section>
             </div>
 
             <div class="splitcta clay">
-              <div><span class="mono">A quick reality check</span><h2>Test the whole deck.</h2><p>Every flashcard in a shuffled order, including the ones you already know. Practice only: it does not change your schedule.</p>
-                <button class="btn btn-primary" id="mockRoundBtn" type="button">Start a mock round ↗</button></div>
+              <div><span class="mono" data-i18n="pg.reality">A quick reality check</span><h2 data-i18n="pg.deck">Test the whole deck.</h2><p data-i18n="pg.deckText">Every flashcard in a shuffled order, including the ones you already know. Practice only: it does not change your schedule.</p>
+                <button class="btn btn-primary" id="mockRoundBtn" type="button" data-i18n="pg.mockStart">Start a mock round ↗</button></div>
               <div class="ppl" aria-hidden="true"><span style="left:10%;top:20%"><i data-icon="user" data-size="24"></i></span><span style="left:45%;top:5%"><i data-icon="user" data-size="24"></i></span><span style="right:8%;top:40%"><i data-icon="user" data-size="24"></i></span><span style="left:28%;bottom:4%"><i data-icon="user" data-size="24"></i></span></div>
             </div>
 
             <div class="progress-grid">
-              <section class="block wide" aria-labelledby="h-badges"><h3 id="h-badges">Badges</h3><div id="badges" class="badges"></div></section>
-              <section class="block wide" aria-labelledby="h-mock"><h3 id="h-mock">Mock exam</h3><div id="mock" class="mock"></div></section>
+              <section class="block wide" aria-labelledby="h-badges"><h3 id="h-badges" data-i18n="pg.badges">Badges</h3><div id="badges" class="badges"></div></section>
+              <section class="block wide" aria-labelledby="h-mock"><h3 id="h-mock" data-i18n="pg.mockExam">Mock exam</h3><div id="mock" class="mock"></div></section>
               <section class="block wide" aria-labelledby="h-chart"><h3 id="h-chart" data-i18n="progress.chart">Mastery over time</h3><div id="chart" class="chart"></div></section>
               <section class="block" aria-labelledby="h-results"><h3 id="h-results" data-i18n="progress.results">Viva and debate results</h3><ul id="results" class="list results"></ul></section>
               <section class="block" aria-labelledby="h-hist"><h3 id="h-hist" data-i18n="progress.recent">Recent answers</h3><ul id="history" class="list history"></ul></section>
@@ -314,26 +314,26 @@
           <!-- FLASHCARDS -->
           <section id="panel-flashcards" class="panel" role="tabpanel" aria-labelledby="tab-flashcards">
             <div class="fc-top">
-              <div><p class="mono">Small repetitions. Long memory.</p><h1 class="page-title">Flashcards<em>.</em></h1><p class="lead">Flip a card and rate it. Eklavya decides when you see it again, and your mastery moves with every rating.</p></div>
+              <div><p class="mono" data-i18n="pg.small">Small repetitions. Long memory.</p><h1 class="page-title"><span data-i18n="pg.cardsTitle">Flashcards</span><em data-i18n="punct.stop">.</em></h1><p class="lead" data-i18n="pg.flip">Flip a card and rate it. Eklavya decides when you see it again, and your mastery moves with every rating.</p></div>
               <div class="fc-actions">
                 <span class="fc-info"><button id="fcInfo" class="icon-btn" type="button" aria-describedby="fcTip" aria-label="How spaced repetition works">?</button>
-                  <span id="fcTip" role="tooltip" class="fc-tip">Got it moves a card to a longer gap. Hard steps it back one box. Again brings it back today. Your schedule is saved with your account.</span></span>
+                  <span id="fcTip" role="tooltip" class="fc-tip" data-i18n="pg.boxesHelp">Got it moves a card to a longer gap. Hard steps it back one box. Again brings it back today. Your schedule is saved with your account.</span></span>
                 <span class="fc-menu"><button id="fcMore" class="icon-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="fcMenu" aria-label="More: reset today's deck, mock round">⋯</button>
-                  <span id="fcMenu" class="fc-menu-pop" hidden><button class="btn btn-secondary" id="resetDeck" type="button">Reset today's deck</button><button class="btn btn-secondary" id="mockRoundBtn2" type="button">Mock round</button></span></span>
+                  <span id="fcMenu" class="fc-menu-pop" hidden><button class="btn btn-secondary" id="resetDeck" type="button" data-i18n="pg.reset">Reset today's deck</button><button class="btn btn-secondary" id="mockRoundBtn2" type="button" data-i18n="pg.mockRound">Mock round</button></span></span>
               </div>
             </div>
             <div class="fcmain" id="fcReview"></div>
             <div id="fcShelf" class="fc-shelf" aria-hidden="true" title="Cards move right when you get them right, so you see them less often. A card you miss goes back to NEW."></div>
-            <p class="hint fc-boxes-help">NEW, 1D, 3D, 7D, 14D, 30D are the boxes. Cards move right when you get them right, so you see them less often. A card you miss goes back to NEW.</p>
-            <div class="lb lb-sr" role="list" aria-label="Cards by box"><div role="listitem"><b>0</b><small>NEW</small></div><div role="listitem"><b>1</b><small>1 DAY</small></div><div role="listitem"><b>2</b><small>3 DAYS</small></div><div role="listitem"><b>3</b><small>7 DAYS</small></div><div role="listitem"><b>4</b><small>14 DAYS</small></div><div role="listitem"><b>5</b><small>30 DAYS</small></div></div>
-            <details class="block fc-decks"><summary id="h-cards"><span data-i18n="progress.cards">Your decks</span> <small class="hint">Make cards from your notes</small></summary><div id="fcDecks" class="flashcards"></div></details>
+            <p class="hint fc-boxes-help" data-i18n="pg.boxes">NEW, 1D, 3D, 7D, 14D, 30D are the boxes. Cards move right when you get them right, so you see them less often. A card you miss goes back to NEW.</p>
+            <div class="lb lb-sr" role="list" aria-label="Cards by box"><div role="listitem"><b>0</b><small data-i18n="pg.new">NEW</small></div><div role="listitem"><b>1</b><small data-i18n="pg.d1">1 DAY</small></div><div role="listitem"><b>2</b><small data-i18n="pg.d3">3 DAYS</small></div><div role="listitem"><b>3</b><small data-i18n="pg.d7">7 DAYS</small></div><div role="listitem"><b>4</b><small data-i18n="pg.d14">14 DAYS</small></div><div role="listitem"><b>5</b><small data-i18n="pg.d30">30 DAYS</small></div></div>
+            <details class="block fc-decks"><summary id="h-cards"><span data-i18n="progress.cards">Your decks</span> <small class="hint" data-i18n="pg.makeCards">Make cards from your notes</small></summary><div id="fcDecks" class="flashcards"></div></details>
           </section>
 
           <!-- STUDY GROUPS -->
           <section id="panel-groups" class="panel" role="tabpanel" aria-labelledby="tab-groups">
-            <div><p class="mono">Learn better, together</p><h1 class="page-title">Your study circle<em>.</em></h1><p class="lead">Share notes, compare progress and challenge a friend.</p></div>
+            <div><p class="mono" data-i18n="pg.together">Learn better, together</p><h1 class="page-title"><span data-i18n="pg.circleTitle">Your study circle</span><em data-i18n="punct.stop">.</em></h1><p class="lead" data-i18n="pg.togetherText">Share notes, compare progress and challenge a friend.</p></div>
             <div id="groupsRoot" class="groups"></div>
-            <section class="block" aria-labelledby="h-challenge"><h3 id="h-challenge">Challenge a friend</h3><div id="challenge" class="challenge"></div></section>
+            <section class="block" aria-labelledby="h-challenge"><h3 id="h-challenge" data-i18n="pg.challenge">Challenge a friend</h3><div id="challenge" class="challenge"></div></section>
           </section>
         </main>
       </div>
@@ -352,7 +352,7 @@
     </nav>
   </div>
 
-  <dialog id="about" class="auth about" aria-labelledby="about-title"><div class="about-head"><h2 id="about-title" class="serif-sm">About Eklavya</h2><button id="aboutClose" class="icon-btn" type="button" aria-label="Close">×</button></div><div id="aboutBody"></div></dialog>
+  <dialog id="about" class="auth about" aria-labelledby="about-title"><div class="about-head"><h2 id="about-title" class="serif-sm" data-i18n="pg.aboutTitle">About Eklavya</h2><button id="aboutClose" class="icon-btn" type="button" aria-label="Close">×</button></div><div id="aboutBody"></div></dialog>
   <dialog id="auth" class="auth"></dialog>
   <dialog id="account" class="auth account"></dialog>
   <dialog id="command" class="command" aria-label="Command menu"></dialog>

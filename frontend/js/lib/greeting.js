@@ -17,8 +17,8 @@ const WORDS = { late: 'Up late', morning: 'Good morning', afternoon: 'Good after
 export const greetingFor = (date = new Date()) => WORDS[dayPart(date.getHours())];
 
 /** "MONDAY, NOVEMBER 02 · A LITTLE PROGRESS ADDS UP" (the mono label above the greeting). */
-export function dateLine(date = new Date(), locale = 'en-US') {
-  return `${date.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: '2-digit' }).toUpperCase()} · A LITTLE PROGRESS ADDS UP`;
+export function dateLine(date = new Date(), locale = 'en-US', tail = 'A LITTLE PROGRESS ADDS UP') {
+  return `${date.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: '2-digit' }).toUpperCase()} · ${tail}`;
 }
 
 /** One capital letter for the round avatar; "E" when there is no name yet. */

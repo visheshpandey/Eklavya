@@ -4,6 +4,9 @@
 // Static labels in index.html carry data-i18n="key" (text) or data-i18n-placeholder / data-i18n-label (attributes);
 // components call t(key, language, values).
 
+import { PAGE_EN, PAGE_HI } from './strings-page.js';
+import { SCREENS_EN, SCREENS_HI } from './strings-screens.js';
+
 const EN = {
   'tab.today': 'Today', 'tab.notes': 'My notes', 'tab.study': 'Study room', 'tab.progress': 'Progress', 'tab.ask': 'Ask Eklavya', 'tab.groups': 'Study groups', 'tab.flashcards': 'Flashcards',
   'm.today': 'Today', 'm.notes': 'Notes', 'm.study': 'Study', 'm.ask': 'Ask', 'm.cards': 'Cards', 'm.progress': 'Progress', 'm.groups': 'Groups',
@@ -161,6 +164,9 @@ const HI = {
   'err.need_topic': 'पहले अपने नोट्स से एक टॉपिक चुनें।', 'err.generic': 'आवाज़ सत्र में कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।',
   'photo.sent': 'आपने एक फ़ोटो भेजी', 'photo.noCall': 'पहले बातचीत शुरू करें, फिर एकलव्य को फ़ोटो दिखाएँ।',
 };
+
+Object.assign(EN, PAGE_EN, SCREENS_EN);
+Object.assign(HI, PAGE_HI, SCREENS_HI);
 
 const TABLES = { english: EN, hinglish: EN, hindi: HI };
 
