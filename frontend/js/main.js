@@ -86,6 +86,7 @@ import { createTour } from './components/tour.js';
 import { TOUR_STEPS, demoLoadedMessage, markTourSeen, pickDemoTopic, shouldAutoTour, tourSeen } from './lib/first-visit.js';
 import { mountImpact } from './components/impact-view.js';
 import { mountFeedbackCard } from './components/feedback-card.js';
+import { sessionIsOver } from './lib/feedback-gate.js';
 import { mountBehindScenes } from './components/behind-scenes.js';
 import { isLite, setLite } from './motion/env.js';
 import { mountAvatar } from './components/avatar.js';
@@ -119,8 +120,10 @@ const headphoneTip = mountHeadphoneTip({ root: byId('headphoneTip') });
 const voiceNote = mountVoiceNote({ root: byId('voiceNote'), isReady: () => Boolean(voiceClient?.standbyReady), isBusy: () => selectSessionActive(store.getState()), onText: () => session.useText() });
 store.select(selectView, (view) => { if (view === VIEWS.STUDY) headphoneTip.show(); });
 const guideMark = (id) => document.dispatchEvent(new CustomEvent('eklavya:guide', { detail: id }));
-const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(answers) });
+const feedback = mountFeedbackCard({ send: (answers) => backend.sendFeedback(answers), canShow: () => sessionIsOver(store.getState()) });
 document.addEventListener('eklavya:mastery', () => feedback.count());   // a flashcard rating
+store.select(sessionIsOver, (over) => { if (over) feedback.sessionEnded(); });   // opens only after a test or a call, never mid-quiz
+store.select(selectView, () => feedback.sessionEnded());   // flashcard ratings: after leaving the deck, not over a card
 const notes = createNotesController({ store, backend, notifier, userId: USER_ID, endSession: () => session.stop(),
   onUploaded: (result, name) => showAfterUpload(result.topics_found?.[0], name) });
 session = createSessionController({ store, notes, notifier, userId: USER_ID, getLanguage: () => byId('lang').value, getTutor: () => byId('tutor').value, backend,

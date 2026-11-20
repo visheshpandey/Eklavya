@@ -1,8 +1,9 @@
-// Three quick questions, asked once after a few answers or flashcards. The answers feed the "What students said" line on Why Eklavya.
+// Three quick questions, asked once after a few answers or flashcards, when a session has ended (never over a question on screen).
+// The answers feed the "What students said" line on Why Eklavya.
 import { el, render } from '../lib/dom.js';
+import { createFeedbackGate } from '../lib/feedback-gate.js';
 
 const KEY = 'eklavya.feedback';
-const NEEDED = 4;   // answers or card ratings before the card appears
 
 const QUESTIONS = [
   { id: 'easier', text: 'Was the explanation easier than your textbook?', options: [['yes', 'Yes'], ['same', 'About the same'], ['no', 'No']] },
@@ -10,11 +11,13 @@ const QUESTIONS = [
   { id: 'rating', text: 'How would you rate Eklavya?', options: [[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']] },
 ];
 
-/** @returns {{count: () => void}} call count() for every answer or card rating; the card shows itself once enough have happened. */
-export function mountFeedbackCard({ send, storage = globalThis.localStorage, root = document.body }) {
+/**
+ * @returns {{count: () => void, sessionEnded: () => void}} call count() for every answer or card rating, and sessionEnded() when a test
+ * finishes or a call ends: the card opens then, once enough answers have happened and `canShow()` agrees.
+ */
+export function mountFeedbackCard({ send, storage = globalThis.localStorage, root = document.body, canShow = () => true }) {
   const remembered = () => { try { return storage.getItem(KEY); } catch { return null; } };
   const remember = (value) => { try { storage.setItem(KEY, value); } catch { /* the card may come back next visit, which is fine */ } };
-  let seen = 0;
   let card = null;
 
   function open() {
@@ -46,11 +49,6 @@ export function mountFeedbackCard({ send, storage = globalThis.localStorage, roo
     setTimeout(() => note.remove(), 3500);
   }
 
-  return {
-    count() {
-      if (remembered() || card) return;
-      seen += 1;
-      if (seen >= NEEDED) open();
-    },
-  };
+  const gate = createFeedbackGate({ done: () => Boolean(remembered() || card), canShow, open });
+  return { count: gate.count, sessionEnded: gate.sessionEnded };
 }
