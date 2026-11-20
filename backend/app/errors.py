@@ -68,6 +68,16 @@ class TooManyRequestsError(AppError):
     code = "too_many_requests"
 
 
+class RateLimitedError(TooManyRequestsError):
+    """Too many Gemini-backed calls in a minute; ``retry_after`` (seconds) goes out as the Retry-After header."""
+
+    code = "rate_limited"
+
+    def __init__(self, message: str, retry_after: int = 60):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
 class LLMError(AppError):
     """Gemini failed (network, quota, timeout, or unusable output after one retry)."""
 
@@ -84,7 +94,8 @@ def register_error_handlers(app: FastAPI) -> None:
     async def _app_error(_: Request, exc: AppError):
         if exc.status_code >= 500:
             log.warning("%s: %s", exc.code, exc)
-        return JSONResponse(status_code=exc.status_code, content=_body(str(exc), exc.code))
+        headers = {"Retry-After": str(exc.retry_after)} if isinstance(exc, RateLimitedError) else None
+        return JSONResponse(status_code=exc.status_code, content=_body(str(exc), exc.code), headers=headers)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError):

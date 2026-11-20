@@ -3,13 +3,14 @@ from fastapi import APIRouter
 
 from app import auth
 from app.agents import mock_exam
+from app.api.limits import limited
 from app.api.schemas import MockExamStart, MockExamSubmit
 
 router = APIRouter()
 
 
 @router.post("/api/mock-exam/start")
-def start(req: MockExamStart, user_id: int = auth.CurrentUser):
+def start(req: MockExamStart, user_id: int = auth.CurrentUser, _: None = limited("generate")):
     return mock_exam.start(user_id, req.count, req.minutes)
 
 

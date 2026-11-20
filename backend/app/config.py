@@ -69,6 +69,7 @@ class Settings:
     log_level: str
     max_upload_mb: int
     daily_voice_minutes: int     # voice time per student per day; protects the Gemini quota and caps the cost
+    rate_limit_per_minute: int   # Ask, quiz/flashcard/mock generation and voice starts per student (or address) per minute; 0 = off
     # --- storage / data
     db_path: Path
     database_url: str           # postgresql://... : use Postgres (Neon) instead of the SQLite file at db_path
@@ -109,6 +110,7 @@ class Settings:
             log_level=_str("LOG_LEVEL", "INFO").upper(),
             max_upload_mb=_int("MAX_UPLOAD_MB", 10, minimum=1),
             daily_voice_minutes=_int("DAILY_VOICE_MINUTES", 20, minimum=1),
+            rate_limit_per_minute=_int("RATE_LIMIT_PER_MINUTE", 20),
             database_url=_str("DATABASE_URL"),
             db_schema=_str("DB_SCHEMA"),
             db_path=Path(_str("DB_PATH") or BACKEND_DIR / "data" / "eklavya.db"),

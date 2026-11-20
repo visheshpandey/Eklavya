@@ -6,6 +6,7 @@ from app import auth
 from fastapi.concurrency import run_in_threadpool
 
 from app.agents import flashcards
+from app.api.limits import limited
 from app.api.schemas import FlashcardReviewRequest, FlashcardsRequest
 from app.services.progress_data import local_today
 
@@ -18,7 +19,7 @@ def list_cards(user_id: int = auth.CurrentUser, topic_id: int | None = None):
 
 
 @router.post("/api/flashcards/generate")
-async def generate_cards(req: FlashcardsRequest, user_id: int = auth.CurrentUser):
+async def generate_cards(req: FlashcardsRequest, user_id: int = auth.CurrentUser, _: None = limited("generate")):
     # calls Gemini (blocking): keep it off the event loop that also serves the voice WebSocket
     return {"cards": await run_in_threadpool(flashcards.generate, user_id, req.topic_id)}
 

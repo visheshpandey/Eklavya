@@ -3,13 +3,14 @@ from fastapi import APIRouter
 
 from app import auth
 from app.agents import evaluation, quiz
+from app.api.limits import limited
 from app.api.schemas import QuizGenerateRequest, QuizSubmitRequest
 
 router = APIRouter()
 
 
 @router.post("/api/quiz/generate")
-def quiz_generate(req: QuizGenerateRequest, user_id: int = auth.CurrentUser):
+def quiz_generate(req: QuizGenerateRequest, user_id: int = auth.CurrentUser, _: None = limited("generate")):
     return {"questions": quiz.generate(user_id, req.topic_id, req.count, req.difficulty)}
 
 

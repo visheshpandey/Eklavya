@@ -19,3 +19,5 @@ def _fresh_sign_in_limits():
     """Every test starts with no sign-in attempts counted (the limits are per process)."""
     from app import accounts
     accounts.reset_limits()
+    from app.services import rate_limit
+    rate_limit.reset()

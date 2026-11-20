@@ -23,6 +23,9 @@ let guestRequest = null;
 let guestRetryMs = 1500;
 /** (for tests) how long to wait between the 3 tries of creating a guest */
 export const setGuestRetryMs = (ms) => { guestRetryMs = ms; };
+let rateLimited = () => {};
+/** Called with {message, waitSeconds} when the server says the student is going too fast (429 rate_limited): main.js shows a toast. */
+export const onRateLimited = (handler) => { rateLimited = handler; };
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * Every browser that is not signed in gets its own private guest before its FIRST call (the login screen's calls too), so nothing it asks
@@ -70,6 +73,9 @@ async function request(path, { method = 'GET', json, form } = {}) {
     if (getToken()) signOut();   // a login ran out: back to the login screen
     else saveGuestToken(null);   // an old guest was cleared: this browser simply starts as a new one
     globalThis.location?.reload();
+  }
+  if (response.status === 429 && data?.code === 'rate_limited') {
+    rateLimited({ message: data.error, waitSeconds: Number(response.headers?.get?.('retry-after')) || 60 });
   }
   if (!response.ok) {
     throw new ApiError(data?.error || ([502, 503, 504].includes(response.status) ? MESSAGES.slow : `Request failed (${response.status})`),

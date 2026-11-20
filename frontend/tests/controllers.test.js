@@ -7,7 +7,7 @@ import { initialState, reducer } from '../js/state/reducer.js';
 import { createNotifier, describeError } from '../js/controllers/notifier.js';
 import { createNotesController } from '../js/controllers/notes-controller.js';
 import { createSessionController } from '../js/controllers/session-controller.js';
-import { ApiError, backend } from '../js/services/api-client.js';
+import { ApiError, backend, onRateLimited } from '../js/services/api-client.js';
 
 function setup({ backendOverrides = {} } = {}) {
   const store = createStore(reducer, initialState);
@@ -281,4 +281,14 @@ test('api client: deleteDocument sends DELETE to the document url', async () => 
   assert.deepEqual(await backend.deleteDocument(7, 1), { deleted: 7 });
   assert.match(seen.url, /\/api\/documents\/7\?user_id=1$/);
   assert.equal(seen.method, 'DELETE');
+});
+
+test('api client: a 429 rate_limited answer is reported once for a toast and still rejects with the friendly message', async () => {
+  const seen = [];
+  onRateLimited((info) => seen.push(info));
+  mockFetch({ ...jsonResponse(429, { error: 'You are going a little fast. Please wait 12 seconds and try again.', code: 'rate_limited' }),
+    headers: { get: (name) => (name === 'retry-after' ? '12' : null) } });
+  await assert.rejects(backend.ask('hi', 'english'), (err) => err.status === 429 && err.code === 'rate_limited' && /a little fast/.test(err.message));
+  assert.deepEqual(seen, [{ message: 'You are going a little fast. Please wait 12 seconds and try again.', waitSeconds: 12 }]);
+  onRateLimited(() => {});
 });

@@ -109,11 +109,12 @@ raise `ConfigError` at startup. Settings are listed in `backend/.env.example`:
 | `HOST`, `PORT`, `RELOAD` | `0.0.0.0`, `5000`, `false` | used by `python main.py` |
 | `CORS_ORIGINS` | `*` | comma-separated allowed origins |
 | `LOG_LEVEL`, `MAX_UPLOAD_MB` | `INFO`, `10` | |
+| `RATE_LIMIT_PER_MINUTE` | `20` | Ask, quiz/flashcard/mock-exam generation and voice starts per student (or address) per minute; over it: 429 `rate_limited` with `Retry-After`; 0 = off |
 | `APP_TIMEZONE` | `Asia/Kolkata` | the calendar for "today" when the browser does not send its zone |
 | `DB_PATH`, `SAMPLES_DIR`, `DEMO_USER_ID` | `data/eklavya.db`, `../samples`, `1` | |
 
 **Errors:** raise from `app/errors.py`: `BadRequestError` (400), `NotFoundError` (404),
-`PayloadTooLargeError` (413), `LLMError` (502). One handler turns every failure, including validation
+`PayloadTooLargeError` (413), `RateLimitedError` (429, `app/services/rate_limit.py`), `LLMError` (502). One handler turns every failure, including validation
 (422) and unexpected exceptions (500, details logged, never sent to the client), into
 `{"error": "<message>", "code": "<machine_code>"}`. Database writes roll back on error. The live
 session reports problems to the browser as `{"type": "error", "message": ...}` and never crashes.
@@ -244,7 +245,7 @@ never breaks an older page.
 | `interrupted`, `turn_complete` | no fields |
 | `session` | `id`: a token for picking this call up again if the browser's connection drops (send it back as `&resume=<id>`; valid once, for the same student, for 10 minutes) |
 | `reconnecting` | `attempt`: Gemini's side dropped and the server is retrying by itself, telling the tutor where the lesson was |
-| `error` | `code`, `retryable`, `message` (English fallback). Codes: `upstream_unavailable`, `quota`, `not_configured`, `session_limit`, `bad_photo`, `need_notes`, `need_topic`. The browser writes its own text per code (`err.<code>` in strings.js) and never shows provider text. `retryable` shows "Connection lost. Reconnect?". |
+| `error` | `code`, `retryable`, `message` (English fallback). Codes: `upstream_unavailable`, `quota`, `not_configured`, `session_limit`, `bad_photo`, `need_notes`, `need_topic`, `rate_limited`. The browser writes its own text per code (`err.<code>` in strings.js) and never shows provider text. `retryable` shows "Connection lost. Reconnect?". |
 | `connection_lost` | made by the browser's voice client, not the server: the socket closed without the student ending the call |
 
 Audio chunks are about 20 to 40 ms. There is one demo student, `user_id = 1`, and no login.

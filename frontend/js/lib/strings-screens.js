@@ -92,6 +92,8 @@ export const SCREENS_EN = {
   'ask.strong': 'From your notes',
   'ask.partial': 'Partial match',
   'ask.none': 'Not in your notes',
+  'toast.rateLimited': 'You are going a little fast. Please wait {wait} seconds and try again.',
+  'err.rate_limited': 'You are starting sessions a little fast. Please wait a minute and try again.',
   'ask.tooLong': 'Your question is too long. Please keep it under {max} characters.',
 };
 
@@ -186,5 +188,7 @@ export const SCREENS_HI = {
   'ask.strong': 'आपके नोट्स से',
   'ask.partial': 'आंशिक मिलान',
   'ask.none': 'आपके नोट्स में नहीं',
+  'toast.rateLimited': 'आप थोड़ा तेज़ चल रहे हैं। कृपया {wait} सेकंड रुककर फिर कोशिश करें।',
+  'err.rate_limited': 'आप सत्र थोड़ा जल्दी-जल्दी शुरू कर रहे हैं। कृपया एक मिनट रुककर फिर कोशिश करें।',
   'ask.tooLong': 'आपका सवाल बहुत लंबा है। कृपया इसे {max} अक्षरों से कम रखें।',
 };

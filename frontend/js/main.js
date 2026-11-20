@@ -11,7 +11,7 @@ import { mountStudyFocus } from './components/study-focus.js';
 import { loadTheme } from './lib/theme.js';
 import { createSound, loadSound, saveSound } from './lib/sound.js';
 import { initialOf } from './lib/greeting.js';
-import { backend } from './services/api-client.js';
+import { backend, onRateLimited } from './services/api-client.js';
 import { shrinkPhoto } from './services/photo.js';
 import { VoiceClient } from './services/voice-client.js';
 import { createStore } from './state/store.js';
@@ -112,6 +112,7 @@ store.select(selectCaptions, (on) => saveCaptions(on));
 byId('lang').value = selectLanguage(store.getState());            // the selector shows the remembered language
 store.select(selectLanguage, (language) => { saveLanguage(language); byId('lang').value = language; });
 const notifier = createNotifier(store);
+onRateLimited(({ waitSeconds }) => notifier.toast('bad', t('toast.rateLimited', selectLanguage(store.getState()), { wait: waitSeconds })));   // 429: a friendly toast, in the interface language
 const home = createHomeController({ store, backend, notifier, userId: USER_ID, onMastery: () => notes?.refresh() });   // a rating changes mastery: reload it everywhere
 
 let session;   // the notes controller needs to end a session; the session controller needs the notes controller
