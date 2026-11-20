@@ -92,6 +92,7 @@ export const SCREENS_EN = {
   'ask.strong': 'From your notes',
   'ask.partial': 'Partial match',
   'ask.none': 'Not in your notes',
+  'ask.tooLong': 'Your question is too long. Please keep it under {max} characters.',
 };
 
 export const SCREENS_HI = {
@@ -185,4 +186,5 @@ export const SCREENS_HI = {
   'ask.strong': 'आपके नोट्स से',
   'ask.partial': 'आंशिक मिलान',
   'ask.none': 'आपके नोट्स में नहीं',
+  'ask.tooLong': 'आपका सवाल बहुत लंबा है। कृपया इसे {max} अक्षरों से कम रखें।',
 };

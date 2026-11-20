@@ -15,6 +15,21 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 log = logging.getLogger(__name__)
 
+FIELD_NAMES = {"question": "Your question", "text": "Your message", "note": "Your note", "motion": "The motion", "name": "The name"}
+
+
+def validation_message(errors) -> str:
+    """A specific sentence for the first problem a student can fix (a question that is too long or empty); a generic one otherwise."""
+    for e in errors:
+        field = str(e.get("loc", ["", ""])[-1])
+        what = FIELD_NAMES.get(field)
+        if e.get("type") == "string_too_long":
+            limit = (e.get("ctx") or {}).get("max_length")
+            return f"{what or 'This text'} is too long. Please keep it under {limit} characters."
+        if e.get("type") in ("string_too_short", "missing") and field == "question":
+            return "Please type a question first."
+    return "The request was not valid."
+
 
 class AppError(Exception):
     """Base class: an expected failure with a safe, user-facing message."""
@@ -74,7 +89,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError):
         fields = [{"field": ".".join(str(p) for p in e["loc"][1:]), "problem": e["msg"]} for e in exc.errors()]
-        return JSONResponse(status_code=422, content=_body("The request was not valid.", "invalid_request", fields=fields))
+        return JSONResponse(status_code=422, content=_body(validation_message(exc.errors()), "invalid_request", fields=fields))
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException):

@@ -182,6 +182,9 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .askbox textarea::placeholder { color: var(--ink-3); }
 .cbot { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; flex-wrap: wrap; }
 .cbot small { color: var(--ink-3); font-size: 13px; }
+.cbot .ask-count { font: 500 13px var(--font-mono); color: var(--ink-2); margin-left: auto; }
+.cbot .ask-count.over { color: var(--bad-text); font-weight: 700; }
+.cbot .ask-count[hidden] { display: none; }
 .err { color: var(--accent-text); font-size: 13px; min-height: 18px; margin-top: 6px; }
 .answer { margin-top: 12px; padding: 18px; background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-panel); animation: rise .35s ease; display: grid; gap: 4px; }
 #answer .answer { scroll-margin-top: calc(var(--topbar, 64px) + 16px); }

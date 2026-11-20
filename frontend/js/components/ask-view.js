@@ -12,6 +12,7 @@ import { createDictation } from '../lib/dictation.js';
 import { isGeneral, matchLabel } from '../lib/match-label.js';
 import { reveal } from '../lib/reveal.js';
 import { t } from '../lib/strings.js';
+import { ASK_MAX, charCount } from '../lib/char-count.js';
 
 const KIND_ICON = { pdf: 'file-pdf', text: 'file-text', photo: 'image', link: 'globe', youtube: 'youtube-logo' };
 
@@ -82,12 +83,20 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
   }
 
   function drawChat() {
-    const input = el('textarea', { id: 'ask-input', placeholder: tr('ask.placeholder'), 'aria-label': tr('ask.label'), maxlength: '2000', disabled: busy ? '' : null });
+    const input = el('textarea', { id: 'ask-input', placeholder: tr('ask.placeholder'), 'aria-label': tr('ask.label'), 'aria-describedby': 'ask-count', disabled: busy ? '' : null });
     input.value = draft;
-    input.addEventListener('input', () => { draft = input.value; if (error) { error = ''; chatRoot.querySelector('.err').textContent = ''; } });
+    const counter = el('small', { id: 'ask-count', class: 'ask-count', 'aria-live': 'polite' });
+    const paintCount = () => {
+      const count = charCount(input.value.length);
+      counter.hidden = !count.show;
+      counter.textContent = count.text;
+      counter.classList.toggle('over', count.over);
+    };
+    paintCount();
+    input.addEventListener('input', () => { draft = input.value; paintCount(); if (error) { error = ''; chatRoot.querySelector('.err').textContent = ''; } });
     input.addEventListener('keydown', (event) => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) form.requestSubmit(); });
     const form = el('form', { class: 'askbox', id: 'askForm' }, input,
-      el('div', { class: 'cbot' }, el('small', { text: tr('ask.hint') }),
+      el('div', { class: 'cbot' }, el('small', { text: tr('ask.hint') }), counter,
         el('div', { class: 'cact' },
           dictation.available() ? el('button', { id: 'ask-mic', class: 'btn btn-secondary ask-mic', type: 'button', 'aria-pressed': String(listening),
             'aria-label': listening ? 'Stop listening' : 'Speak your question', disabled: busy ? '' : null,
@@ -98,6 +107,7 @@ export function mountAsk({ chatRoot, listRoot, sourcesRoot, recentRoot, recentWr
       dictation.stop();
       const question = input.value.trim();
       if (!question) { error = tr('ask.empty'); chatRoot.querySelector('.err').textContent = error; input.focus(); return; }
+      if (question.length > ASK_MAX) { error = tr('ask.tooLong', { max: ASK_MAX.toLocaleString('en-IN') }); chatRoot.querySelector('.err').textContent = error; input.focus(); return; }
       if (busy) return;
       run(question);
     });

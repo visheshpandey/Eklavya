@@ -55,3 +55,16 @@ def test_an_answer_from_the_notes_still_cites_them(guest, monkeypatch):
     (False, False, False, True), (True, True, False, False), (None, True, False, True), (None, False, False, False), (False, True, True, False)])
 def test_is_general(used, unrelated, outline, expected):
     assert voice_tutor.is_general(used, unrelated, outline) is expected
+
+
+def test_a_too_long_question_gets_a_specific_message(guest):
+    _, headers = guest
+    res = client.post("/api/tutor/ask", headers=headers, json={"question": "x" * 2001, "language": "english"})
+    assert res.status_code == 422
+    assert res.json()["error"] == "Your question is too long. Please keep it under 2000 characters."
+
+
+def test_other_bad_requests_keep_the_generic_message(guest):
+    _, headers = guest
+    res = client.post("/api/tutor/ask", headers=headers, json={"question": "hi", "document_id": "not a number"})
+    assert res.status_code == 422 and res.json()["error"] == "The request was not valid."
