@@ -17,6 +17,7 @@ import time
 from google import genai
 from google.genai import types
 
+from app.ai import prompts
 from app.config import settings
 from app.errors import LLMError
 from app.services import usage
@@ -48,6 +49,11 @@ def _parse_json(raw: str) -> dict:
     return json.loads(text)
 
 
+def guarded(system: str) -> str:
+    """Every text prompt ends with the prompt-safety rule (prompts/prompt_safety.md): instructions are never revealed."""
+    return f"{system}\n\n{prompts.load('prompt_safety.md')}"
+
+
 def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float = 0.7, timeout_ms: int | None = None) -> dict:
     """Call Gemini in JSON mode and validate the keys.
 
@@ -67,7 +73,7 @@ def call_llm_json(system: str, prompt: str, required_keys=(), temperature: float
                 model=settings.gemini_model,
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=system,
+                    system_instruction=guarded(system),
                     response_mime_type="application/json",
                     temperature=temperature,
                     http_options=types.HttpOptions(timeout=timeout_ms) if timeout_ms else None,
@@ -156,6 +162,9 @@ ARTICLE_PROMPT = ("Below is the text of a web page. Turn its study content into 
                   "subject. Only use what the page says. If it has no study content, answer exactly: NO_TEXT\n\n")
 
 
+READ_SYSTEM = "You copy the text of study material exactly, as the request below asks."
+
+
 def _read(contents, what: str, busy_message: str) -> str:
     """One multimodal call that returns plain text, with the same retries as the JSON calls. Raises ``LLMError``."""
     last_error = "unknown error"
@@ -163,7 +172,7 @@ def _read(contents, what: str, busy_message: str) -> str:
         try:
             response = _get_client().models.generate_content(
                 model=settings.gemini_model, contents=contents,
-                config=types.GenerateContentConfig(temperature=0.1, http_options=types.HttpOptions(timeout=settings.gemini_long_timeout_ms)),
+                config=types.GenerateContentConfig(system_instruction=guarded(READ_SYSTEM), temperature=0.1, http_options=types.HttpOptions(timeout=settings.gemini_long_timeout_ms)),
             )
             text = (response.text or "").strip()
             return "" if text == "NO_TEXT" else text

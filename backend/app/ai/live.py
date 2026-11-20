@@ -166,7 +166,8 @@ def build_system_prompt(language: str, topics: list, mode: str = "free", focus_t
             .replace("{{SESSION_PLAN}}", plan)
             + (f"\n\n# Your personality in this session\n{TUTORS.get(tutor, TUTORS['mentor'])['style']}\n"
                if persona == "persona_eklavya.md" else "")
-            + "\n\n" + rules)
+            + "\n\n" + rules
+            + "\n\n" + prompts.load("prompt_safety.md"))
 
 
 def voice_for(tutor: str) -> str:

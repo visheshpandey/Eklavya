@@ -9,7 +9,7 @@ import time
 from app import db
 from app.agents.logger import log_agent
 from app.ai.gemini import llm_json
-from app.domain import language_check, retrieval
+from app.domain import language_check, prompt_guard, retrieval
 from app.errors import BadRequestError, LLMError
 from app.services import usage
 from app.services.search import search
@@ -107,6 +107,9 @@ def _write(prompt: str, language: str, question: str = "") -> dict:
                      required_keys=("answer", "follow_up_question"), temperature=0.3)
         d["answer"] = language_check.clean(d["answer"], language)
         d["follow_up_question"] = language_check.clean(d["follow_up_question"], language)
+    if prompt_guard.leaks(question, f"{d['answer']} {d['follow_up_question']}"):   # it talked about its instructions or format
+        log.warning("Ask answer talked about its instructions; showing the decline instead")
+        d = {**prompt_guard.decline(language), "used_notes": False}
     return d
 
 
