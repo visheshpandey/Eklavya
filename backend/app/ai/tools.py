@@ -247,7 +247,7 @@ async def ask_quiz_question(ctx: ToolContext, topic: str = None, **_):
                 "message": "No more questions on this topic." + (" Give the spoken summary now." if focused else "")}
     ctx.asked_ids.append(q["question_id"])
     ctx.current_question_id = q["question_id"]
-    number = len(ctx.asked_ids)
+    number = min(len(ctx.results) + 1, ctx.test_total) if focused else len(ctx.asked_ids)   # never "Question 4 of 3"
     ctx.current_question = {"question": q["question"], "options": q["options"], "number": number}
     if focused:
         if number == 1:

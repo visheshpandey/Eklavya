@@ -1,6 +1,7 @@
 // Text mode: the same lesson and test, by typing and tapping, using the ordinary (non-Live) endpoints. It takes over when the voice would not
 // connect, stalled, or has no microphone, so a student (or a judge with no mic) can always finish a test: Q1, Q2, Q3, then the summary.
 // It speaks the live server's own event language through `emit`, so the question card, the stepper, the summary and the toasts work unchanged.
+import { questionNumber } from '../lib/question-count.js';
 import { feedbackLimitMs, feedbackMs } from '../lib/feedback-timing.js';
 import { createAutoAdvance } from '../lib/auto-advance.js';
 import { cancel as defaultCancel, schedule as defaultSchedule } from '../lib/timers.js';
@@ -72,9 +73,10 @@ export function createTextSession({ store, backend, emit, notifier, getLanguage,
       const question = queue.shift();
       if (!question) { say('There are no more questions on this topic.'); finish(); return; }
       asked.push(question.question_id);
-      if (asked.length === 1) emit({ type: 'phase', phase: 'test', topic: question.topic });
-      emit({ type: 'quiz_question', ...question, number: asked.length, total });
-      say(`Question ${asked.length} of ${total}. Tap an option, or type A, B, C or D.`);
+      if (!results.length && asked.length === 1) emit({ type: 'phase', phase: 'test', topic: question.topic });
+      const number = questionNumber(results.length, total);   // answered + 1: a question skipped or carried over unanswered does not count
+      emit({ type: 'quiz_question', ...question, number, total });
+      say(`Question ${number} of ${total}. Tap an option, or type A, B, C or D.`);
     } catch (err) {
       notifier.error(err);
       say('I could not load the next question. Tap "Next question" to try again.');

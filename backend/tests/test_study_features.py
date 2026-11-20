@@ -552,3 +552,24 @@ def test_a_scanned_pdf_or_link_that_gemini_cannot_read_never_shows_provider_text
     with pytest.raises(LLMError) as err:
         gemini.read_pdf(b"%PDF-1.4")
     assert "INTERNAL" not in str(err.value) and "{" not in str(err.value)
+
+
+def test_the_question_counter_never_passes_the_total():
+    """A resumed call can carry a question that was shown but never graded: the counter still counts answers, never "Question 4 of 3"."""
+    from app.ai import tools
+    import asyncio
+    prec = topic_id("Precision")
+    emitted = []
+    ctx = make_ctx(prec, emitted)
+    ctx.asked_ids = [-1, -2]                      # two questions shown in an earlier call, never graded
+    numbers = []
+    for _ in range(3):
+        q = asyncio.run(tools.ask_quiz_question(ctx))
+        assert q["available"], q
+        numbers.append(q["question_number"])
+        right = db.one("SELECT correct FROM quiz_questions WHERE id = ?", (ctx.current_question_id,))["correct"]
+        graded(ctx, right, ctx.current_question_id)
+    assert numbers == [1, 2, 3]
+    assert all(e["number"] <= e["total"] for e in emitted if e["type"] == "quiz_question")
+    after = asyncio.run(tools.ask_quiz_question(ctx))   # the session ends after the last question
+    assert after["available"] is False and after["test_complete"] is True

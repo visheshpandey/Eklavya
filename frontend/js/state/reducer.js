@@ -1,4 +1,5 @@
 // The one pure function that decides how state changes. No DOM, no network, no timers: easy to test.
+import { clampQuestion } from '../lib/question-count.js';
 import { ActionType as A } from './actions.js';
 import { LANGUAGES, VOICE_STATUS, SESSION_MODE } from '../lib/protocol.js';
 
@@ -188,7 +189,7 @@ export function reducer(state, action) {
     case A.PHASE_CHANGED:
       return withSession(state, { phase: { phase: payload.phase, topic: payload.topic, ...(payload.side ? { side: payload.side, motion: payload.motion } : {}) } });
     case A.QUESTION_ASKED:
-      return withSession(state, { question: payload, result: null, summary: null });
+      return withSession(state, { question: clampQuestion(payload), result: null, summary: null });
     case A.ANSWER_GRADED:
       return withSession(state, { result: payload });
     case A.TEST_SUMMARIZED:
