@@ -107,6 +107,7 @@ raise `ConfigError` at startup. Settings are listed in `backend/.env.example`:
 | `GEMINI_TIMEOUT_MS` | `30000` | a slow call becomes a 502 |
 | `LIVE_VOICE`, `LIVE_AFFECTIVE_DIALOG`, `SESSION_CAP_SECONDS` | `Kore`, `false`, `840` | live session |
 | `HOST`, `PORT`, `RELOAD` | `0.0.0.0`, `5000`, `false` | used by `python main.py` |
+| `ENABLE_DOCS` | `false` | serve `/docs`, `/redoc` and `/openapi.json` (keep off in production) |
 | `CORS_ORIGINS` | `*` | comma-separated allowed origins |
 | `LOG_LEVEL`, `MAX_UPLOAD_MB` | `INFO`, `10` | |
 | `RATE_LIMIT_PER_MINUTE` | `20` | Ask, quiz/flashcard/mock-exam generation and voice starts per student (or address) per minute; over it: 429 `rate_limited` with `Retry-After`; 0 = off |

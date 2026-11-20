@@ -62,7 +62,9 @@ def create_app() -> FastAPI:
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
     db.init_db()
 
-    app = FastAPI(title="Eklavya API", lifespan=lifespan)
+    docs = settings.enable_docs   # the interactive API docs only when asked for (ENABLE_DOCS=true), never by default in production
+    app = FastAPI(title="Eklavya API", lifespan=lifespan, docs_url="/docs" if docs else None, redoc_url="/redoc" if docs else None,
+                  openapi_url="/openapi.json" if docs else None)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
