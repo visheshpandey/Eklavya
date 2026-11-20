@@ -120,6 +120,28 @@ def test_badge_rules():
     assert earned["sharp-50"]["progress"] == 20 and earned["sharp-50"]["goal"] == 50
 
 
+def test_streak_badges_count_the_same_streak_as_the_streak_card():
+    """Best run 5 days, but today's streak is 1: the locked badges say "1 of 7" and "1 of 30", matching the card; earned ones stay earned."""
+    got = {b["id"]: b for b in badge_rules.evaluate({"best_streak": 5, "streak": 1})}
+    assert got["streak-3"]["earned"] and got["streak-3"]["progress"] == 3
+    assert not got["streak-7"]["earned"] and got["streak-7"]["progress"] == 1
+    assert got["streak-30"]["progress"] == 1
+
+
+def test_badge_streak_matches_today_endpoint():
+    user_id, headers = signup("streakmatch@example.com")
+    old = [(date.today() - timedelta(days=back)).isoformat() for back in (10, 11, 12, 13, 14)]   # a 5-day run, long ago
+    from app.services import badges as badge_service, progress_data
+    import app.services.badges as module
+    original = module.active_days
+    module.active_days = lambda uid: {date.fromisoformat(d) for d in old} | {progress_data.local_today()}
+    try:
+        got = {b["id"]: b for b in badge_service.badges(user_id)["badges"]}
+    finally:
+        module.active_days = original
+    assert got["streak-7"]["progress"] == 1 and got["streak-30"]["progress"] == 1   # today only: the card says 1 day
+
+
 def test_badges_follow_real_activity():
     user_id, headers = signup("badge@example.com")
     assert client.get("/api/badges", headers=headers).json()["earned"] == 0

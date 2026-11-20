@@ -2,7 +2,8 @@
 from app import db
 from app.domain.badges import evaluate, longest_streak
 from app.services.challenges import wins
-from app.services.progress_data import active_days
+from app.domain.streak import study_streak
+from app.services.progress_data import active_days, local_today
 
 MIN_MOCK_QUESTIONS = 5   # a 1-question "exam" does not earn the exam badge
 
@@ -11,11 +12,13 @@ def stats(user_id: int) -> dict:
     count = lambda sql: db.one(sql, (user_id,))["n"] or 0   # noqa: E731 - one-line helper for the counts below
     best_mock = db.one("SELECT MAX(100 * correct / total) AS n FROM mock_exams WHERE user_id = ? AND finished_at IS NOT NULL "
                        f"AND total >= {MIN_MOCK_QUESTIONS}", (user_id,))["n"]
+    days = active_days(user_id)
     return {
         "documents": count("SELECT COUNT(*) AS n FROM documents WHERE user_id = ?"),
         "answers": count("SELECT COUNT(*) AS n FROM quiz_attempts WHERE user_id = ?"),
         "correct": count("SELECT SUM(is_correct) AS n FROM quiz_attempts WHERE user_id = ?"),
-        "best_streak": longest_streak(active_days(user_id)),
+        "best_streak": longest_streak(days),
+        "streak": study_streak(days, local_today()),   # the same value as the streak card on Today
         "mastered": count("SELECT COUNT(*) AS n FROM learner_mastery m JOIN topics t ON t.id = m.topic_id "
                           "WHERE m.user_id = ? AND m.mastery_score >= 80"),
         "vivas": count("SELECT COUNT(*) AS n FROM vivas WHERE user_id = ? AND finished_at IS NOT NULL"),

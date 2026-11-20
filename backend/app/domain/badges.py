@@ -38,12 +38,19 @@ def longest_streak(active_days) -> int:
     return best
 
 
+# A streak badge, once earned, stays earned (best run ever); while it is locked its "3 of 7" counts the CURRENT run, the same number as
+# the streak card on Today, so the two never disagree.
+PROGRESS_STAT = {"best_streak": "streak"}
+
+
 def evaluate(stats: dict) -> list:
     """[{id, title, description, icon, earned, progress, goal}] in a fixed order: earned ones are not moved."""
     out = []
     for badge_id, title, description, stat, goal, icon in BADGES:
         value = int(stats.get(stat) or 0)
+        earned = value >= goal
+        shown = int(stats.get(PROGRESS_STAT.get(stat, stat)) or 0)
         out.append({"id": badge_id, "title": title, "description": description, "icon": icon,
-                    "earned": value >= goal, "progress": min(value, goal), "goal": goal})
+                    "earned": earned, "progress": goal if earned else min(shown, goal), "goal": goal})
     return out
 
