@@ -187,6 +187,7 @@ kbd { margin-left: 6px; color: var(--ink-3); }
 .ahead { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
 .strength { font: 500 13px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 3px; background: var(--sage); color: var(--ok-text); }
 .strength.partial { background: var(--clay-pale); color: var(--accent-text); }
+.strength.general { background: var(--blue-pale); color: var(--ink); text-transform: none; letter-spacing: .02em; }
 .passage { padding: 12px 0; border-top: 1px solid var(--line); }
 .passage p { font-size: 14px; line-height: 1.65; }
 .passage .mono { display: block; margin-top: 6px; }

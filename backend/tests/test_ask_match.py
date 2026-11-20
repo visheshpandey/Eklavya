@@ -49,6 +49,8 @@ def test_the_suggestion_chips_get_from_your_notes(guest, question, topic):
     assert out["match"] == "strong" and out["source_topic"] == topic
 
 
-def test_a_question_the_notes_do_not_cover_is_not_strong(guest):
+def test_a_question_the_notes_do_not_cover_is_not_strong(guest, monkeypatch):
+    from app.agents import voice_tutor
+    monkeypatch.setattr(voice_tutor, "llm_json", lambda *a, **k: {"answer": "A fruit.", "follow_up_question": "Back to precision?"})
     out = client.post("/api/tutor/ask", headers=guest, json={"question": "what is a banana", "language": "english"}).json()
-    assert out["match"] == "none"
+    assert out["match"] == "general" and out["sources"] == []

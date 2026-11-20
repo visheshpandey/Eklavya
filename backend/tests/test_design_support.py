@@ -43,7 +43,7 @@ def test_ask_returns_the_passages_it_used_and_how_well_they_match(student, monke
     partial = client.post("/api/tutor/ask", headers=headers, json={"question": "gradient descent and quantum entanglement", "language": "english"}).json()
     assert partial["match"] == "partial"
     none = client.post("/api/tutor/ask", headers=headers, json={"question": "photosynthesis", "language": "english"}).json()
-    assert none["match"] == "none" and none["sources"] == [] and none["grounded"] is False and none["searched"] == 1
+    assert none["match"] == "general" and none["sources"] == [] and none["grounded"] is False and none["searched"] == 1
 
 
 def test_ask_falls_back_to_the_notes_when_gemini_is_busy(student, monkeypatch):

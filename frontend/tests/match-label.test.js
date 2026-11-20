@@ -21,3 +21,11 @@ test('partial and none are amber and explain themselves', () => {
 test('an unknown value falls back to partial, never to green', () => {
   assert.equal(matchLabel(undefined).text, 'Partial match');
 });
+
+test('a general answer is labelled as not from the notes and never shows a passage', async () => {
+  const { isGeneral } = await import('../js/lib/match-label.js');
+  assert.equal(matchLabel('general').text, 'General answer: not from your notes');
+  assert.equal(isGeneral({ match: 'general', sources: [{ text: 'x' }] }), true);
+  assert.equal(isGeneral({ general: true }), true);
+  assert.equal(isGeneral({ match: 'strong' }), false);
+});
