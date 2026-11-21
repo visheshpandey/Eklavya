@@ -365,7 +365,7 @@
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/three-addons/"}}</script>
   <script src="config.js"></script>
   <div id="wakeToast" class="wake-toast" role="status" aria-live="polite" hidden></div>
-  <script>fetch(window.APP_CONFIG.apiBase + "/api/health", { cache: "no-store" }).catch(function () {});   /* wake the server the instant the page opens */</script>
+  <script src="js/wake.js"></script>
   <script type="module" src="js/main.js"></script>
   <div id="guide" class="guide-dock" hidden></div>
 </body>
