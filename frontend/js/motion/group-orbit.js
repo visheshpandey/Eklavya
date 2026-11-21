@@ -1,9 +1,9 @@
 // A study group in 3D: the shared book in the middle and one sphere per member orbiting it, joined to it by faint glowing lines. The student's own
-// sphere is gold; the leader (rank 1) orbits closest. Names appear as small labels. The group's real data is read from the page's leaderboard.
+// sphere is gold; the leader (rank 1) orbits closest. Names are page text pinned to each sphere (always readable, never over the book: see
+// lib/orbit-labels.js). The group's real data is read from the page's leaderboard.
 import { PALETTE } from './env.js';
-import { THREE, canvasTexture, createStage } from './scene-kit.js';
-
-const SERIF = '"Instrument Serif", Georgia, serif';
+import { THREE, createStage } from './scene-kit.js';
+import { placeLabels } from '../lib/orbit-labels.js';
 const COLORS = [PALETTE.greenSoft, PALETTE.terracotta, '#7a9bb0', '#a98bb8', '#d1a35c', '#6fae9a'];
 
 export function createGroupOrbit(host, members) {
@@ -17,18 +17,20 @@ export function createGroupOrbit(host, members) {
   book.position.y = 0.2;
   stage.scene.add(book);
 
+  const labels = document.createElement('div');   // the names (the leaderboard below says the same for screen readers)
+  labels.className = 'o3-labels';
+  labels.setAttribute('aria-hidden', 'true');
+  host.append(labels);
+
   const orbiters = members.slice(0, 8).map((member, i, all) => {
     const color = member.you ? PALETTE.gold : COLORS[i % COLORS.length];
     const radius = 1.45 + (member.rank - 1) * 0.16;
     const sphere = new THREE.Mesh(new THREE.SphereGeometry(member.you ? 0.24 : 0.2, 28, 20), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2, roughness: 0.5 }));
     sphere.castShadow = true;
-    const label = canvasTexture(256, 72, (ctx, w, h) => {
-      ctx.fillStyle = 'rgba(250,248,242,.94)'; ctx.beginPath(); ctx.roundRect(4, 8, w - 8, h - 16, 16); ctx.fill();
-      ctx.fillStyle = PALETTE.ink; ctx.font = `34px ${SERIF}`; ctx.textAlign = 'center'; ctx.fillText(member.name.length > 15 ? `${member.name.slice(0, 14)}…` : member.name, w / 2, h / 2 + 11);
-    });
-    const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: label.texture, depthTest: false }));
-    tag.scale.set(0.9, 0.25, 1); tag.position.y = 0.42; tag.renderOrder = 5;
-    sphere.add(tag);
+    const label = document.createElement('span');
+    label.className = `o3-label${member.you ? ' you' : ''}`;
+    label.textContent = member.name.length > 15 ? `${member.name.slice(0, 14)}…` : member.name;
+    labels.append(label);
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 }));
     stage.scene.add(sphere, line);
     return { sphere, line, radius, phase: (i / all.length) * Math.PI * 2, speed: 0.32 - i * 0.015, tilt: (i % 3) * 0.12, label };
@@ -41,7 +43,25 @@ export function createGroupOrbit(host, members) {
       o.sphere.position.set(Math.cos(angle) * o.radius, 0.55 + Math.sin(time * 0.9 + o.phase) * 0.12 + Math.sin(angle) * o.tilt, Math.sin(angle) * o.radius * 0.8);
       o.line.geometry.setFromPoints([new THREE.Vector3(0, 0.3, 0), o.sphere.position]);
     }
+    placeNames();
   } });
 
-  return { dispose() { for (const o of orbiters) o.label.texture.dispose(); stage.dispose(); } };
+  const toScreen = (point, width, height) => { const v = point.clone().project(stage.camera); return { x: (v.x + 1) / 2 * width, y: (1 - v.y) / 2 * height }; };
+  const bookBox = new THREE.Box3();
+  function placeNames() {
+    const width = host.clientWidth, height = host.clientHeight;
+    if (!width || !height) return;
+    bookBox.setFromObject(book);
+    const corners = [];
+    for (const x of [bookBox.min.x, bookBox.max.x]) for (const y of [bookBox.min.y, bookBox.max.y]) for (const z of [bookBox.min.z, bookBox.max.z]) corners.push(toScreen(new THREE.Vector3(x, y, z), width, height));
+    const avoid = { left: Math.min(...corners.map((c) => c.x)), right: Math.max(...corners.map((c) => c.x)), top: Math.min(...corners.map((c) => c.y)), bottom: Math.max(...corners.map((c) => c.y)) };
+    const items = orbiters.map((o) => {
+      const centre = toScreen(o.sphere.position, width, height);
+      const edge = toScreen(o.sphere.position.clone().add(new THREE.Vector3(0, o.sphere.geometry.parameters.radius, 0)), width, height);
+      return { x: centre.x, y: centre.y, r: Math.abs(centre.y - edge.y), w: o.label.offsetWidth, h: o.label.offsetHeight };
+    });
+    placeLabels(items, avoid, { width, height }).forEach((spot, i) => { orbiters[i].label.style.transform = `translate(${spot.left}px, ${spot.top}px)`; });
+  }
+
+  return { dispose() { labels.remove(); stage.dispose(); } };
 }
