@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Eklavya Live</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/live.css">
+</head>
+<body class="live">
+  <header class="lv-head">
+    <div>
+      <h1>Eklavya <em>live</em></h1>
+      <p class="lv-sub">What students are doing right now. Counts only: no names, no questions.</p>
+    </div>
+    <div class="lv-status" id="lv-status" role="status"><span class="lv-dot" aria-hidden="true"></span><span id="lv-status-text">Connecting…</span></div>
+  </header>
+
+  <main class="lv-main">
+    <section class="lv-hero" aria-label="Right now">
+      <div class="lv-big"><span class="lv-num" id="lv-active">0</span><span class="lv-cap">students active now</span></div>
+      <div class="lv-big"><span class="lv-num" id="lv-today">0</span><span class="lv-cap">actions today</span></div>
+      <div class="lv-big"><span class="lv-num" id="lv-voice">0</span><span class="lv-cap">voice minutes, all time</span></div>
+      <div class="lv-big"><span class="lv-num" id="lv-ms">–</span><span class="lv-cap">avg answer time</span></div>
+    </section>
+
+    <section class="lv-card" aria-labelledby="lv-chart-title">
+      <h2 id="lv-chart-title">Activity, last 30 minutes</h2>
+      <div class="lv-bars" id="lv-bars" role="img" aria-label="Activity per minute for the last 30 minutes"></div>
+      <div class="lv-axis"><span>30 min ago</span><span>now</span></div>
+    </section>
+
+    <div class="lv-cols">
+      <section class="lv-card" aria-labelledby="lv-feed-title">
+        <h2 id="lv-feed-title">Live feed</h2>
+        <ul class="lv-feed" id="lv-feed" aria-live="polite"></ul>
+      </section>
+
+      <section class="lv-card" aria-labelledby="lv-total-title">
+        <h2 id="lv-total-title">All time</h2>
+        <dl class="lv-totals" id="lv-totals"></dl>
+      </section>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script type="module" src="js/live.js"></script>
+</body>
+</html>

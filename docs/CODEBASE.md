@@ -273,6 +273,13 @@ live tutor cannot be unsaid, so a slip is logged and the model is reminded befor
 "Today", streaks and the study pack follow the student's calendar: the browser sends `X-Timezone` with every request
 (`progress_data.use_timezone`); without it `APP_TIMEZONE` (default `Asia/Kolkata`) is used. The server's own zone is never used.
 
+### Live dashboard
+
+`frontend/live.html` (script `js/live.js`, pure helpers `js/lib/live-view.js`) polls `GET /api/live` every 3 seconds. The endpoint
+(`services/live_stats.py`) is public and returns counts only: totals, today's actions, students active in the last 5 minutes,
+voice minutes, a 30-minute activity series and a feed of recent events as "Student #id" with the topic. It never includes names,
+emails or the text of a question or answer (`tests/test_live_stats.py` checks this).
+
 ## 5. Running and testing
 
 All commands from Windows `cmd`; replace ports to taste (the two ports must match, see `config.js`).

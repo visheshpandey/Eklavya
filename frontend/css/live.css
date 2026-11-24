@@ -1,0 +1,42 @@
+/* The live dashboard page (live.html). Uses the same tokens as the app, so light and dark both work. */
+body.live { background: var(--bg); color: var(--ink); min-height: 100vh; }
+.lv-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; padding: 28px 24px 8px; max-width: 1100px; margin: 0 auto; }
+.lv-head h1 { font-family: var(--font-serif); font-weight: 400; font-size: clamp(32px, 6vw, 48px); margin: 0; letter-spacing: -0.01em; }
+.lv-head h1 em { color: var(--accent-text); }
+.lv-sub { margin: 4px 0 0; color: var(--ink-3); font-size: 15px; }
+.lv-status { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; color: var(--ink-2); }
+.lv-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn-text); }
+.lv-status[data-ok="yes"] .lv-dot { background: var(--ok-fill); animation: lv-pulse 1.6s ease-out infinite; }
+.lv-status[data-ok="no"] .lv-dot { background: var(--bad-text); }
+@keyframes lv-pulse { 0% { box-shadow: 0 0 0 0 rgb(95 138 105 / .6); } 100% { box-shadow: 0 0 0 10px rgb(95 138 105 / 0); } }
+
+.lv-main { max-width: 1100px; margin: 0 auto; padding: 16px 24px 48px; display: grid; gap: 16px; }
+.lv-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.lv-big { background: var(--hero); color: var(--hero-ink); border-radius: 18px; padding: 20px 22px; display: grid; gap: 4px; }
+.lv-num { font-family: var(--font-serif); font-size: clamp(38px, 7vw, 64px); line-height: 1; font-variant-numeric: tabular-nums; }
+.lv-cap { color: var(--hero-mute); font-size: 14px; }
+
+.lv-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; box-shadow: var(--shadow); }
+.lv-card h2 { margin: 0 0 14px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.lv-cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+
+.lv-bars { display: flex; align-items: flex-end; gap: 4px; height: 130px; }
+.lv-bar { flex: 1; min-height: 3px; background: var(--series-1); border-radius: 3px 3px 0 0; transition: height .4s ease; }
+.lv-bar.quiet { background: var(--line); }
+.lv-axis { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: var(--ink-3); }
+
+.lv-feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.lv-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); animation: lv-in .35s ease; }
+.lv-item:last-child { border-bottom: 0; }
+.lv-who { font-weight: 600; font-family: var(--font-mono, monospace); font-size: 13px; color: var(--accent-text); }
+.lv-what { color: var(--ink); }
+.lv-when { color: var(--ink-3); font-size: 13px; white-space: nowrap; }
+.lv-empty { color: var(--ink-3); padding: 12px 0; }
+@keyframes lv-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+.lv-totals { display: grid; grid-template-columns: 1fr auto; gap: 10px 14px; margin: 0; }
+.lv-totals dt { color: var(--ink-2); }
+.lv-totals dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+
+@media (max-width: 800px) { .lv-hero { grid-template-columns: repeat(2, 1fr); } .lv-cols { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .lv-status[data-ok="yes"] .lv-dot, .lv-item { animation: none; } .lv-bar { transition: none; } }
