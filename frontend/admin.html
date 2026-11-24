@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Eklavya Students</title>
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/live.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="live">
+  <header class="lv-head">
+    <div>
+      <h1>Eklavya <em>students</em></h1>
+      <p class="lv-sub">Everyone who signed up, and what each person has done. Owner only.</p>
+    </div>
+    <div class="lv-status" id="ad-count" role="status" hidden></div>
+  </header>
+
+  <main class="lv-main">
+    <form class="lv-card ad-gate" id="ad-gate" autocomplete="off">
+      <label for="ad-key">Admin key</label>
+      <div class="ad-row">
+        <input id="ad-key" type="password" autocomplete="off" spellcheck="false" required>
+        <button type="submit">Open</button>
+      </div>
+      <p class="ad-error" id="ad-error" role="alert" hidden></p>
+    </form>
+
+    <section class="lv-card" id="ad-list-card" hidden aria-labelledby="ad-list-title">
+      <div class="ad-tools">
+        <h2 id="ad-list-title">Students</h2>
+        <input id="ad-search" type="search" placeholder="Search name or email" aria-label="Search students">
+        <button type="button" id="ad-refresh">Refresh</button>
+        <button type="button" id="ad-export" title="Every table as one JSON file, without passwords or tokens">Download all data</button>
+        <button type="button" id="ad-lock">Lock</button>
+      </div>
+      <div class="ad-scroll">
+        <table class="ad-table">
+          <thead><tr><th>Student</th><th>Email</th><th>Signed in with</th><th>Joined</th><th>Last active</th><th>Done so far</th><th>Settings</th></tr></thead>
+          <tbody id="ad-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

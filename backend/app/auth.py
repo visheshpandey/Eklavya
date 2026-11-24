@@ -110,8 +110,8 @@ def sign_up(name: str, email: str, password: str) -> dict:
         raise BadRequestError(f"Use a password with at least {MIN_PASSWORD} characters.")
     if db.one("SELECT id FROM users WHERE email = ?", (email,)):
         raise BadRequestError("That email already has an account. Sign in instead.")
-    user_id = db.execute("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-                         (name.strip() or email.split("@")[0], email, hash_password(password)))
+    user_id = db.execute("INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)",
+                         (name.strip() or email.split("@")[0], email, hash_password(password), time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
     return {"token": make_token(user_id), "user": public_user(db.one("SELECT * FROM users WHERE id = ?", (user_id,)))}
 
 

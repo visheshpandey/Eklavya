@@ -66,6 +66,7 @@ class Settings:
     port: int
     reload: bool
     enable_docs: bool            # /docs, /redoc and /openapi.json; off unless ENABLE_DOCS=true (hidden in production)
+    admin_key: str               # secret for the owner's student list (GET /api/admin/students); empty = that page is switched off
     cors_origins: tuple[str, ...]
     log_level: str
     max_upload_mb: int
@@ -108,6 +109,7 @@ class Settings:
             port=_int("PORT", 5000, minimum=1),
             reload=_bool("RELOAD", False),
             enable_docs=_bool("ENABLE_DOCS", False),
+            admin_key=_str("ADMIN_KEY"),
             cors_origins=_csv("CORS_ORIGINS", "*"),
             log_level=_str("LOG_LEVEL", "INFO").upper(),
             max_upload_mb=_int("MAX_UPLOAD_MB", 10, minimum=1),

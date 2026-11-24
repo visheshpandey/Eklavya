@@ -1,0 +1,20 @@
+/* The owner's student list (admin.html); builds on live.css and the app tokens. */
+.ad-gate { max-width: 440px; display: grid; gap: 10px; }
+.ad-gate label { font-weight: 600; }
+.ad-row { display: flex; gap: 8px; }
+.ad-row input, .ad-tools input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); font: inherit; }
+.ad-gate button, .ad-tools button { padding: 10px 16px; border-radius: 10px; border: 0; background: var(--accent-fill); color: var(--on-accent); font: inherit; font-weight: 600; cursor: pointer; }
+.ad-tools button { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line-strong); }
+.ad-error { margin: 0; color: var(--bad-text); }
+.ad-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.ad-tools h2 { margin: 0 auto 0 0; }
+.ad-tools input { flex: 0 1 260px; }
+.ad-scroll { overflow-x: auto; }
+.ad-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 860px; }
+.ad-table th { text-align: left; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); padding: 8px 10px; border-bottom: 1px solid var(--line-strong); }
+.ad-table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-2); }
+.ad-table tr:last-child td { border-bottom: 0; }
+.ad-name { font-weight: 600; color: var(--ink); }
+.ad-mono { font-family: var(--font-mono, monospace); font-size: 13px; word-break: break-all; }
+.ad-empty { text-align: center; color: var(--ink-3); padding: 24px 10px; }
+.ad-gate button:focus-visible, .ad-tools button:focus-visible, .ad-gate input:focus-visible, .ad-tools input:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }

@@ -196,8 +196,8 @@ def google_sign_in(credential: str, ip: str) -> dict:
         if not row.get("google_sub"):
             db.execute("UPDATE users SET google_sub = ? WHERE id = ?", (claims["sub"], row["id"]))
     else:
-        user_id = db.execute("INSERT INTO users (name, email, google_sub) VALUES (?, ?, ?)",
-                             ((claims.get("name") or email.split("@")[0])[:80], email, claims["sub"]))
+        user_id = db.execute("INSERT INTO users (name, email, google_sub, created_at) VALUES (?, ?, ?, ?)",
+                             ((claims.get("name") or email.split("@")[0])[:80], email, claims["sub"], time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())))
         row = db.one("SELECT * FROM users WHERE id = ?", (user_id,))
     return {"token": auth.make_token(row["id"]), "user": auth.public_user(row)}
 

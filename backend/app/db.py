@@ -167,6 +167,7 @@ MIGRATIONS = (
     ("users", "guest_since", "TEXT"),                 # set for a private guest (one per browser), so old ones can be cleared
     ("users", "password_hash", "TEXT"),
     ("users", "google_sub", "TEXT"),                  # Google account id, for "Sign in with Google"
+    ("users", "created_at", "TEXT"),                  # when the account was made (UTC); empty for accounts made before this was kept
     ("users", "remind_push", "INTEGER"),              # daily reminder channels (NULL/0 = off)
     ("users", "remind_email", "INTEGER"),
     ("users", "last_reminded_on", "TEXT"),            # YYYY-MM-DD, so a reminder goes out at most once a day

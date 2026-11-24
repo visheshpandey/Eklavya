@@ -280,6 +280,14 @@ live tutor cannot be unsaid, so a slip is logged and the model is reminded befor
 voice minutes, a 30-minute activity series and a feed of recent events as "Student #id" with the topic. It never includes names,
 emails or the text of a question or answer (`tests/test_live_stats.py` checks this).
 
+### Owner's student list and data export
+
+`frontend/admin.html` (script `js/admin.js`, helpers `js/lib/admin-view.js`) shows every signed-up student (accounts with an email; guests and
+the demo student are left out): name, email, whether they use a password or Google, join date, last activity and how much they have done.
+It calls `GET /api/admin/students` and `GET /api/admin/export` (every table as JSON), both with the `ADMIN_KEY` secret in the `X-Admin-Key`
+header. With no `ADMIN_KEY` set the routes return 404; wrong keys are limited to 8 a minute per address. Password hashes, Google ids,
+reset tokens, push keys and search vectors are never returned (`services/admin_export.py`). `users.created_at` is kept for new accounts only.
+
 ## 5. Running and testing
 
 All commands from Windows `cmd`; replace ports to taste (the two ports must match, see `config.js`).
